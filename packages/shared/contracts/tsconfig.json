@@ -1,0 +1,4 @@
+{
+  "extends": "@matematika/tsconfig/library.json",
+  "include": ["src"]
+}

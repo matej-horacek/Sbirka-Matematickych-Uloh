@@ -1,0 +1,1249 @@
+openapi: 3.0.3
+info:
+  title: Math app endpoints
+  description: |
+    Documentation of endpoints for the math problem library
+    (Komunitní sbírka úloh z matematiky).
+
+    ## Changelog
+    - 1.0.1 (2026-10-25): documentation only. operationId on every endpoint, grouping
+      sections (Problems, Problem actions, Pickers), realistic request and response examples.
+    - 1.0.0 (2026-10-25): frozen contract for the problem part. Problems CRUD with whole-set
+      editing (`children`), copy, publish, dissolve; read-only pickers for tags, chapters
+      and licences; RFC 9457 errors with `code` values; bearer (JWT) auth on all endpoints.
+  version: 1.0.1
+
+servers:
+- url: https://main.server.com/api/v1
+  description: Not implemented yet
+
+security:
+- bearerAuth: []
+
+tags:
+- name: Problems
+  description: Create, read, update and delete problems and whole sets.
+- name: Problem actions
+  description: Copy, publish and dissolve.
+- name: Pickers
+  description: Read-only lists for the editor (tags, chapters, licences).
+paths:
+  /problems:
+    get:
+      summary: List problems
+      operationId: listProblems
+      tags:
+      - Problems
+      description: |
+        Who: any logged-in teacher.
+        scope=mine returns the caller's own problems (dashboard),
+        scope=public returns published problems (public browser).
+        Set children are not listed on their own; only standalone problems
+        and set parents appear (see childCount).
+      parameters:
+      - $ref: '#/components/parameters/Scope'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/TagIdFilter'
+      - $ref: '#/components/parameters/ChapterIdFilter'
+      - $ref: '#/components/parameters/LanguageFilter'
+      responses:
+        '200':
+          description: Problems received successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemPage'
+              example:
+                items:
+                - id: k3Xa9
+                  name: Řešte rovnice
+                  assignment: 'Vyřešte rovnice v oboru reálných čísel:'
+                  result:
+                  language: cs
+                  difficulty: 3
+                  author: &id001
+                    id: u7Hn2
+                    displayName: Jan Novák
+                  tags: &id007
+                  - &id009
+                    id: t1Ab3
+                    name: lineární rovnice
+                    scope: global
+                  - &id012
+                    id: t2Cd4
+                    name: kvadratické rovnice
+                    scope: global
+                  chapters: &id008
+                  - &id010
+                    id: c9Kd1
+                    name: Rovnice
+                    scope: global
+                  childCount: 2
+                - id: p5Qw8
+                  name: Obsah kruhu
+                  assignment: Vypočítejte obsah kruhu o poloměru \( r = 5\,\text{cm} \).
+                  result: \( S = 25\pi\,\text{cm}^2 \)
+                  language: cs
+                  difficulty: 2
+                  author: *id001
+                  tags: &id015
+                  - id: t5Gh6
+                    name: geometrie
+                    scope: global
+                  chapters: &id016
+                  - id: c2Xy5
+                    name: Planimetrie
+                    scope: global
+                  childCount: 0
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 2
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create a problem
+      operationId: createProblem
+      tags:
+      - Problems
+      description: |
+        Who: any logged-in teacher (registered teachers too; creating is private).
+        The new problem is PRIVATE, owned by the caller, with source OWN and no licence
+        (the licence is chosen when publishing).
+        Sending `children` creates a set; then `result` must be null.
+        Codes: 400 VALIDATION_FAILED (includes a set parent with a result).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProblemCreate'
+            examples:
+              newSet:
+                summary: A new set with two children
+                value:
+                  name: Řešte rovnice
+                  assignment: 'Vyřešte rovnice v oboru reálných čísel:'
+                  result:
+                  language: cs
+                  difficulty: 3
+                  tagIds:
+                  - t1Ab3
+                  - t2Cd4
+                  chapterIds:
+                  - c9Kd1
+                  children:
+                  - name: Rovnice a)
+                    assignment: \( 2x + 3 = 11 \)
+                    result: \( x = 4 \)
+                    difficulty: 2
+                    tagIds:
+                    - t1Ab3
+                    chapterIds:
+                    - c9Kd1
+                  - name: Rovnice b)
+                    assignment: \( x^2 = 9 \)
+                    result: \( x = \pm 3 \)
+                    difficulty: 3
+                    tagIds:
+                    - t2Cd4
+                    chapterIds:
+                    - c9Kd1
+      responses:
+        '201':
+          description: Created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                id: k3Xa9
+                name: Řešte rovnice
+                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
+                result:
+                language: cs
+                difficulty: 3
+                author: &id002
+                  id: u7Hn2
+                  displayName: Jan Novák
+                tags:
+                - &id003
+                  id: t1Ab3
+                  name: lineární rovnice
+                  scope: global
+                - &id006
+                  id: t2Cd4
+                  name: kvadratické rovnice
+                  scope: global
+                chapters:
+                - &id004
+                  id: c9Kd1
+                  name: Rovnice
+                  scope: global
+                childCount: 2
+                createdAt: '2026-10-25T14:02:00Z'
+                updatedAt: '2026-10-25T14:02:00Z'
+                source: &id005
+                  type: OWN
+                  license:
+                  citation:
+                  licenseNote:
+                  showInWeb: true
+                  showInPdf: true
+                status: PRIVATE
+                version: 1
+                lockVersion: 1
+                parentId:
+                children:
+                - id: a1B2c
+                  name: Rovnice a)
+                  assignment: \( 2x + 3 = 11 \)
+                  result: \( x = 4 \)
+                  language: cs
+                  difficulty: 2
+                  author: *id002
+                  tags:
+                  - *id003
+                  chapters:
+                  - *id004
+                  childCount: 0
+                  createdAt: '2026-10-25T14:02:00Z'
+                  updatedAt: '2026-10-25T14:02:00Z'
+                  source: *id005
+                - id: d4E5f
+                  name: Rovnice b)
+                  assignment: \( x^2 = 9 \)
+                  result: \( x = \pm 3 \)
+                  language: cs
+                  difficulty: 3
+                  author: *id002
+                  tags:
+                  - *id006
+                  chapters:
+                  - *id004
+                  childCount: 0
+                  createdAt: '2026-10-25T14:02:00Z'
+                  updatedAt: '2026-10-25T14:02:00Z'
+                  source: *id005
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /problems/{id}:
+    get:
+      summary: Problem detail
+      operationId: getProblem
+      tags:
+      - Problems
+      description: |
+        Who: the author, or any logged-in teacher when the problem is published.
+        Otherwise 404 (the problem's existence is not revealed).
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example: &id014
+                id: k3Xa9
+                name: Řešte rovnice
+                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
+                result:
+                language: cs
+                difficulty: 3
+                author: *id001
+                tags: *id007
+                chapters: *id008
+                childCount: 2
+                createdAt: '2026-10-20T09:15:00Z'
+                updatedAt: '2026-10-25T14:02:00Z'
+                source: &id011
+                  type: OWN
+                  license:
+                  citation:
+                  licenseNote:
+                  showInWeb: true
+                  showInPdf: true
+                status: PRIVATE
+                version: 1
+                lockVersion: 3
+                parentId:
+                children:
+                - &id013
+                  id: a1B2c
+                  name: Rovnice a)
+                  assignment: \( 2x + 3 = 11 \)
+                  result: \( x = 4 \)
+                  language: cs
+                  difficulty: 2
+                  author: *id001
+                  tags: &id022
+                  - *id009
+                  chapters: &id023
+                  - *id010
+                  childCount: 0
+                  createdAt: '2026-10-20T09:15:00Z'
+                  updatedAt: '2026-10-25T14:02:00Z'
+                  source: *id011
+                - id: d4E5f
+                  name: Rovnice b)
+                  assignment: \( x^2 = 9 \)
+                  result: \( x = \pm 3 \)
+                  language: cs
+                  difficulty: 3
+                  author: *id001
+                  tags: &id024
+                  - *id012
+                  chapters: &id025
+                  - *id010
+                  childCount: 0
+                  createdAt: '2026-10-20T09:15:00Z'
+                  updatedAt: '2026-10-25T14:02:00Z'
+                  source: *id011
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update a problem
+      operationId: updateProblem
+      tags:
+      - Problems
+      description: |
+        Who: the author only. Not allowed on a set child (edit the set through its parent).
+        A non-author gets 403 on a published problem and 404 on a private one.
+        - 200: the change is applied (private problem, or author is a trusted teacher/admin).
+        - 202: the problem is published and the author is not trusted; the change is saved
+          as a revision waiting for review, and the returned problem is still unchanged.
+        Codes: 400 VALIDATION_FAILED; 403 FORBIDDEN; 404 NOT_FOUND;
+        409 LOCK_MISMATCH, SET_PARENT_HAS_RESULT, SET_CHILD_EDIT_VIA_PARENT.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProblemPatch'
+            examples:
+              editSet:
+                summary: 'Edit a set: keep a), remove b) by leaving it out, add new c), copy problem Zz9Yy in as d)'
+                value:
+                  lockVersion: 3
+                  assignment: 'Vyřešte rovnice v oboru reálných čísel a proveďte zkoušku:'
+                  children:
+                  - id: a1B2c
+                  - name: Rovnice c)
+                    assignment: \( 3x - 1 = 2x + 4 \)
+                    result: \( x = 5 \)
+                    difficulty: 2
+                    tagIds:
+                    - t1Ab3
+                    chapterIds:
+                    - c9Kd1
+                  - copyFromId: Zz9Yy
+                    name: Rovnice d)
+      responses:
+        '200':
+          description: Updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                id: k3Xa9
+                name: Řešte rovnice
+                assignment: 'Vyřešte rovnice v oboru reálných čísel a proveďte zkoušku:'
+                result:
+                language: cs
+                difficulty: 3
+                author:
+                  id: u7Hn2
+                  displayName: Jan Novák
+                tags:
+                - id: t1Ab3
+                  name: lineární rovnice
+                  scope: global
+                - id: t2Cd4
+                  name: kvadratické rovnice
+                  scope: global
+                chapters:
+                - id: c9Kd1
+                  name: Rovnice
+                  scope: global
+                childCount: 3
+                createdAt: '2026-10-20T09:15:00Z'
+                updatedAt: '2026-10-25T14:02:00Z'
+                source:
+                  type: OWN
+                  license:
+                  citation:
+                  licenseNote:
+                  showInWeb: true
+                  showInPdf: true
+                status: PRIVATE
+                version: 2
+                lockVersion: 4
+                parentId:
+                children:
+                - *id013
+                - id: g7H8j
+                  name: Rovnice c)
+                  assignment: \( 3x - 1 = 2x + 4 \)
+                  result: \( x = 5 \)
+                  language: cs
+                  difficulty: 2
+                  author: *id001
+                  tags:
+                  - *id009
+                  chapters:
+                  - *id010
+                  childCount: 0
+                  createdAt: '2026-10-20T09:15:00Z'
+                  updatedAt: '2026-10-25T14:02:00Z'
+                  source: *id011
+                - id: m2N3p
+                  name: Rovnice d)
+                  assignment: \( \frac{x}{2} = 6 \)
+                  result: \( x = 12 \)
+                  language: cs
+                  difficulty: 2
+                  author: *id001
+                  tags:
+                  - *id009
+                  chapters:
+                  - *id010
+                  childCount: 0
+                  createdAt: '2026-10-20T09:15:00Z'
+                  updatedAt: '2026-10-25T14:02:00Z'
+                  source:
+                    type: LICENSED_USE
+                    license: &id017
+                      id: L2bY4
+                      name: CC BY 4.0
+                      url: https://creativecommons.org/licenses/by/4.0/
+                    citation: 'Převzato od: Petr Dvořák'
+                    licenseNote:
+                    showInWeb: true
+                    showInPdf: true
+        '202':
+          description: Change accepted for review; the problem itself is not changed yet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example: *id014
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Soft delete a problem
+      operationId: deleteProblem
+      tags:
+      - Problems
+      description: |
+        Who: the author only. Not allowed on a set child (edit the set through its parent).
+        Soft delete (hidden). On a set, deletes the parent together with its children.
+        To keep the children, use POST /problems/{id}/dissolve instead.
+        Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 SET_CHILD_EDIT_VIA_PARENT.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted successfully.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /problems/{id}/copy:
+    post:
+      summary: Copy a problem
+      operationId: copyProblem
+      tags:
+      - Problem actions
+      description: |
+        Who: any logged-in teacher who can see the problem (own problems, or published ones).
+        No request body. Creates a new problem owned by the caller:
+        - standalone problem → standalone copy
+        - set → new set with copies of all its children
+        - set child → standalone copy (the original set is not changed)
+        The copy is PRIVATE and keeps a link to the original and its version
+        (used for "update available" checks).
+        Source: OWN → LICENSED_USE citing the original author;
+        LICENSED_USE and FREE_USE keep their type and citation; the licence is always inherited.
+        Tags and chapters: only global ones are copied, unless the caller owns the original.
+        Attachments point to the same stored images (no file is duplicated).
+        Codes: 404 NOT_FOUND.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '201':
+          description: Copy created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                id: q6Rs4
+                name: Obsah kruhu
+                assignment: Vypočítejte obsah kruhu o poloměru \( r = 5\,\text{cm} \).
+                result: \( S = 25\pi\,\text{cm}^2 \)
+                language: cs
+                difficulty: 2
+                author:
+                  id: u3Kp8
+                  displayName: Eva Svobodová
+                tags: *id015
+                chapters: *id016
+                childCount: 0
+                createdAt: '2026-10-25T14:02:00Z'
+                updatedAt: '2026-10-25T14:02:00Z'
+                source:
+                  type: LICENSED_USE
+                  license: *id017
+                  citation: 'Převzato od: Jan Novák'
+                  licenseNote:
+                  showInWeb: true
+                  showInPdf: true
+                status: PRIVATE
+                version: 1
+                lockVersion: 1
+                parentId:
+                children: []
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /problems/{id}/publish:
+    post:
+      summary: Publish a problem
+      operationId: publishProblem
+      tags:
+      - Problem actions
+      description: |
+        Who: the author, if verified or trusted. Not allowed on a set child;
+        publishing a set publishes the parent with all its children as one unit.
+        - trusted teacher / admin → PUBLISHED
+        - verified teacher → REVIEWING (waits for review)
+        - registered (unverified) teacher → 403 TRUST_TOO_LOW
+        The problem needs a licence that allows publication. If it has none yet,
+        send `licenseId` in the body; if it already has one, `licenseId` is ignored
+        (a licence cannot be changed once set).
+        On a set, `licenseId` is applied to the parent and to every child without a licence;
+        a child whose licence does not allow publication → 409 LICENSE_REQUIRED
+        (the `detail` names the child).
+        Already PUBLISHED or REVIEWING → 200 with no change. BLOCKED → 403 FORBIDDEN.
+        Codes: 403 FORBIDDEN, TRUST_TOO_LOW; 404 NOT_FOUND;
+        409 LICENSE_REQUIRED, SET_CHILD_NOT_PUBLISHABLE.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRequest'
+            examples:
+              withLicense:
+                summary: 'First publication: choose a licence'
+                value:
+                  licenseId: L2bY4
+      responses:
+        '200':
+          description: Published, or sent to review (see `status`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example:
+                id: k3Xa9
+                name: Řešte rovnice
+                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
+                result:
+                language: cs
+                difficulty: 3
+                author: &id018
+                  id: u7Hn2
+                  displayName: Jan Novák
+                tags:
+                - &id019
+                  id: t1Ab3
+                  name: lineární rovnice
+                  scope: global
+                - &id021
+                  id: t2Cd4
+                  name: kvadratické rovnice
+                  scope: global
+                chapters:
+                - &id020
+                  id: c9Kd1
+                  name: Rovnice
+                  scope: global
+                childCount: 2
+                createdAt: '2026-10-20T09:15:00Z'
+                updatedAt: '2026-10-25T14:02:00Z'
+                source:
+                  type: OWN
+                  license: *id017
+                  citation:
+                  licenseNote:
+                  showInWeb: true
+                  showInPdf: true
+                status: PUBLISHED
+                version: 1
+                lockVersion: 3
+                parentId:
+                children:
+                - id: a1B2c
+                  name: Rovnice a)
+                  assignment: \( 2x + 3 = 11 \)
+                  result: \( x = 4 \)
+                  language: cs
+                  difficulty: 2
+                  author: *id018
+                  tags:
+                  - *id019
+                  chapters:
+                  - *id020
+                  childCount: 0
+                  createdAt: '2026-10-20T09:15:00Z'
+                  updatedAt: '2026-10-25T14:02:00Z'
+                  source:
+                    type: OWN
+                    license: *id017
+                    citation:
+                    licenseNote:
+                    showInWeb: true
+                    showInPdf: true
+                - id: d4E5f
+                  name: Rovnice b)
+                  assignment: \( x^2 = 9 \)
+                  result: \( x = \pm 3 \)
+                  language: cs
+                  difficulty: 3
+                  author: *id018
+                  tags:
+                  - *id021
+                  chapters:
+                  - *id020
+                  childCount: 0
+                  createdAt: '2026-10-20T09:15:00Z'
+                  updatedAt: '2026-10-25T14:02:00Z'
+                  source:
+                    type: OWN
+                    license: *id017
+                    citation:
+                    licenseNote:
+                    showInWeb: true
+                    showInPdf: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /problems/{id}/dissolve:
+    post:
+      summary: Dissolve a set
+      operationId: dissolveSet
+      tags:
+      - Problem actions
+      description: |
+        Who: the author only. Only on a set parent.
+        The parent is soft-deleted and every child becomes a standalone PRIVATE problem
+        owned by the author (to be published again on its own if wanted).
+        No request body. Returns the now-standalone problems in their former order.
+        Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 NOT_A_SET, SET_CHILD_EDIT_VIA_PARENT.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Set dissolved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemList'
+              example:
+                items:
+                - id: a1B2c
+                  name: Rovnice a)
+                  assignment: \( 2x + 3 = 11 \)
+                  result: \( x = 4 \)
+                  language: cs
+                  difficulty: 2
+                  author: *id001
+                  tags: *id022
+                  chapters: *id023
+                  childCount: 0
+                - id: d4E5f
+                  name: Rovnice b)
+                  assignment: \( x^2 = 9 \)
+                  result: \( x = \pm 3 \)
+                  language: cs
+                  difficulty: 3
+                  author: *id001
+                  tags: *id024
+                  chapters: *id025
+                  childCount: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /tags:
+    get:
+      summary: List tags (for pickers and autocomplete)
+      operationId: listTags
+      tags:
+      - Pickers
+      description: |
+        Who: any logged-in teacher.
+        Returns global tags and the caller's own personal tags.
+        With `q`, returns only tags whose name contains it (case-insensitive).
+      parameters:
+      - $ref: '#/components/parameters/TagQuery'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagPage'
+              example:
+                items:
+                - *id012
+                - *id009
+                - id: t8Mn1
+                  name: opakování 2.A
+                  scope: personal
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 3
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /chapters:
+    get:
+      summary: List chapters (flat, build the tree with parentId)
+      operationId: listChapters
+      tags:
+      - Pickers
+      description: |
+        Who: any logged-in teacher.
+        Returns all global chapters and the caller's own personal chapters as a flat list.
+        The frontend builds the tree from `parentId` (null = top level).
+        A personal chapter may have a global parent.
+        Sorted by name within each parent.
+        Not paginated: the tree is only usable when complete.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterList'
+              example:
+                items:
+                - id: c2Xy5
+                  name: Planimetrie
+                  scope: global
+                  parentId:
+                - id: c9Kd1
+                  name: Rovnice
+                  scope: global
+                  parentId:
+                - id: c4Lm7
+                  name: Lineární rovnice
+                  scope: global
+                  parentId: c9Kd1
+                - id: c6Pr2
+                  name: Rovnice – opakování 2.A
+                  scope: personal
+                  parentId: c9Kd1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /licenses:
+    get:
+      summary: List licences that allow publication
+      operationId: listLicenses
+      tags:
+      - Pickers
+      description: |
+        Who: any logged-in teacher.
+        Returns only licences that allow publication (the choices when publishing).
+        Not paginated: the list is short.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseList'
+              example:
+                items:
+                - id: L1aX3
+                  name: CC0 1.0
+                  url: https://creativecommons.org/publicdomain/zero/1.0/
+                  description: Volné dílo, bez nutnosti uvádět autora.
+                  requiresAttribution: false
+                  allowsModification: true
+                  requiresShareAlike: false
+                - id: L2bY4
+                  name: CC BY 4.0
+                  url: https://creativecommons.org/licenses/by/4.0/
+                  description: Užití i úpravy s uvedením autora.
+                  requiresAttribution: true
+                  allowsModification: true
+                  requiresShareAlike: false
+                - id: L3cZ5
+                  name: CC BY-SA 4.0
+                  url: https://creativecommons.org/licenses/by-sa/4.0/
+                  description: S uvedením autora, úpravy pod stejnou licencí.
+                  requiresAttribution: true
+                  allowsModification: true
+                  requiresShareAlike: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token from the auth part (not in this spec yet).
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: {$ref: '#/components/schemas/Sqid'}
+    Scope:
+      name: scope
+      in: query
+      required: true
+      description: mine = dashboard (own problems), public = public browser.
+      schema: {type: string, enum: [mine, public]}
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, default: 1}
+    Limit:
+      name: limit
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    TagIdFilter:
+      name: tagId
+      in: query
+      schema:
+        type: array
+        items: {$ref: '#/components/schemas/Sqid'}
+    ChapterIdFilter:
+      name: chapterId
+      in: query
+      description: Includes problems from child chapters.
+      schema:
+        type: array
+        items: {$ref: '#/components/schemas/Sqid'}
+    LanguageFilter:
+      name: language
+      in: query
+      schema: {type: string, example: cs}
+    TagQuery:
+      name: q
+      in: query
+      description: Text the tag name must contain (case-insensitive).
+      schema: {type: string, minLength: 1, example: rovn}
+
+  responses:
+    BadRequest:
+      description: Invalid input.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/ErrorDetails'}
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            code: VALIDATION_FAILED
+            detail: name must not be empty.
+    Unauthorized:
+      description: Not logged in, or the login expired.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/ErrorDetails'}
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+            code: UNAUTHENTICATED
+            detail: You are not logged in.
+    Forbidden:
+      description: Logged in, but not allowed to do this.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/ErrorDetails'}
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            code: FORBIDDEN
+            detail: You are not allowed to perform this action.
+    NotFound:
+      description: Resource not found.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/ErrorDetails'}
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: NOT_FOUND
+            detail: The resource you are looking for was not found.
+    Conflict:
+      description: The request conflicts with the current state of the resource.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/ErrorDetails'}
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            code: LOCK_MISMATCH
+            detail: Someone saved this problem in between. Reload and try again.
+
+  schemas:
+    # --- building blocks ---
+    Sqid:
+      type: string
+      example: k3Xa9
+    UserRef:
+      type: object
+      required: [id, displayName]
+      properties:
+        id: {$ref: '#/components/schemas/Sqid'}
+        displayName: {type: string}
+    TagRef:
+      type: object
+      required: [id, name, scope]
+      properties:
+        id: {$ref: '#/components/schemas/Sqid'}
+        name: {type: string}
+        scope: {type: string, enum: [global, personal]}
+    ChapterRef:
+      type: object
+      required: [id, name, scope]
+      properties:
+        id: {$ref: '#/components/schemas/Sqid'}
+        name: {type: string}
+        scope: {type: string, enum: [global, personal]}
+    LicenseRef:
+      type: object
+      required: [id, name]
+      properties:
+        id: {$ref: '#/components/schemas/Sqid'}
+        name: {type: string, example: CC BY 4.0}
+        url: {type: string, nullable: true}
+    SourceRef:
+      type: object
+      required: [type, license, licenseNote, showInWeb, showInPdf]
+      properties:
+        type:
+          type: string
+          enum: [OWN, LICENSED_USE, FREE_USE]
+        license:
+          description: The licence, or null when none is set yet (OWN before publishing).
+          anyOf:
+          - $ref: '#/components/schemas/LicenseRef'
+          - type: object
+            nullable: true
+            enum:
+            - 
+        citation:
+          type: string
+          nullable: true
+          description: >
+            Null for OWN (frontend builds it from author).
+            Omitted for viewers outside the source's citation audience
+            (applies to anonymous share-code views).
+        licenseNote: {type: string, nullable: true}
+        showInWeb: {type: boolean}
+        showInPdf: {type: boolean}
+
+    # --- problem: input ---
+    ProblemBase:
+      type: object
+      properties:
+        name: {type: string, minLength: 1}
+        assignment: {type: string, minLength: 1}
+        result: {type: string, nullable: true}
+        language: {type: string, nullable: true, example: cs}
+        difficulty: {type: integer, nullable: true, minimum: 1, maximum: 10}
+
+    ProblemChildInput:
+      description: |
+        One child of a set, sent inside `children` on create and patch.
+        - with `id`: update this existing child
+        - with `copyFromId`: copy that problem in, then apply any other sent fields
+        - with neither: create a new child (`name` and `assignment` required)
+        `id` and `copyFromId` are never both set. On create, `id` is not allowed.
+        Updating with `id`: same rules as PATCH (missing field = unchanged, null = clear);
+        the `id` must belong to this set.
+        Copying with `copyFromId`: same rules as POST /problems/{id}/copy. The problem must be
+        visible to the caller and must not be a set itself (sets have depth 1).
+        A child has no `children` of its own and no `lockVersion`
+        (the parent's lockVersion guards the whole set).
+        Breaking these rules returns 400 VALIDATION_FAILED.
+      allOf:
+      - $ref: '#/components/schemas/ProblemBase'
+      - type: object
+        properties:
+          id: {$ref: '#/components/schemas/Sqid'}
+          copyFromId: {$ref: '#/components/schemas/Sqid'}
+          tagIds:
+            type: array
+            items: {$ref: '#/components/schemas/Sqid'}
+          chapterIds:
+            type: array
+            items: {$ref: '#/components/schemas/Sqid'}
+
+    ProblemCreate:
+      allOf:
+      - $ref: '#/components/schemas/ProblemBase'
+      - type: object
+        required: [name, assignment]
+        properties:
+          tagIds:
+            type: array
+            items: {$ref: '#/components/schemas/Sqid'}
+          chapterIds:
+            type: array
+            items: {$ref: '#/components/schemas/Sqid'}
+          children:
+            type: array
+            description: >
+              Optional. Sending children makes this problem a set
+              (then `result` must be null). Array order = position.
+            items: {$ref: '#/components/schemas/ProblemChildInput'}
+
+    ProblemPatch:
+      allOf:
+      - $ref: '#/components/schemas/ProblemBase'
+      - type: object
+        required: [lockVersion]
+        properties:
+          lockVersion: {type: integer}
+          tagIds:
+            type: array
+            description: Missing = unchanged. Sent = replaces the whole list.
+            items: {$ref: '#/components/schemas/Sqid'}
+          chapterIds:
+            type: array
+            description: Missing = unchanged. Sent = replaces the whole list.
+            items: {$ref: '#/components/schemas/Sqid'}
+          children:
+            type: array
+            description: >
+              Missing = children unchanged.
+              Sent = the complete new list: existing children not in it are removed,
+              array order = position. An empty array removes all children.
+              A set parent must have `result` null (409 SET_PARENT_HAS_RESULT).
+            items: {$ref: '#/components/schemas/ProblemChildInput'}
+
+    # --- problem: output ---
+    ProblemListItem:
+      allOf:
+      - $ref: '#/components/schemas/ProblemBase'
+      - type: object
+        required: [id, name, assignment, author, tags, chapters, childCount]
+        properties:
+          id: {$ref: '#/components/schemas/Sqid'}
+          author: {$ref: '#/components/schemas/UserRef'}
+          tags:
+            type: array
+            items: {$ref: '#/components/schemas/TagRef'}
+          chapters:
+            type: array
+            items: {$ref: '#/components/schemas/ChapterRef'}
+          childCount:
+            type: integer
+            minimum: 0
+            description: 0 = standalone problem, more = set. Counted by the server, not stored.
+
+    ProblemDetailCore:
+      description: Detail fields shared by a problem and by each child inside a set.
+      allOf:
+      - $ref: '#/components/schemas/ProblemListItem'
+      - type: object
+        required: [source]
+        properties:
+          createdAt: {type: string, format: date-time}
+          updatedAt: {type: string, format: date-time}
+          source: {$ref: '#/components/schemas/SourceRef'}
+
+    ProblemDetail:
+      allOf:
+      - $ref: '#/components/schemas/ProblemDetailCore'
+      - type: object
+        required: [parentId, children]
+        properties:
+          status:
+            type: string
+            enum: [PRIVATE, REVIEWING, PUBLISHED, WITHDRAWN, BLOCKED]
+            description: Present only for the author.
+          version:
+            type: integer
+            description: Present only for the author.
+          lockVersion:
+            type: integer
+            description: Present only for the author. Send back in PATCH.
+          parentId:
+            type: string
+            nullable: true
+            example: k3Xa9
+            description: Sqid of the set this problem belongs to, or null when it is not a set child.
+          children:
+            type: array
+            description: Ordered children of a set. Empty for a standalone problem or a child.
+            items: {$ref: '#/components/schemas/ProblemDetailCore'}
+
+    # --- pickers ---
+    ChapterNode:
+      allOf:
+      - $ref: '#/components/schemas/ChapterRef'
+      - type: object
+        required: [parentId]
+        properties:
+          parentId:
+            type: string
+            nullable: true
+            example: c9Kd1
+            description: Sqid of the parent chapter, or null for a top-level chapter.
+    ChapterList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ChapterNode'}
+    TagPage:
+      type: object
+      required: [items, meta]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/TagRef'}
+        meta: {$ref: '#/components/schemas/PageMeta'}
+    License:
+      allOf:
+      - $ref: '#/components/schemas/LicenseRef'
+      - type: object
+        required: [requiresAttribution, allowsModification, requiresShareAlike]
+        properties:
+          description: {type: string, nullable: true}
+          requiresAttribution: {type: boolean}
+          allowsModification: {type: boolean}
+          requiresShareAlike:
+            type: boolean
+            description: Copies inherit the licence.
+    LicenseList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/License'}
+
+    # --- actions ---
+    PublishRequest:
+      type: object
+      properties:
+        licenseId:
+          allOf:
+          - $ref: '#/components/schemas/Sqid'
+          description: Required only when the problem has no licence yet. Must allow publication.
+    ProblemList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ProblemListItem'}
+
+    # --- pagination wrapper ---
+    PageMeta:
+      type: object
+      required: [page, limit, total]
+      properties:
+        page: {type: integer}
+        limit: {type: integer}
+        total: {type: integer}
+    ProblemPage:
+      type: object
+      required: [items, meta]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ProblemListItem'}
+        meta: {$ref: '#/components/schemas/PageMeta'}
+
+    # --- errors (RFC 9457) ---
+    ErrorDetails:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: {type: string}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        code:
+          type: string
+          example: LOCK_MISMATCH
+          description: |
+            Exact error case, so the frontend can show the right message.
+            400 VALIDATION_FAILED - invalid input
+            401 UNAUTHENTICATED - not logged in
+            403 FORBIDDEN - logged in, but not allowed
+            403 TRUST_TOO_LOW - registered user trying to publish
+            404 NOT_FOUND - problem does not exist or is hidden
+            409 LOCK_MISMATCH - lockVersion does not match
+            409 SET_PARENT_HAS_RESULT - set parent (or problem getting its first child) still has a result
+            409 LICENSE_REQUIRED - publishing without a licence that allows publication
+            409 NOT_A_SET - dissolving something that is not a set
+            409 SET_CHILD_NOT_PUBLISHABLE - publishing a child on its own
+            409 SET_CHILD_EDIT_VIA_PARENT - PATCH or DELETE sent directly to a set child
+        requestId: {type: string}

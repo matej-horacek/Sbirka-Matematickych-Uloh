@@ -1,0 +1,16 @@
+packages:
+  - "apps/*"
+  - "packages/shared/*"
+  - "packages/web/*"
+  - "packages/api/*"
+  - "tooling/*"
+
+# only what both sides use
+catalog:
+  typescript: ^5.9.0
+  zod: ^4.1.0
+  tsup: ^8.5.0
+
+onlyBuiltDependencies:
+  - "@nestjs/core"
+  - esbuild

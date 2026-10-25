@@ -1,0 +1,30 @@
+{
+  "name": "@matematika/contracts",
+  "version": "1.0.1",
+  "private": true,
+  "type": "module",
+  "description": "API contract: openapi.yaml is the source of truth; types and Zod schemas are generated from it.",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    },
+    "./openapi.yaml": "./openapi.yaml"
+  },
+  "files": ["dist", "openapi.yaml"],
+  "scripts": {
+    "generate": "openapi-ts",
+    "build": "pnpm generate && tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.99.0",
+    "@matematika/tsconfig": "workspace:*",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
+  }
+}

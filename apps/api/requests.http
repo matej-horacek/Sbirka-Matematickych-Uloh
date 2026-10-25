@@ -1,0 +1,76 @@
+### Requests for the JetBrains HTTP client (click the ▶ next to each one).
+### Mock login: Bearer jan (trusted), eva (verified), petr (registered).
+### Seed ids: set UkLWZ (children gbHJd, EfhxL), Obsah kruhu VqXmZ, Pythagorova věta uw2YK,
+### Eva's private OIJLh, textbook problem AXs1i; chapter Rovnice UkLWZ; licence CC BY 4.0 gbHJd.
+
+@base = http://localhost:3000/api/v1
+
+### My problems (dashboard)
+GET {{base}}/problems?scope=mine
+Authorization: Bearer jan
+
+### Public browser, filtered by chapter (includes child chapters)
+GET {{base}}/problems?scope=public&chapterId=UkLWZ
+Authorization: Bearer eva
+
+### Detail of a set
+GET {{base}}/problems/UkLWZ
+Authorization: Bearer jan
+
+### Create a set
+POST {{base}}/problems
+Authorization: Bearer jan
+Content-Type: application/json
+
+{
+  "name": "Řešte rovnice",
+  "assignment": "Vyřešte rovnice v oboru reálných čísel:",
+  "result": null,
+  "tagIds": ["UkLWZ"],
+  "chapterIds": ["UkLWZ"],
+  "children": [
+    { "name": "Rovnice a)", "assignment": "\\( 2x + 3 = 11 \\)", "result": "\\( x = 4 \\)" },
+    { "name": "Rovnice b)", "assignment": "\\( x^2 = 9 \\)" }
+  ]
+}
+
+### Edit the whole set: keep a), drop b), add c), copy Obsah kruhu in
+PATCH {{base}}/problems/UkLWZ
+Authorization: Bearer jan
+Content-Type: application/json
+
+{
+  "lockVersion": 3,
+  "children": [
+    { "id": "gbHJd" },
+    { "name": "Rovnice c)", "assignment": "\\( 3x - 1 = 2x + 4 \\)" },
+    { "copyFromId": "VqXmZ" }
+  ]
+}
+
+### Copy a published problem
+POST {{base}}/problems/VqXmZ/copy
+Authorization: Bearer eva
+
+### Publish the set with a licence
+POST {{base}}/problems/UkLWZ/publish
+Authorization: Bearer jan
+Content-Type: application/json
+
+{ "licenseId": "gbHJd" }
+
+### Dissolve a set (children become standalone)
+POST {{base}}/problems/UkLWZ/dissolve
+Authorization: Bearer jan
+
+### Pickers
+GET {{base}}/tags?q=rov
+Authorization: Bearer jan
+
+###
+GET {{base}}/chapters
+Authorization: Bearer jan
+
+###
+GET {{base}}/licenses
+Authorization: Bearer jan
