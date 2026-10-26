@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Block } from '../../types'
+import type { Block } from '../../../types.ts'
 import TextBlock from './TextBlock.vue'
 import MathBlock from './MathBlock.vue'
 import ImageBlock from './ImageBlock.vue'

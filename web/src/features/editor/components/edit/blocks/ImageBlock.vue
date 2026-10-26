@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ImageBlock as ImageBlockData } from '../../types'
+import type { ImageBlock as ImageBlockData } from '../../../types'
 defineProps<{ block: ImageBlockData }>()
 defineEmits<{ update: [patch: Partial<ImageBlockData>] }>()
 </script>

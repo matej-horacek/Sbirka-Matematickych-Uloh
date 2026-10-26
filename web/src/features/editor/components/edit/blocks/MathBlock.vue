@@ -1,7 +1,6 @@
-<!-- MathBlock.vue -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { MathBlock as MathBlockData } from '../../types'
+import type { MathBlock as MathBlockData } from '../../../types.ts'
 import MathLiveInput from '../MathLiveInput.vue'
 import KaTeXInput from '../KaTeXInput.vue'
 
