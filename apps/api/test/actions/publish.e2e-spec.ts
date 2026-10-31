@@ -1,7 +1,8 @@
 import { useTestApp } from '../support/app';
 import { expectError } from '../support/expect';
 import { createProblem } from '../support/factory';
-import { malformedIds, seed, unknownId } from '../support/seed';
+import { auth } from '../support/auth';
+import { malformedIds, overflowIds, seed, unknownId } from '../support/seed';
 
 // publishProblem — POST /problems/{id}/publish
 // Spec: the author, if verified or trusted. trusted/admin → PUBLISHED; verified → REVIEWING;
@@ -85,6 +86,14 @@ describe('publishProblem POST /problems/{id}/publish', () => {
       const copy = (await api.as('jan').post(`/problems/${P.pythagoras}/copy`).expect(201)).body;
       const res = await api.as('jan').post(`/problems/${copy.id}/publish`).expect(200);
       expect(res.body.status).toBe('PUBLISHED');
+    });
+
+    it.skip('a licenseId that decodes beyond the safe integer range never causes a 500 [R-021]', async () => {
+      // Status not asserted (400 is not declared for publish, C-6): only "not 500". raw() because 500 is not in the spec either.
+      const { api } = ctx();
+      const p = await createProblem(api, 'jan');
+      const res = await api.raw().post(`/api/v1/problems/${p.id}/publish`).set(auth.jan).send({ licenseId: overflowIds[0] });
+      expect(res.status).toBeLessThan(500);
     });
 
     // Not tested: a malformed licenseId. The mock answers 409 LICENSE_REQUIRED; the spec declares no 400 for

@@ -1,7 +1,7 @@
 import { useTestApp } from '../support/app';
 import { users } from '../support/auth';
 import { expectError } from '../support/expect';
-import { seed, unknownId } from '../support/seed';
+import { overflowIds, seed, unknownId } from '../support/seed';
 
 // createProblem — POST /problems
 // Spec: any logged-in teacher (registered too). Creates ONE problem: PRIVATE, owned by the caller,
@@ -119,6 +119,14 @@ describe('createProblem POST /problems', () => {
         const before = await store.countRecords('problems', undefined, { includeDeleted: true });
         expectError(await api.as('jan').post('/problems', body), 400, 'VALIDATION_FAILED');
         expect(await store.countRecords('problems', undefined, { includeDeleted: true })).toBe(before);
+      }
+    });
+
+    it.skip('a tagId/chapterId that decodes beyond the safe integer range → 400, never 500 [R-021]', async () => {
+      const { api } = ctx();
+      for (const bad of overflowIds) {
+        expectError(await api.as('jan').post('/problems', { name: 'N', assignment: 'A', tagIds: [bad] }), 400, 'VALIDATION_FAILED');
+        expectError(await api.as('jan').post('/problems', { name: 'N', assignment: 'A', chapterIds: [bad] }), 400, 'VALIDATION_FAILED');
       }
     });
 

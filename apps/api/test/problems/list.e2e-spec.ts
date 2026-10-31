@@ -1,7 +1,7 @@
 import { useTestApp } from '../support/app';
 import { users } from '../support/auth';
 import { expectError, ids } from '../support/expect';
-import { seed, unknownId } from '../support/seed';
+import { overflowIds, seed, unknownId } from '../support/seed';
 
 // listProblems — GET /problems
 // Spec: any logged-in teacher; scope=mine = own problems, scope=public = published ones;
@@ -107,6 +107,18 @@ describe('listProblems GET /problems', () => {
         const res = await ctx().api.as('jan').get(`/problems?scope=mine&${q}`);
         if (res.status === 200) expect(res.body.items).toEqual([]);
         else expectError(res, 400, 'VALIDATION_FAILED');
+      }
+    });
+  });
+
+  describe('overflowing ids [R-021]', () => {
+    it.skip('a tagId/chapterId that decodes beyond the safe integer range never causes a 500 [R-021]', async () => {
+      for (const bad of overflowIds) {
+        for (const q of [`tagId=${bad}`, `chapterId=${bad}`]) {
+          const res = await ctx().api.as('jan').get(`/problems?scope=mine&${q}`);
+          if (res.status === 200) expect(res.body.items).toEqual([]);
+          else expectError(res, 400, 'VALIDATION_FAILED');
+        }
       }
     });
   });

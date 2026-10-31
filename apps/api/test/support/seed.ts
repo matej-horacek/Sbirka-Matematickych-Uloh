@@ -27,3 +27,8 @@ export const seed = {
 export const unknownId = encodeId(9999);
 /** Strings that are not canonical Sqids (decode fails or re-encode differs). */
 export const malformedIds = ['!!!', 'a', '0'];
+/**
+ * Strings that pass Sqids' alphabet but decode to a number above Number.MAX_SAFE_INTEGER (found by fast-check).
+ * decodeId re-encodes them, Sqids throws, and the API answers 500 (R-021).
+ */
+export const overflowIds = ['e50000AA0A', 'aa00000A00'];

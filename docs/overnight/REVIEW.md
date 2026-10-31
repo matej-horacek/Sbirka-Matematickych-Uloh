@@ -31,6 +31,7 @@ pass today by accident (Nest's own 404 for a missing route looks like the spec's
 | R-008 | medium | `ProblemDetail` lacks `originalId`; children lack their own `lockVersion` | `problem.mapper.ts:66-76` | `ProblemDetail.originalId`, `ProblemDetailCore.lockVersion` | `get` 2, `create` 1, `copy` 1 |
 | R-010 | medium | Set child on delete/dissolve → code `SET_CHILD_EDIT_VIA_PARENT`, spec says `IS_SET_CHILD` | `problems.service.ts:151,164` | deleteProblem, dissolveSet codes; changelog 2.0.0 | `delete` 1, `dissolve` 1 |
 | R-012 | medium | `error-codes.ts` out of sync with spec 2.0.0 | `packages/shared/contracts/src/error-codes.ts:15` | `ErrorDetails.code` list | none (static) |
+| R-021 | medium | A crafted id that decodes beyond `MAX_SAFE_INTEGER` (e.g. `e50000AA0A`) → **500** on every id input (path, query, body) | `common/utils/ids.ts:19` | ids are Sqids; 400/404, never 500 | `get` 1, `create` 1, `list` 1, `publish` 1, `properties` 1 |
 | R-013 | medium | `listProblems`: a malformed `tagId`/`chapterId` is dropped, so the filter **widens** to all problems | `problems.service.ts:48-49` | `TagIdFilter`/`ChapterIdFilter` items are Sqids; 400 VALIDATION_FAILED | `list` 1 |
 | R-011 | low | `createProblem`/`updateProblem` still accept the 1.0.x `children` array (whole-set editing) | `problems.service.ts:69-74,106,119-129,144` | 2.0.0 changelog "children removed"; "Creates one problem" | `create` 1 |
 | R-014 | low (mock) | Any unknown bearer token logs in as jan | `common/guards/mock-auth.guard.ts:22` | `Unauthorized` 401; Phase B B1 | `pickers` 1 |
@@ -40,7 +41,7 @@ pass today by accident (Nest's own 404 for a missing route looks like the spec's
 | R-019 | low (Phase B) | Data-access shapes that make the Prisma swap harder | see details | T5.2 | none |
 | R-020 | low now, medium in Phase B | Set children are ordered with locale-dependent `localeCompare` (cs-CZ: "ch" after "i"; case order ignored) | `problems.repository.ts:32` | §6 "positions are string fractional-indexing values" | `properties` 1 |
 
-Counts: high 9, medium 4, low 7. No critical findings: the ownership and visibility checks hold everywhere the tests looked (see T5.3 below).
+Counts: high 9, medium 5, low 7. No critical findings: the ownership and visibility checks hold everywhere the tests looked (see T5.3 below).
 
 ## Details
 
@@ -108,6 +109,17 @@ the implementation checklist for the mock's 2.0.0 catch-up (`PHASE_B_PLAN.md` T7
 - `packages/shared/contracts/src/error-codes.ts`: missing `IS_SET_CHILD`, `CANNOT_ADD_TO_SET`, `NO_UPDATE_AVAILABLE`;
   still has `SET_CHILD_EDIT_VIA_PARENT` (`:15`). Same as SPEC_CHECK T2.4. Not in `apps/api/src`, but it is the mock's code list.
 
+### R-021 — overflowing Sqids cause a 500 (medium)
+- **Where:** `decodeId` (`common/utils/ids.ts:16-20`) decodes, then re-encodes to check the string is canonical (`:19`). Some
+  10-character strings in the Sqids alphabet decode to a number above `Number.MAX_SAFE_INTEGER`; `sqids.encode` then throws a
+  plain `Error` ("Encoding supports numbers between 0 and 9007199254740991"), which is not an `ApiError`, so the filter answers **500**.
+- **Found by:** fast-check (T8). Counterexamples kept in `test/support/seed.ts` (`overflowIds`) and as fixed examples in `test/properties.spec.ts`.
+- **Reproduced on:** `GET /problems/e50000AA0A`, `GET /problems?scope=mine&tagId=e50000AA0A`, `POST /problems` with that tagId,
+  `POST /problems/{id}/publish` with that licenseId: all 500. Every endpoint that takes an id is affected.
+- **Impact:** any logged-in client can produce 500s at will (log noise, alerting, error budget); no data leaks (the body has no details).
+- **Suggested fix:** in `decodeId`, return null unless `Number.isSafeInteger(numbers[0])` before re-encoding (or wrap the re-encode in try/catch).
+  Phase B: the same guard keeps oversized values away from Postgres `int` columns (max 2 147 483 647, so a lower bound check is even better).
+
 ### R-013 — malformed filter ids widen the list (medium)
 - **Where:** `problems.service.ts:48-49` maps `decodeId` and **filters out** nulls. `?tagId=!!!` becomes `tagIds: []`,
   and `findMany` treats an empty list as "no filter" (`problems.repository.ts:49-50`), so every problem in the scope is returned.
@@ -174,4 +186,4 @@ the implementation checklist for the mock's 2.0.0 catch-up (`PHASE_B_PLAN.md` T7
 - Personal tags/chapters of another teacher are neither listed nor attachable (400).
 - Copies of a foreign original keep only global tags/chapters; the original is never modified by a copy.
 - Raw integer ids are never accepted in paths (`/problems/4` → 404) and never appear in responses (every id is a Sqid; the contract check plus `toDbId` decoding in the store probe).
-- Malformed ids never cause a 500 (path → 404; body → 400), except R-013's widening.
+- Malformed ids (wrong alphabet, non-canonical) never cause a 500 (path → 404; body → 400), apart from R-013's widening. **But** ids that decode beyond the safe integer range do cause a 500 (R-021, found by fast-check in T8).

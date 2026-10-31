@@ -1,7 +1,7 @@
 import { useTestApp } from '../support/app';
 import { users } from '../support/auth';
 import { AUTHOR_ONLY_DETAIL_FIELDS, expectError, ids } from '../support/expect';
-import { malformedIds, seed, unknownId } from '../support/seed';
+import { malformedIds, overflowIds, seed, unknownId } from '../support/seed';
 
 // getProblem — GET /problems/{id}
 // Spec: the author, or any logged-in teacher when published; otherwise 404 (existence not revealed).
@@ -107,6 +107,11 @@ describe('getProblem GET /problems/{id}', () => {
 
     it.each(malformedIds)('404 NOT_FOUND (never 500) for the malformed id "%s"', async (bad) => {
       expectError(await ctx().api.as('jan').get(`/problems/${encodeURIComponent(bad)}`), 404, 'NOT_FOUND');
+    });
+
+    it.skip('an id that decodes beyond the safe integer range → 404, never 500 [R-021]', async () => {
+      // Mock: decodeId re-encodes the decoded number, Sqids throws "Encoding supports numbers between 0 and …", the filter answers 500.
+      for (const bad of overflowIds) expectError(await ctx().api.as('jan').get(`/problems/${bad}`), 404, 'NOT_FOUND');
     });
 
     it('a raw integer id is not accepted as an id', async () => {
