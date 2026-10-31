@@ -11,9 +11,14 @@ module.exports = {
   testMatch: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
+    // test/tsconfig.json sets isolatedModules, so ts-jest skips per-file type-checking
+    // (typecheck:test in verify covers it).
     '^.+\\.ts$': [transformer, { tsconfig: '<rootDir>/test/tsconfig.json' }],
   },
   testEnvironment: 'node',
+  // Memory guards: a runaway node process once exhausted all RAM.
+  maxWorkers: 2,
+  workerIdleMemoryLimit: '768MB',
   collectCoverageFrom: ['src/**/*.ts', '!src/main.ts'],
   coverageDirectory: '<rootDir>/coverage',
 };

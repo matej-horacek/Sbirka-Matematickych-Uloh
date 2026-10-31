@@ -48,7 +48,9 @@ for (const step of steps) {
   }
   console.log(`\n=== ${step.name}: ${step.cmd}`);
   const t = Date.now();
-  const r = spawnSync(step.cmd, { cwd: root, stdio: 'inherit', shell: true });
+  // Cap each node process's heap so a runaway one dies instead of exhausting system RAM.
+  const env = { ...process.env, NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --max-old-space-size=2048`.trim() };
+  const r = spawnSync(step.cmd, { cwd: root, stdio: 'inherit', shell: true, env });
   const secs = ((Date.now() - t) / 1000).toFixed(1);
   if (r.status !== 0) {
     summary.push(`  FAIL  ${step.name} (${secs}s)`);

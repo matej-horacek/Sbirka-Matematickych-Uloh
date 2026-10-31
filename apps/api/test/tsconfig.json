@@ -4,6 +4,7 @@
   "compilerOptions": {
     "rootDir": "..",
     "noEmit": true,
+    "isolatedModules": true,
     "types": ["jest", "node"]
   },
   "include": ["../src", "./**/*.ts"]
