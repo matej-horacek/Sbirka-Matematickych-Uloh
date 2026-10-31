@@ -74,3 +74,31 @@ Result: **67 symbols drift** (types: 1 removed, 32 added, 6 changed; Zod: 1 remo
 | `ErrorDetails` | doc comment only (code list); no type change | `error-codes.ts` is hand-kept and **not** covered by drift; see T2.4 |
 
 Everything else (87 − 7 type symbols; 53 − 7 Zod symbols) is identical.
+
+## T2.3b Internal consistency of the spec
+
+Items marked **(O-x)** touch an Open decision. They are reported, not judged.
+
+| # | Where | What the spec says | Inconsistency |
+|---|---|---|---|
+| C-1 | `info.version` (line 21) | `version: 1.0.0` | The changelog's top entry is **2.0.0**. The version also went *down*: the previous commit (`fcd8b9c`) had `1.0.1`. `packages/shared/contracts/package.json` says `1.0.1`. **(O8)**: Daniel fixes it himself. |
+| C-2 | `createProblem` 201 example (lines 157–225) | A set: `childCount: 2` plus two `children` | The 2.0.0 description says create makes **one** problem, and `ProblemCreate` has no `children`. A fresh problem always has `childCount: 0` and `children: []`. The example is a leftover from 1.0.x. |
+| C-3 | `updateProblem` description (line 320) | "Editing a set child also raises the set's version (**copy holders of the set are notified**)" | Decided: `updateAvailable` is computed on read, not stored. "Are notified" can mean just that flag, or stored notification rows. **(O2)**: not judged here; see `decisions/O-2.md`. |
+| C-4 | Author views of children | `getProblem` 200 example: each child has `lockVersion`. `createProblem` 201, `updateProblem` 200, `publishProblem` 200 examples (also author views): children have **no** `lockVersion`. | 2.0.0 moved `lockVersion` to `ProblemDetailCore` ("each child has its own lockVersion for editing its content"), so author views should show it on children too. The examples disagree with each other. (Schema-valid, because the field is optional.) |
+| C-5 | `takeOverUpdate` | `requestBody.required: true` (`lockVersion` required) | No `400` response is declared, and the "Codes:" line has no `VALIDATION_FAILED`. A missing or wrong-typed `lockVersion` has no specified answer. |
+| C-6 | `publishProblem` | Optional body `{ licenseId: Sqid }` | No `400` response declared. A wrong-typed `licenseId` (e.g. a number) or malformed JSON has no specified answer (the mock returns 400 `VALIDATION_FAILED`). An unknown licence is specified as 409 `LICENSE_REQUIRED`. |
+| C-7 | `ErrorDetails.code` description | `409 IS_SET_CHILD - delete, dissolve or add-children sent to a set child` | `takeOverUpdate` also lists `IS_SET_CHILD`, which this list does not mention. (A child copy is never flagged with `updateAvailable`, per `ProblemListItem.updateAvailable`, so take-over on a child may be unreachable; then the code is unnecessary there.) |
+| C-8 | Tag `Problems` description (line 32) | "Create, read, update and delete problems and **whole sets**." | 1.0.x wording; 2.0.0 removed whole-set editing. |
+| C-9 | `AddChildRequest` | "Exactly one of `problemId` or `copyFromId`" | Only stated in prose; the schema doesn't express it (no `oneOf`/`not`), so generated Zod accepts both or neither. The server has to check it in code. (Fine for 3.0, but worth knowing: contract validation won't catch it.) |
+| C-10 | `afterId` (`AddChildRequest`, `ReorderChildRequest`) | `type: string, nullable: true` | Every other id uses `$ref: Sqid`. `afterId` is an inline string, so generators produce `string \| null`, not `Sqid`. Cosmetic, but inconsistent. |
+| C-11 | Example ids | Most examples use invented ids (`k3Xa9`, `a1B2c`) | `addSetChild` `copyAfter` uses `VqXmZ`, and the `afterId` examples use `gbHJd`: real Sqids from the mock seed. Cosmetic. |
+| C-12 | `SourceRef.license` | `anyOf: [LicenseRef, {type: object, nullable: true, enum: [null]}]` | A valid OpenAPI 3.0 workaround for a nullable `$ref`, but unusual. openapi-ts turns it into `LicenseRef \| null` correctly. Informational. |
+| C-13 | `listChapters`, `listLicenses` | "Not paginated" | Deliberate exceptions to "one shared pagination", stated in the spec. Informational. |
+
+### Unclear points where the spec is silent (→ `QUESTIONS.md`)
+
+These are gaps, not contradictions. They are not Open items in §6, so they went to QUESTIONS (Q-004…Q-007):
+- Does `addSetChild` / `reorderSetChild` / `removeSetChild` raise the set's **`version`**? (It changes `lockVersion`, per "the editor gets the new lockVersion".) This decides whether copy holders of a set see `updateAvailable` after a structure change.
+- Does `takeOverUpdate` raise the copy's `version` / `lockVersion`, and does it set `originalProblemVersion` to the original's current version?
+- A child copied in with `copyFromId` keeps `originalId`, but `updateAvailable` is "never on its children". Is that child's link ever used?
+- What does `takeOverUpdate` / `getProblem` report when the **original was deleted** (soft delete) or made private again?

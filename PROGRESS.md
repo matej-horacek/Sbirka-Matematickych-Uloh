@@ -11,5 +11,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 | T2.1 | done | Redocly recommended: valid, 1 warning (info-license); all 144 $refs resolve; added pnpm spec:lint + dev dep @redocly/cli | 01:56 |
 | T2.2 | done | scripts/check-spec-examples.mjs + pnpm spec:examples: 47/47 examples valid (self-test with planted errors fails as expected); no undeclared props; dev deps ajv, ajv-formats, yaml | 01:58 |
 | T2.3 | done | scripts/spec-drift.mjs + pnpm spec:drift (temp-dir regen vs local src/generated): 67 symbols drift (1 removed, 53 added, 12 changed across types+zod) — summary by schema in SPEC_CHECK.md; kept out of verify | 01:59 |
+| T2.3b | done | 13 consistency items C-1..C-13 in SPEC_CHECK.md (C-1 version→O8, C-3 notified→O2, C-2 create example is a set, C-4 child lockVersion inconsistent in examples, C-5/C-6 missing 400 on takeOverUpdate/publish); 4 gaps → Q-004..Q-007 | 02:01 |
 
-**Next task:** T2.3b
+**Next task:** T2.4
