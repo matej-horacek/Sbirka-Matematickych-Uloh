@@ -1,0 +1,10 @@
+{
+  // Type-checks the tests together with the source they import. Not used by `nest build`.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true,
+    "types": ["jest", "node"]
+  },
+  "include": ["../src", "./**/*.ts"]
+}
