@@ -28,4 +28,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 
 | T6 | done | decisions/O-2,3,4,5,7,8.md: current state quoted from §6 + spec + mock, 3 options each with impacts, spec sketches for O2/O3/O4, one "look at first" line. No recommendation. | 11:10 |
 
-**Next task:** T7 (PHASE_B_PLAN.md)
+| T7 | done | PHASE_B_PLAN.md: T7.1 data model (8 tables + Phase B additions), T7.0 mock→2.0.0 in 11 steps mapped to skipped tests, T7.2 swap per marker incl. atomic optimistic locking, T7.3 test reuse (StoreProbe + Docker Postgres), T7.4 risks per O-item. | 11:16 |
+
+**Next task:** T10 is mandatory at 13:15; time remains → T8 (extra tests), then T10
