@@ -14,5 +14,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 | T2.3b | done | 13 consistency items C-1..C-13 in SPEC_CHECK.md (C-1 version→O8, C-3 notified→O2, C-2 create example is a set, C-4 child lockVersion inconsistent in examples, C-5/C-6 missing 400 on takeOverUpdate/publish); 4 gaps → Q-004..Q-007 | 02:01 |
 | T2.4 | done | Conventions: all pass except error-codes.ts vs spec (missing IS_SET_CHILD, CANNOT_ADD_TO_SET, NO_UPDATE_AVAILABLE; stale SET_CHILD_EDIT_VIA_PARENT); minor: nullable ids not Sqid refs | 02:01 |
 | T2.5 | done | 12 issues S-1..S-12 with severity (1 high: YAML anchors crash startup; 3 medium); O8 + O2 listed under Open | 02:01 |
+| T3.1 | done | No runner existed → Jest 30 + ts-jest 29 + supertest 7 + @nestjs/testing 11 (apps/api devDeps); jest.config.js, test/tsconfig.json; scripts test, test:unit, test:e2e, test:cov, typecheck:test | 02:06 |
 
-**Next task:** T3.1
+**Next task:** T3.2
