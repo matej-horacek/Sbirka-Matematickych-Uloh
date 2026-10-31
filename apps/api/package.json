@@ -11,7 +11,8 @@
     "test": "jest",
     "test:unit": "jest --testPathIgnorePatterns \"\\.e2e-spec\\.ts$\"",
     "test:e2e": "jest --testPathPatterns \"\\.e2e-spec\\.ts$\"",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "test:unskipped": "node -e \"process.env.UNSKIP=1;require('jest').run()\" -- --no-cache"
   },
   "dependencies": {
     "@matematika/contracts": "workspace:*",
