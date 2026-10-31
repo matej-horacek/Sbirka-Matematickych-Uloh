@@ -3,7 +3,8 @@
 // and which already pass (the mock caught up: remove the `.skip`). Wraps ts-jest.
 const tsJest = require('ts-jest').default;
 
-const SKIP = /\bit\.skip\(/g;
+// it.skip(…) → it(…), it.skip.each(…)(…) → it.each(…)(…).
+const SKIP = /\bit\.skip(?=[.(])/g;
 
 module.exports = {
   createTransformer(options) {
@@ -11,13 +12,13 @@ module.exports = {
     return {
       ...inner,
       process(src, path, opts) {
-        return inner.process(src.replace(SKIP, 'it('), path, opts);
+        return inner.process(src.replace(SKIP, 'it'), path, opts);
       },
       processAsync(src, path, opts) {
-        return inner.processAsync(src.replace(SKIP, 'it('), path, opts);
+        return inner.processAsync(src.replace(SKIP, 'it'), path, opts);
       },
       getCacheKey(src, path, opts) {
-        return 'unskip:' + inner.getCacheKey(src.replace(SKIP, 'it('), path, opts);
+        return 'unskip:' + inner.getCacheKey(src.replace(SKIP, 'it'), path, opts);
       },
     };
   },
