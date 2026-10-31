@@ -112,7 +112,8 @@ describe('listProblems GET /problems', () => {
   });
 
   describe('overflowing ids [R-021]', () => {
-    it.skip('a tagId/chapterId that decodes beyond the safe integer range never causes a 500 [R-021]', async () => {
+    // Still skipped: the unparseable id is dropped and the filter widens to everything (R-013, out of scope for I2).
+    it.skip('a tagId/chapterId that decodes beyond the safe integer range never causes a 500 [R-021, needs R-013]', async () => {
       for (const bad of overflowIds) {
         for (const q of [`tagId=${bad}`, `chapterId=${bad}`]) {
           const res = await ctx().api.as('jan').get(`/problems?scope=mine&${q}`);

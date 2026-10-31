@@ -103,7 +103,7 @@ export class ProblemsService {
   update(user: CurrentUserData, id: number, body: ProblemPatch): { accepted: boolean; problem: ProblemDetail } {
     const row = this.findOwn(user, id);
     if (row.parentId !== null) {
-      throw ApiError.conflict(ErrorCode.SET_CHILD_EDIT_VIA_PARENT, 'Edit a set child through its parent.');
+      throw ApiError.conflict(ErrorCode.IS_SET_CHILD, 'Edit a set child through its parent.');
     }
     if (body.lockVersion !== row.lockVersion) {
       throw ApiError.conflict(ErrorCode.LOCK_MISMATCH, 'Someone saved this problem in between. Reload and try again.');
@@ -136,7 +136,7 @@ export class ProblemsService {
   remove(user: CurrentUserData, id: number): void {
     const row = this.findOwn(user, id);
     if (row.parentId !== null) {
-      throw ApiError.conflict(ErrorCode.SET_CHILD_EDIT_VIA_PARENT, 'Delete a set child through its parent.');
+      throw ApiError.conflict(ErrorCode.IS_SET_CHILD, 'Delete a set child through its parent.');
     }
     this.repo.softDelete([row.id, ...this.repo.findChildren(row.id).map((c) => c.id)]);
   }
@@ -149,7 +149,7 @@ export class ProblemsService {
   dissolve(user: CurrentUserData, id: number): ProblemList {
     const row = this.findOwn(user, id);
     if (row.parentId !== null) {
-      throw ApiError.conflict(ErrorCode.SET_CHILD_EDIT_VIA_PARENT, 'A set child cannot be dissolved.');
+      throw ApiError.conflict(ErrorCode.IS_SET_CHILD, 'A set child cannot be dissolved.');
     }
     const children = this.repo.findChildren(row.id);
     if (!children.length) throw ApiError.conflict(ErrorCode.NOT_A_SET, 'This problem is not a set.');

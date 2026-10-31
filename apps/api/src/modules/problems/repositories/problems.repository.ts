@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { MockDatabase, type ProblemRow } from '../../../database/mock-database';
 
+/** Byte order, not localeCompare: fractional-indexing keys are case- and locale-sensitive (R-020). */
+export function comparePositions(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 export type NewProblem = Omit<ProblemRow, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>;
 
 export interface ProblemFilter {
@@ -29,7 +34,7 @@ export class ProblemsRepository {
   findChildren(parentId: number): ProblemRow[] {
     return this.alive
       .filter((p) => p.parentId === parentId)
-      .sort((a, b) => (a.position ?? '').localeCompare(b.position ?? ''));
+      .sort((a, b) => comparePositions(a.position ?? '', b.position ?? ''));
   }
 
   countChildren(parentIds: number[]): Map<number, number> {

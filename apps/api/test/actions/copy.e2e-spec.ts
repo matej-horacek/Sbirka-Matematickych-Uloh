@@ -10,9 +10,7 @@ import { malformedIds, seed, unknownId } from '../support/seed';
 // child → standalone copy (original set unchanged). Source: OWN → LICENSED_USE citing the original
 // author; LICENSED_USE / FREE_USE keep type and citation; licence always inherited.
 // Tags/chapters: only global ones, unless the caller owns the original. Codes: 404.
-// Not tested here (O-items):
-//   O4: the source type when copying YOUR OWN OWN-problem (spec: LICENSED_USE, maybe should stay OWN).
-//       Copies of one's own problems are tested for everything except `source.type` / citation.
+// O4 (decided): copying YOUR OWN OWN-problem keeps OWN, with no citation; the licence is still inherited.
 // Not testable tonight: attachments pointing to the same stored images (Phase C, no attachments yet).
 describe('copyProblem POST /problems/{id}/copy', () => {
   const ctx = useTestApp();
@@ -58,6 +56,16 @@ describe('copyProblem POST /problems/{id}/copy', () => {
         license: { id: seed.licenses.ccBy, name: 'CC BY 4.0' },
       });
       await store.expectRecord('problems', res.body.id, { source: { originType: 'LICENSED_USE', licenseId: 2 } });
+    });
+
+    it('O4: copying your own OWN problem stays OWN with no citation; the licence is inherited', async () => {
+      const { api, store } = ctx();
+      const original = await store.expectRecord('problems', P.circle);
+      expect(original.source.originType).toBe('OWN');
+      const res = await api.as('jan').post(`/problems/${P.circle}/copy`).expect(201);
+      expect(res.body.source.type).toBe('OWN');
+      expect(res.body.source.citation ?? null).toBeNull();
+      await store.expectRecord('problems', res.body.id, { source: { originType: 'OWN', sourceCitationText: null, licenseId: original.source.licenseId } });
     });
 
     it('the original is unchanged (row deep-equal before and after)', async () => {

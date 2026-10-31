@@ -111,7 +111,7 @@ describe('createProblem POST /problems', () => {
       expect(await store.countRecords('problems', undefined, { includeDeleted: true })).toBe(before);
     });
 
-    it.skip('missing name or assignment → 400, nothing stored [R-015]', async () => {
+    it('missing name or assignment → 400, nothing stored [R-015]', async () => {
       // Mock: the generated zProblemCreate loses `required: [name, assignment]` (an allOf branch without
       // properties), so the request passes validation and a problem WITHOUT a name is stored (201).
       const { api, store } = ctx();
@@ -122,7 +122,7 @@ describe('createProblem POST /problems', () => {
       }
     });
 
-    it.skip('a tagId/chapterId that decodes beyond the safe integer range → 400, never 500 [R-021]', async () => {
+    it('a tagId/chapterId that decodes beyond the safe integer range → 400, never 500 [R-021]', async () => {
       const { api } = ctx();
       for (const bad of overflowIds) {
         expectError(await api.as('jan').post('/problems', { name: 'N', assignment: 'A', tagIds: [bad] }), 400, 'VALIDATION_FAILED');

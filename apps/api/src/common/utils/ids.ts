@@ -15,7 +15,8 @@ export function encodeId(id: number): string {
 /** Returns null for anything that is not a canonical id (decode + re-encode must match). */
 export function decodeId(value: string): number | null {
   const numbers = sqids.decode(value);
-  if (numbers.length !== 1) return null;
+  // Some canonical-looking strings decode beyond 2^53; re-encoding them would throw (500), so refuse them here.
+  if (numbers.length !== 1 || !Number.isSafeInteger(numbers[0])) return null;
   return sqids.encode(numbers) === value ? numbers[0] : null;
 }
 

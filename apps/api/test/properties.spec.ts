@@ -1,6 +1,7 @@
 import fc from 'fast-check';
 import { decodeId, encodeId } from '../src/common/utils/ids';
 import { positionAt } from '../src/common/utils/position';
+import { comparePositions } from '../src/modules/problems/repositories/problems.repository';
 
 // T8: property-based tests (fast-check) for the two pure helpers every id and every set order goes through.
 // They test public behaviour only, so they stay valid when Phase B replaces the implementations
@@ -21,7 +22,7 @@ describe('properties', () => {
       fc.assert(fc.property(dbId, dbId, (a, b) => a === b || encodeId(a) !== encodeId(b)));
     });
 
-    it.skip('any string either decodes to null or is the canonical Sqid of what it decodes to (never throws) [R-021]', () => {
+    it('any string either decodes to null or is the canonical Sqid of what it decodes to (never throws) [R-021]', () => {
       // fast-check finds strings like "e50000AA0A" that decode beyond MAX_SAFE_INTEGER: decodeId's re-encode throws.
       // So "4", "k3Xa9 " or a re-encoded variant can never alias a real id.
       fc.assert(
@@ -57,13 +58,12 @@ describe('properties', () => {
       );
     });
 
-    it.skip('the comparator ProblemsRepository.findChildren uses (localeCompare, default locale) keeps index order [R-020]', () => {
-      // Found by fast-check: under the cs-CZ default locale "ch" sorts after "h" AND after "i" (Czech digraph),
-      // so positionAt(583200) = "aci00" sorts BEFORE positionAt(581904) = "ach00". localeCompare also ignores
-      // the ASCII case order that fractional-indexing keys (Phase B, B2) rely on: "aB" vs "ab".
-      expect(positionAt(581904).localeCompare(positionAt(583200))).toBeLessThan(0);
-      expect('aB'.localeCompare('ab')).toBeLessThan(0);
-      fc.assert(fc.property(index, index, (a, b) => Math.sign(a - b) === Math.sign(positionAt(a).localeCompare(positionAt(b)))), { numRuns: 5000 });
+    it('the comparator ProblemsRepository.findChildren uses (byte order) keeps index order [R-020]', () => {
+      // fast-check found: under the cs-CZ default locale localeCompare puts "ch" after "i" (Czech digraph),
+      // and it ignores the ASCII case order that fractional-indexing keys rely on: "aB" vs "ab".
+      expect(comparePositions(positionAt(581904), positionAt(583200))).toBeLessThan(0);
+      expect(comparePositions('aB', 'ab')).toBeLessThan(0);
+      fc.assert(fc.property(index, index, (a, b) => Math.sign(a - b) === Math.sign(comparePositions(positionAt(a), positionAt(b)))), { numRuns: 5000 });
     });
   });
 });

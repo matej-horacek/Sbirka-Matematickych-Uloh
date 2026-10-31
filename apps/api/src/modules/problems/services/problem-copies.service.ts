@@ -42,7 +42,7 @@ export class ProblemCopiesService {
       position: target.position ?? null,
       originalProblemId: original.id,
       originalProblemVersion: original.version,
-      source: sourceForCopy(original.source, authorName),
+      source: sourceForCopy(original.source, authorName, callerOwns),
       tagIds,
       chapterIds,
       // TODO Phase C (attachments): attachment rows point to the same stored images.
