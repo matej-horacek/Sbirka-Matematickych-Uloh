@@ -30,4 +30,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 
 | T7 | done | PHASE_B_PLAN.md: T7.1 data model (8 tables + Phase B additions), T7.0 mock→2.0.0 in 11 steps mapped to skipped tests, T7.2 swap per marker incl. atomic optimistic locking, T7.3 test reuse (StoreProbe + Docker Postgres), T7.4 risks per O-item. | 11:16 |
 
-**Next task:** T10 is mandatory at 13:15; time remains → T8 (extra tests), then T10
+| T8 | done | fast-check properties (Sqids round-trip, positions) found R-020 (localeCompare + cs-CZ breaks position order); pagination/filter edge cases (8 tests, property over limit 1..14); coverage 99.2 % lines / 85.5 % branches, 5 least-covered files in INVENTORY §6. New dev dep fast-check; .gitignore += coverage/. | 11:20 |
+
+**Next task:** T9 (docs, if time) — T10 mandatory at 13:15
