@@ -15,5 +15,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 | T2.4 | done | Conventions: all pass except error-codes.ts vs spec (missing IS_SET_CHILD, CANNOT_ADD_TO_SET, NO_UPDATE_AVAILABLE; stale SET_CHILD_EDIT_VIA_PARENT); minor: nullable ids not Sqid refs | 02:01 |
 | T2.5 | done | 12 issues S-1..S-12 with severity (1 high: YAML anchors crash startup; 3 medium); O8 + O2 listed under Open | 02:01 |
 | T3.1 | done | No runner existed → Jest 30 + ts-jest 29 + supertest 7 + @nestjs/testing 11 (apps/api devDeps); jest.config.js, test/tsconfig.json; scripts test, test:unit, test:e2e, test:cov, typecheck:test | 02:06 |
+| T3.2-T3.5 | done | test/support: app.ts (fresh AppModule app per file), auth.ts, contract.ts (AJV 2019 from openapi.yaml, strict unevaluatedProperties), api.ts (auto contract check on every request), store.ts (async StoreProbe + MockStoreProbe, Sqid decode), seed.ts; 15 tests pass | 02:06 |
 
-**Next task:** T3.2
+**Next task:** T3.6
