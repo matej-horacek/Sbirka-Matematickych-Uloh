@@ -17,36 +17,78 @@ Authorization: Bearer eva
 GET {{base}}/problems/UkLWZ
 Authorization: Bearer jan
 
-### Create a set
+### 2.0.0 flow: create problems one at a time, nest them in a set, reorder, take one out.
+### Run the requests below in order; each one stores what the next needs (ids, lockVersion).
+
+### 1. Create problem A
 POST {{base}}/problems
 Authorization: Bearer jan
 Content-Type: application/json
 
-{
-  "name": "Řešte rovnice",
-  "assignment": "Vyřešte rovnice v oboru reálných čísel:",
-  "result": null,
-  "tagIds": ["UkLWZ"],
-  "chapterIds": ["UkLWZ"],
-  "children": [
-    { "name": "Rovnice a)", "assignment": "\\( 2x + 3 = 11 \\)", "result": "\\( x = 4 \\)" },
-    { "name": "Rovnice b)", "assignment": "\\( x^2 = 9 \\)" }
-  ]
-}
+{ "name": "Rovnice a)", "assignment": "\( 2x + 3 = 11 \)", "result": "\( x = 4 \)" }
 
-### Edit the whole set: keep a), drop b), add c), copy Obsah kruhu in
-PATCH {{base}}/problems/UkLWZ
+> {% client.global.set("a", response.body.id); %}
+
+### 2. Create problem B
+POST {{base}}/problems
 Authorization: Bearer jan
 Content-Type: application/json
 
-{
-  "lockVersion": 3,
-  "children": [
-    { "id": "gbHJd" },
-    { "name": "Rovnice c)", "assignment": "\\( 3x - 1 = 2x + 4 \\)" },
-    { "copyFromId": "VqXmZ" }
-  ]
-}
+{ "name": "Rovnice b)", "assignment": "\( x^2 = 9 \)", "result": "\( x = \pm 3 \)" }
+
+> {% client.global.set("b", response.body.id); %}
+
+### 3. Create the set parent (no result: a set parent must not have one)
+POST {{base}}/problems
+Authorization: Bearer jan
+Content-Type: application/json
+
+{ "name": "Řešte rovnice", "assignment": "Vyřešte rovnice v oboru reálných čísel:", "tagIds": ["UkLWZ"], "chapterIds": ["UkLWZ"] }
+
+> {% client.global.set("set", response.body.id); client.global.set("lock", response.body.lockVersion); %}
+
+### 4. Add A to the set by MOVE (your own private problem; same record)
+POST {{base}}/problems/{{set}}/children
+Authorization: Bearer jan
+Content-Type: application/json
+
+{ "lockVersion": {{lock}}, "problemId": "{{a}}" }
+
+> {% client.global.set("lock", response.body.lockVersion); %}
+
+### 5. Add a foreign problem (Pythagorova věta) by COPY, as the first child (afterId null)
+POST {{base}}/problems/{{set}}/children
+Authorization: Bearer jan
+Content-Type: application/json
+
+{ "lockVersion": {{lock}}, "copyFromId": "uw2YK", "afterId": null }
+
+> {% client.global.set("copy", response.body.children[0].id); client.global.set("lock", response.body.lockVersion); %}
+
+### 6. Add B by move, right after A (afterId = A)
+POST {{base}}/problems/{{set}}/children
+Authorization: Bearer jan
+Content-Type: application/json
+
+{ "lockVersion": {{lock}}, "problemId": "{{b}}", "afterId": "{{a}}" }
+
+> {% client.global.set("lock", response.body.lockVersion); %}
+
+### 7. Reorder: move the copy to the end (afterId = the current last child, B)
+PATCH {{base}}/problems/{{set}}/children/{{copy}}
+Authorization: Bearer jan
+Content-Type: application/json
+
+{ "lockVersion": {{lock}}, "afterId": "{{b}}" }
+
+> {% client.global.set("lock", response.body.lockVersion); %}
+
+### 8. Take A out of the set (the lock travels in If-Match; A becomes a standalone private problem)
+DELETE {{base}}/problems/{{set}}/children/{{a}}
+Authorization: Bearer jan
+If-Match: "{{lock}}"
+
+> {% client.global.set("lock", response.body.lockVersion); %}
 
 ### Copy a published problem
 POST {{base}}/problems/VqXmZ/copy
