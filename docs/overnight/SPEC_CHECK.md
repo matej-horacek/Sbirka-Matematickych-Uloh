@@ -102,3 +102,48 @@ These are gaps, not contradictions. They are not Open items in §6, so they went
 - Does `takeOverUpdate` raise the copy's `version` / `lockVersion`, and does it set `originalProblemVersion` to the original's current version?
 - A child copied in with `copyFromId` keeps `originalId`, but `updateAvailable` is "never on its children". Is that child's link ever used?
 - What does `takeOverUpdate` / `getProblem` report when the **original was deleted** (soft delete) or made private again?
+
+## T2.4 Conventions (against §6 Decided)
+
+| Convention | Result | Evidence |
+|---|---|---|
+| `/api/v1` prefix | **pass** | `servers[0].url: https://main.server.com/api/v1`; all 12 paths are relative to it. The mock sets `app.setGlobalPrefix('api/v1')` (`main.ts:12`). |
+| Plural nouns | **pass** | `/problems`, `/tags`, `/chapters`, `/licenses`, `/children` |
+| PATCH only (no PUT) | **pass** | Methods used: GET, POST, PATCH, DELETE. No PUT anywhere. |
+| Actions as `POST /resource/{id}/verb` | **pass** | `copy`, `publish`, `dissolve`, `take-over-update`, `dismiss-update`: all `POST /problems/{id}/<verb>`. |
+| Nesting max one level | **pass** | Deepest path: `/problems/{id}/children/{childId}` (one sub-collection under one resource). |
+| One shared pagination | **pass, with stated exceptions** | `listProblems` and `listTags` share `Page`/`Limit` and `PageMeta` (`{page, limit, total}`). `listChapters` and `listLicenses` are explicitly "not paginated" (C-13). |
+| One error format: RFC 9457 with `code` | **pass** | Every 4xx response is a `$ref` to `components/responses/*`, all `application/problem+json` with `ErrorDetails` (`type`, `title`, `status`, `detail`, `code`, `requestId`). 412 included (`PreconditionFailed`). |
+| Every operation states who may call it | **pass** | 16/16 descriptions start with `Who:`. |
+| Every operation has 401 (global bearer) | **pass** | 16/16 declare `401`. |
+| IDs are Sqids strings | **pass, minor inconsistency** | No integer ids. 17 `$ref: Sqid` uses. The nullable id fields (`ProblemDetail.parentId`, `ProblemDetail.originalId`, `ChapterNode.parentId`, `AddChildRequest.afterId`, `ReorderChildRequest.afterId`) are inline `type: string, nullable: true` instead of a Sqid reference (C-10). `Sqid` itself has no pattern or length, so the contract can't reject a malformed id. |
+| Spec error `code`s match `error-codes.ts` | **FAIL** | Spec (`ErrorDetails.code`) has 13 distinct codes; `error-codes.ts` has 11. **Missing in `error-codes.ts`:** `IS_SET_CHILD`, `CANNOT_ADD_TO_SET`, `NO_UPDATE_AVAILABLE`. **In `error-codes.ts` but not in the spec:** `SET_CHILD_EDIT_VIA_PARENT` (renamed to `IS_SET_CHILD` in 2.0.0). The mock still sends `SET_CHILD_EDIT_VIA_PARENT` (`problems.service.ts:114,151,164`). Every code named in an operation's "Codes:" line is in the `ErrorDetails` list. |
+| Status codes per code | **pass** | `LOCK_MISMATCH` is 409 in bodies and 412 for If-Match; both are documented in the code list. |
+
+## T2.5 Issue list with severity
+
+Severity scale: **critical** (blocks use) · **high** (breaks a client or the server) · **medium** (contract unclear or wrong in a way a client may hit) · **low** (inconsistency, docs) · **info**.
+
+| ID | Severity | Issue | Ref |
+|---|---|---|---|
+| S-1 | **high** | Spec 2.0.0 YAML uses generated anchors/aliases (`&id001`…). `main.ts` parses it with `yaml`'s default alias limit and **the API crashes on startup**. The fix is in the spec (plain YAML) or in `main.ts` (`maxAliasCount`); both are read-only tonight. | T2.1, R-001, Q-003 |
+| S-2 | **medium** | `error-codes.ts` is out of date with the spec: 3 codes missing, 1 old name. `ErrorCode` isn't generated, so drift (T2.3) doesn't catch it. | T2.4 |
+| S-3 | **medium** | `createProblem` 201 example shows a set with 2 children, but 2.0.0 creates one problem. Mock servers (Prism) and docs readers will show the wrong thing. | C-2 |
+| S-4 | **medium** | `takeOverUpdate` has a required body but no `400` response. | C-5 |
+| S-5 | low | `publishProblem` has a body but no `400` response. | C-6 |
+| S-6 | low | Children's `lockVersion` appears in one author-view example but not in three others. | C-4 |
+| S-7 | low | `IS_SET_CHILD` code description doesn't list take-over. | C-7 |
+| S-8 | low | Tag `Problems` description still says "whole sets". | C-8 |
+| S-9 | low | "Exactly one of `problemId` / `copyFromId`" is prose only; generated Zod won't enforce it. | C-9 |
+| S-10 | low | Nullable id fields are plain strings, not Sqid refs; `Sqid` has no pattern. | C-10, T2.4 |
+| S-11 | info | `info.license` missing (Redocly `info-license`). | T2.1 |
+| S-12 | info | Real seed Sqids in examples; unusual nullable-`$ref` form in `SourceRef.license`; chapters/licences not paginated by design. | C-11, C-12, C-13 |
+
+### Listed under Open items (not errors)
+
+| Open item | Issue | Ref |
+|---|---|---|
+| **O8** Version bump | `info.version: 1.0.0`, changelog says 2.0.0; the previous file said 1.0.1. Daniel fixes it himself. | C-1 |
+| **O2** Notifications for copy holders | `updateProblem` says copy holders "are notified". It's unclear whether that means only the computed `updateAvailable` flag or also stored notification rows. | C-3 |
+
+None of the other Open items (O3, O4, O5, O7) shows up as a spec inconsistency. O4 (source type when copying your own problem) is consistent: the spec states OWN → LICENSED_USE without an exception.
