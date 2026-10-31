@@ -26,4 +26,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 | T4.5 | done | Results table in INVENTORY §5: 189 pass / 0 fail / 126 skip. REVIEW.md R-001..R-019 (T5 folded in). QUESTIONS Q-008..Q-011. | 11:02 |
 | T5 | done | REVIEW.md: 9 high, 4 medium, 6 low, 0 critical; T5.1 consistency list, T5.2 Phase B friction (R-016, R-019), T5.3 security checks that hold. | 11:02 |
 
-**Next task:** T6 (decision files O2, O3, O4, O5, O7, O8)
+| T6 | done | decisions/O-2,3,4,5,7,8.md: current state quoted from §6 + spec + mock, 3 options each with impacts, spec sketches for O2/O3/O4, one "look at first" line. No recommendation. | 11:10 |
+
+**Next task:** T7 (PHASE_B_PLAN.md)
