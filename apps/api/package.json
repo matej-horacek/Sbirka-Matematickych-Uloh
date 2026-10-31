@@ -8,11 +8,11 @@
     "start": "node dist/main",
     "typecheck": "tsc --noEmit -p .",
     "typecheck:test": "tsc --noEmit -p test/tsconfig.json",
-    "test": "jest",
-    "test:unit": "jest --testPathIgnorePatterns \"\\.e2e-spec\\.ts$\"",
-    "test:e2e": "jest --testPathPatterns \"\\.e2e-spec\\.ts$\"",
-    "test:cov": "jest --coverage",
-    "test:unskipped": "node -e \"process.env.UNSKIP=1;require('jest').run()\" -- --no-cache"
+    "test": "node ../../scripts/jest-capped.mjs",
+    "test:unit": "node ../../scripts/jest-capped.mjs --testPathIgnorePatterns \"\\.e2e-spec\\.ts$\"",
+    "test:e2e": "node ../../scripts/jest-capped.mjs --testPathPatterns \"\\.e2e-spec\\.ts$\"",
+    "test:cov": "node ../../scripts/jest-capped.mjs --coverage",
+    "test:unskipped": "node ../../scripts/jest-capped.mjs --unskip --no-cache"
   },
   "dependencies": {
     "@matematika/contracts": "workspace:*",

@@ -13,7 +13,11 @@
     "spec:version": "node scripts/check-spec-version.mjs",
     "lint": "eslint .",
     "verify": "node scripts/verify.mjs",
-    "verify:quick": "node scripts/verify.mjs --quick"
+    "verify:quick": "node scripts/verify.mjs --quick",
+    "test": "pnpm --filter @matematika/api test",
+    "test:unit": "pnpm --filter @matematika/api test:unit",
+    "test:e2e": "pnpm --filter @matematika/api test:e2e",
+    "test:unskipped": "pnpm --filter @matematika/api test:unskipped"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

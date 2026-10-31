@@ -39,8 +39,8 @@ Run one test file or one test by name:
 
 ```powershell
 cd apps/api
-pnpm jest test/problems/copy.e2e-spec.ts
-pnpm jest -t "copies every child"
+pnpm test test/problems/copy.e2e-spec.ts
+pnpm test -t "copies every child"
 ```
 
 ## Why the contracts are built from an old spec
