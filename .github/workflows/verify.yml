@@ -1,0 +1,28 @@
+# Runs the same `pnpm verify` as locally. Committed by the overnight run, never pushed.
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # build-baseline.mjs reads the 1.0.1 spec from git history (commit fcd8b9c).
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4 # version comes from "packageManager" in package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Builds the contracts from the spec the mock was written for (src/generated is not committed).
+      - run: pnpm baseline:build --contracts-only
+      - run: pnpm verify

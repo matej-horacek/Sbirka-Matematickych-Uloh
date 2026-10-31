@@ -17,5 +17,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 | T3.1 | done | No runner existed → Jest 30 + ts-jest 29 + supertest 7 + @nestjs/testing 11 (apps/api devDeps); jest.config.js, test/tsconfig.json; scripts test, test:unit, test:e2e, test:cov, typecheck:test | 02:06 |
 | T3.2-T3.5 | done | test/support: app.ts (fresh AppModule app per file), auth.ts, contract.ts (AJV 2019 from openapi.yaml, strict unevaluatedProperties), api.ts (auto contract check on every request), store.ts (async StoreProbe + MockStoreProbe, Sqid decode), seed.ts; 15 tests pass | 02:06 |
 | T3.6 | done | pnpm verify (12s, PASS): spec lint → spec examples → [spec drift skipped, opt-in --with-drift per T2.3] → contracts auto-built if missing → typecheck (src+tests) → lint → tests; verify:quick = unit tests only. Added ESLint 10 + typescript-eslint recommended (src lints clean). Fresh-clone path tested. | 02:09 |
+| T3.7 | done | .github/workflows/verify.yml (ubuntu+windows, fetch-depth 0, never pushed) + docs/TESTING.md (Windows how-to). T3 done-criterion met: verify runs end to end. | 02:09 |
 
-**Next task:** T3.7
+**Next task:** T4.1
