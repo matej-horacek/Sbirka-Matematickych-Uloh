@@ -18,5 +18,12 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 | T3.2-T3.5 | done | test/support: app.ts (fresh AppModule app per file), auth.ts, contract.ts (AJV 2019 from openapi.yaml, strict unevaluatedProperties), api.ts (auto contract check on every request), store.ts (async StoreProbe + MockStoreProbe, Sqid decode), seed.ts; 15 tests pass | 02:06 |
 | T3.6 | done | pnpm verify (12s, PASS): spec lint → spec examples → [spec drift skipped, opt-in --with-drift per T2.3] → contracts auto-built if missing → typecheck (src+tests) → lint → tests; verify:quick = unit tests only. Added ESLint 10 + typescript-eslint recommended (src lints clean). Fresh-clone path tested. | 02:09 |
 | T3.7 | done | .github/workflows/verify.yml (ubuntu+windows, fetch-depth 0, never pushed) + docs/TESTING.md (Windows how-to). T3 done-criterion met: verify runs end to end. | 02:09 |
+| (resume) | — | Session resumed 10:40 (runbook window edited to 13:15/14:00 in the working tree, not by the run; left uncommitted). Found uncommitted T4 work (list tests, test:unskipped): verified and committed. | 10:40 |
+| T4.1 | done | The 49 checks don't exist (Q-001); ported the 11 requests.http scenarios to `test/requests-http.e2e-spec.ts` (contract + store checks). Old replay script kept. | 10:52 |
+| T4.2 | done | Tests for every implemented operation (list, create, get, update, delete, copy, publish, dissolve, 3 pickers): contract + store + auth + validation + 404. New bug found: R-015 (create without name stores a nameless row, generated zod loses `required`). | 10:52 |
+| T4.3 | done | O-items noted per file (O2 update/copies, O4 copy, O5 publish, O7 pickers); nothing from §6 Open is asserted. | 10:52 |
+| T4.4 | done | Full spec tests, skipped, for addSetChild (37), reorderSetChild (21), removeSetChild (18), takeOver (13), dismiss (6), updateAvailable (10). test:unskipped: 122 fail as expected, 4 accidental passes marked. | 10:58 |
+| T4.5 | done | Results table in INVENTORY §5: 189 pass / 0 fail / 126 skip. REVIEW.md R-001..R-019 (T5 folded in). QUESTIONS Q-008..Q-011. | 11:02 |
+| T5 | done | REVIEW.md: 9 high, 4 medium, 6 low, 0 critical; T5.1 consistency list, T5.2 Phase B friction (R-016, R-019), T5.3 security checks that hold. | 11:02 |
 
-**Next task:** T4.1
+**Next task:** T6 (decision files O2, O3, O4, O5, O7, O8)

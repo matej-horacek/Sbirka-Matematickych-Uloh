@@ -80,6 +80,11 @@ Then `node scripts/smoke/run-requests-http.mjs http://localhost:3000/api/v1` rep
 Skipped tests:
 - `it.skip('… [R-0xx]')`: the mock has a bug (see `docs/overnight/REVIEW.md`).
 - `it.skip('… [R-0xx not in mock]')`: the operation is new in spec 2.0.0 and the mock doesn't have it yet. These tests are written from the spec and form the checklist for implementing 2.0.0: remove `.skip` as each part lands.
+- `pnpm --filter @matematika/api test:unskipped` runs the skipped tests as normal tests (a Jest transformer,
+  `support/unskip-transformer.js`, rewrites `it.skip` to `it`). A failure there is expected and proves the finding; a skipped test that
+  **passes** there means the mock caught up, so drop its `.skip`. Today 4 pass by accident (Nest's 404 for a missing route); they are marked in their files.
+- `support/factory.ts`: arrange helpers that go through the API only (`createProblem`, `createPublished`, `buildSet`), so they work against Prisma too.
+  `buildSet` uses `POST /problems/{id}/children`, so only skipped tests use it until R-002 lands.
 
 ## Troubleshooting on Windows
 
