@@ -63,15 +63,25 @@ export function toDetailCore(row: ProblemRow, lk: ProblemLookups): ProblemDetail
   };
 }
 
+/** A set child carries its own lockVersion, for its author only (R-008). */
+function toChild(row: ProblemRow, lk: ProblemLookups, viewerId: number): ProblemDetailCore {
+  return { ...toDetailCore(row, lk), ...(row.authorId === viewerId && { lockVersion: row.lockVersion }) };
+}
+
 export function toDetail(row: ProblemRow, children: ProblemRow[], lk: ProblemLookups, viewerId: number): ProblemDetail {
   const authorOnly =
     row.authorId === viewerId
-      ? { status: row.publishStatus, version: row.version, lockVersion: row.lockVersion }
+      ? {
+          status: row.publishStatus,
+          version: row.version,
+          lockVersion: row.lockVersion,
+          originalId: encodeNullableId(row.originalProblemId),
+        }
       : {};
   return {
     ...toDetailCore(row, lk),
     ...authorOnly,
     parentId: encodeNullableId(row.parentId),
-    children: children.map((c) => toDetailCore(c, lk)),
+    children: children.map((c) => toChild(c, lk, viewerId)),
   };
 }

@@ -65,13 +65,13 @@ describe('getProblem GET /problems/{id}', () => {
       });
     });
 
-    it.skip('each child carries its own lockVersion (author only) [R-008]', async () => {
+    it('each child carries its own lockVersion (author only) [R-008]', async () => {
       // Spec ProblemDetailCore.lockVersion: "Each child has its own lockVersion for editing its content."
       const res = await ctx().api.as('jan').get(`/problems/${P.set}`).expect(200);
       expect(res.body.children.map((c: { lockVersion?: number }) => c.lockVersion)).toEqual([1, 1]);
     });
 
-    it.skip('sees originalId (null for a problem that is not a copy) [R-008]', async () => {
+    it('sees originalId (null for a problem that is not a copy) [R-008]', async () => {
       const res = await ctx().api.as('jan').get(`/problems/${P.set}`).expect(200);
       expect(res.body).toHaveProperty('originalId', null);
     });

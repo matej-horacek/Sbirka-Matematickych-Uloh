@@ -168,7 +168,7 @@ describe('createProblem POST /problems', () => {
       }
     });
 
-    it.skip('the author sees originalId: null on a new problem [R-008]', async () => {
+    it('the author sees originalId: null on a new problem [R-008]', async () => {
       const res = await ctx().api.as('jan').post('/problems', { name: 'N', assignment: 'A' }).expect(201);
       expect(res.body).toHaveProperty('originalId', null);
     });

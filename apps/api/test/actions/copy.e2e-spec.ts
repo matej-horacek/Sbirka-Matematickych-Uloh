@@ -223,7 +223,7 @@ describe('copyProblem POST /problems/{id}/copy', () => {
   });
 
   describe('spec 2.0.0 fields', () => {
-    it.skip('the copy shows originalId (the original’s id) to its author [R-008]', async () => {
+    it('the copy shows originalId (the original’s id) to its author [R-008]', async () => {
       const res = await ctx().api.as('eva').post(`/problems/${P.circle}/copy`).expect(201);
       expect(res.body.originalId).toBe(P.circle);
       expect((await getProblem(ctx().api, 'eva', res.body.id)).originalId).toBe(P.circle);
