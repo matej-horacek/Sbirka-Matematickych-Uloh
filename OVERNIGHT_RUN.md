@@ -1,6 +1,6 @@
 # Overnight run (safe version) — Komunitní sbírka úloh, mock backend
 
-**Window:** Sat 2026-10-31 ~01:15 → 14:00 (Europe/Prague)
+**Window:** Sat 2026-10-31 ~01:15 → 14:00 (Europe/Prague), resumed 10:40
 **Owner:** Daniel. He reviews everything in the morning, with time to spare.
 
 **What this repo is:** the `matematika/` pnpm monorepo.
@@ -57,8 +57,8 @@
 - **Before every commit:** run `verify` once it exists. Never commit a broken harness.
   - Because the source is read-only, a test that fails due to a real mock bug is committed as `it.skip('… [R-0xx]')`, with a matching `REVIEW.md` entry.
 - **Time:** check the current time with a shell command before each task.
-  - At **13:00**, stop and do T10.
-  - Everything must be committed by **13:45**.
+  - At **13:15**, stop and do T10.
+  - Everything must be committed by **14:00**.
 - **Priority if time runs short:** T1 → T2 → T3 → T4 → T10 → T5 → T6 → T7 → T8 → T9. **T10 is mandatory.**
 
 ### Output files (in `docs/overnight/`)
@@ -211,7 +211,7 @@ For each item in §6 Open:
 - [ ] Write `codebase-walkthrough.md`: the code in reading order, so Daniel can explain every part himself.
 - [ ] Write `defense-questions.md`: 30 likely examiner questions about this backend, with short answers pointing to file:line. Put the answers in a separate section at the end, so Daniel can quiz himself first.
 
-## T10 — Morning report (mandatory, start by 13:00)
+## T10 — Morning report (mandatory, start by 13:15)
 
 Write `docs/overnight/MORNING_REPORT.md`, readable in about 20 minutes:
 1. **Verdict:** does `verify` pass? Give pass/fail/skip counts compared with the T1 baseline.
