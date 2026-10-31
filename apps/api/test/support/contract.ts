@@ -17,6 +17,8 @@ import { parse } from 'yaml';
  * the test. `nullable` (OpenAPI 3.0) is AJV's built-in keyword.
  */
 
+// Spec nodes are arbitrary JSON; `any` keeps the walkers readable.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Json = Record<string, any>;
 const METHODS = ['get', 'post', 'patch', 'put', 'delete'] as const;
 export type Method = (typeof METHODS)[number];

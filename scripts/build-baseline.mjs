@@ -7,6 +7,7 @@
 // src/generated, bundles contracts with tsup and builds the API. It edits no tracked file.
 //
 // Usage: pnpm baseline:build            (from the repo root)
+//        pnpm baseline:build --contracts-only   (skip the API build; used by verify)
 //        MOCK_SPEC_REF=<commit> pnpm baseline:build
 import { execSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
@@ -16,6 +17,7 @@ import { join, resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const contracts = join(root, 'packages/shared/contracts');
 const ref = process.env.MOCK_SPEC_REF ?? 'fcd8b9c';
+const contractsOnly = process.argv.includes('--contracts-only');
 
 const run = (cmd, cwd = root) => execSync(cmd, { cwd, stdio: 'inherit', shell: true });
 
@@ -31,7 +33,7 @@ try {
     tmp,
   );
   run('pnpm exec tsup', contracts);
-  run('pnpm --filter @matematika/api build');
+  if (!contractsOnly) run('pnpm --filter @matematika/api build');
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }

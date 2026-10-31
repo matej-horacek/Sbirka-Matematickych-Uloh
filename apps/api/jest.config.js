@@ -8,7 +8,7 @@ module.exports = {
   testMatch: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
-    '^.+\.ts$': ['ts-jest', { tsconfig: '<rootDir>/test/tsconfig.json' }],
+    '^.+\\.ts$':['ts-jest', { tsconfig: '<rootDir>/test/tsconfig.json' }],
   },
   testEnvironment: 'node',
   collectCoverageFrom: ['src/**/*.ts', '!src/main.ts'],

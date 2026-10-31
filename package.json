@@ -9,12 +9,19 @@
     "baseline:build": "node scripts/build-baseline.mjs",
     "spec:lint": "redocly lint packages/shared/contracts/openapi.yaml",
     "spec:examples": "node scripts/check-spec-examples.mjs",
-    "spec:drift": "node scripts/spec-drift.mjs"
+    "spec:drift": "node scripts/spec-drift.mjs",
+    "lint": "eslint .",
+    "verify": "node scripts/verify.mjs",
+    "verify:quick": "node scripts/verify.mjs --quick"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@redocly/cli": "^2.72.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "eslint": "^10.14.0",
+    "globals": "^17.13.0",
+    "typescript-eslint": "^8.72.1",
     "yaml": "^2.9.1"
   }
 }
