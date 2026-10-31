@@ -7,9 +7,13 @@
     "dev": "pnpm -r --parallel dev",
     "typecheck": "pnpm -r typecheck",
     "baseline:build": "node scripts/build-baseline.mjs",
-    "spec:lint": "redocly lint packages/shared/contracts/openapi.yaml"
+    "spec:lint": "redocly lint packages/shared/contracts/openapi.yaml",
+    "spec:examples": "node scripts/check-spec-examples.mjs"
   },
   "devDependencies": {
-    "@redocly/cli": "^2.72.1"
+    "@redocly/cli": "^2.72.1",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "yaml": "^2.9.1"
   }
 }
