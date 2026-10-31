@@ -32,4 +32,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 
 | T8 | done | fast-check properties (Sqids round-trip, positions) found R-020 (localeCompare + cs-CZ breaks position order); pagination/filter edge cases (8 tests, property over limit 1..14); coverage 99.2 % lines / 85.5 % branches, 5 least-covered files in INVENTORY §6. New dev dep fast-check; .gitignore += coverage/. | 11:20 |
 
-**Next task:** T9 (docs, if time) — T10 mandatory at 13:15
+| T9 | done | docs/overnight/architecture.md, codebase-walkthrough.md (27 steps in reading order), defense-questions.md (30 Q, answers at the end with file:line). | 11:30 |
+
+**Next task:** T10 (MORNING_REPORT.md)
