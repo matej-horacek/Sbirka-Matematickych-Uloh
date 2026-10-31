@@ -8,7 +8,8 @@
     "typecheck": "pnpm -r typecheck",
     "baseline:build": "node scripts/build-baseline.mjs",
     "spec:lint": "redocly lint packages/shared/contracts/openapi.yaml",
-    "spec:examples": "node scripts/check-spec-examples.mjs"
+    "spec:examples": "node scripts/check-spec-examples.mjs",
+    "spec:drift": "node scripts/spec-drift.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "^2.72.1",

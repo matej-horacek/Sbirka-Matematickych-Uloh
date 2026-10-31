@@ -45,3 +45,32 @@ Schema-valid, but semantically inconsistent with the 2.0.0 text (details in T2.3
 - `createProblem` 201 shows a set with 2 children.
 - In the `getProblem` 200 example the children carry `lockVersion`, but in the `createProblem` 201, `updateProblem` 200 and `publishProblem` 200 examples (all author views) they don't.
 - No example shows `updateAvailable` or a non-null `originalId`.
+
+## T2.3 Generated-code drift (expected tonight)
+
+Command: `pnpm spec:drift` (summary per exported symbol; `--diff` adds a line diff). Exit 1 on any drift. **Not part of `verify`** until Daniel regenerates.
+
+The runbook assumes a *committed* 1.0.x output to compare against, but `src/generated/` is gitignored and was never committed (Q-002). The script therefore compares the code the API is **actually compiled against** (the local `src/generated`, written by `pnpm baseline:build` from the 1.0.1 spec at `fcd8b9c`) with a fresh generation from the current `openapi.yaml`, written to a temp dir. `src/generated` is never touched.
+
+Result: **67 symbols drift** (types: 1 removed, 32 added, 6 changed; Zod: 1 removed, 21 added, 6 changed).
+
+### Drift by schema = the list of types the mock must adopt
+
+| Schema / symbol | Change in 2.0.0 | Mock code that uses the 1.0.x shape |
+|---|---|---|
+| `ProblemChildInput` / `zProblemChildInput` | **removed** | `domain/set-rules.ts:1`, `services/problem-sets.service.ts:2` (and the whole `planChildren`/`applyChildren` flow) |
+| `ProblemCreate` / `zProblemCreate` | `children` removed | `problems.service.ts:69` (`body.children`) |
+| `ProblemPatch` / `zProblemPatch` | `children` removed | `problems.service.ts:119,122,129` |
+| `ProblemListItem` / `zProblemListItem` | `updateAvailable?: boolean` added | `mappers/problem.mapper.ts` `toListItem` (never sets it) |
+| `ProblemDetailCore` / `zProblemDetailCore` | `lockVersion?` **moved here** from `ProblemDetail` (so each child carries its own) | `mappers/problem.mapper.ts:57-64` `toDetailCore` |
+| `ProblemDetail` / `zProblemDetail` | `lockVersion` moved to Core; `originalId?: string \| null` added | `mappers/problem.mapper.ts:66-77` `toDetail` |
+| `ListProblemsData` / `zListProblemsQuery` | query `ids?: Sqid[]`, `updateAvailable?: boolean` added | `dto/list-problems.query.ts` (hand-written Zod; does not use `zListProblemsQuery`) |
+| `AddChildRequest` / `zAddChildRequest`, `zAddSetChildBody`, `zAddSetChildPath`, `zAddSetChildResponse`, `AddSetChild*` | **new** (addSetChild) | none yet |
+| `ReorderChildRequest` / `zReorderChildRequest`, `zReorderSetChild*`, `ReorderSetChild*` | **new** (reorderSetChild) | none yet |
+| `RemoveSetChild*`, `zRemoveSetChildHeaders` (`If-Match`), `zRemoveSetChildPath`, `zRemoveSetChildResponse` | **new** (removeSetChild) | none yet |
+| `TakeOverRequest` / `zTakeOverRequest`, `TakeOverUpdate*`, `zTakeOverUpdate*` | **new** (takeOverUpdate) | none yet |
+| `DismissUpdate*`, `zDismissUpdatePath`, `zDismissUpdateResponse` | **new** (dismissUpdate) | none yet |
+| `ChildId`, `IfMatch`, `IdsFilter`, `UpdateAvailableFilter` (+ `z…`) | **new** parameter types | none yet |
+| `ErrorDetails` | doc comment only (code list); no type change | `error-codes.ts` is hand-kept and **not** covered by drift; see T2.4 |
+
+Everything else (87 − 7 type symbols; 53 − 7 Zod symbols) is identical.

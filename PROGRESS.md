@@ -10,5 +10,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 | T1.4 | done | INVENTORY.md: 6 modules, layers, 5 TODO Phase B markers (+4 untagged, 2 Phase C, 1 TODO decide=O4), 16 spec ops: 4 yes / 7 partial / 5 not in mock | 01:55 |
 | T2.1 | done | Redocly recommended: valid, 1 warning (info-license); all 144 $refs resolve; added pnpm spec:lint + dev dep @redocly/cli | 01:56 |
 | T2.2 | done | scripts/check-spec-examples.mjs + pnpm spec:examples: 47/47 examples valid (self-test with planted errors fails as expected); no undeclared props; dev deps ajv, ajv-formats, yaml | 01:58 |
+| T2.3 | done | scripts/spec-drift.mjs + pnpm spec:drift (temp-dir regen vs local src/generated): 67 symbols drift (1 removed, 53 added, 12 changed across types+zod) — summary by schema in SPEC_CHECK.md; kept out of verify | 01:59 |
 
-**Next task:** T2.3
+**Next task:** T2.3b
