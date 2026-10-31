@@ -19,7 +19,11 @@ catalogs:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@redocly/cli':
+        specifier: ^2.72.1
+        version: 2.72.1
 
   apps/api:
     dependencies:
@@ -554,6 +558,11 @@ packages:
     peerDependenciesMeta:
       prettier:
         optional: true
+
+  '@redocly/cli@2.72.1':
+    resolution: {integrity: sha512-eARHR2ZsqIlrnV4mcKA+CK3ptV0u2d74xOhNQMlrmixMEbV4RfrnAdwNyIcGhO+3A6B3YzzG6nj5kZRKKCiGLw==}
+    engines: {node: '>=22.12.0 || >=20.19.0 <21.0.0', npm: '>=10'}
+    hasBin: true
 
   '@rollup/rollup-android-arm-eabi@4.65.0':
     resolution: {integrity: sha512-t2AnVba25baFdq7gczzS13JyVcdubLVbFX1X04mxrggDrTQPUXNv3XM0k9H1hr5tqvg7AVvtQ720QHAj0iYqhg==}
@@ -2535,6 +2544,8 @@ snapshots:
       typescript: 5.9.3
     transitivePeerDependencies:
       - chokidar
+
+  '@redocly/cli@2.72.1': {}
 
   '@rollup/rollup-android-arm-eabi@4.65.0':
     optional: true

@@ -6,6 +6,10 @@
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
     "typecheck": "pnpm -r typecheck",
-    "baseline:build": "node scripts/build-baseline.mjs"
+    "baseline:build": "node scripts/build-baseline.mjs",
+    "spec:lint": "redocly lint packages/shared/contracts/openapi.yaml"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2.72.1"
   }
 }
