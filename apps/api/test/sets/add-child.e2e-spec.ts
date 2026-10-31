@@ -4,7 +4,7 @@ import { expectError, ids } from '../support/expect';
 import { buildSet, createProblem, createPublished, getProblem } from '../support/factory';
 import { malformedIds, seed, unknownId } from '../support/seed';
 
-// addSetChild — POST /problems/{id}/children            NOT IN MOCK (R-002): every test is skipped.
+// addSetChild — POST /problems/{id}/children           
 // Spec 2.0.0: the set's author. `id` = a set, or a standalone problem that becomes a set with its first child.
 //   problemId  = MOVE your own PRIVATE standalone problem (not a set) in: same record, no copy.
 //   copyFromId = COPY any problem you can see (not a set) in: a new record, usual copy rules.
@@ -17,13 +17,13 @@ import { malformedIds, seed, unknownId } from '../support/seed';
 //   moving in another teacher's PRIVATE problem (400 "not found" vs 409 "not yours", Q-008);
 //   copying in a child of another set (Q-008).
 // Not reachable through the API: the 202 path (only trusted teachers reach PUBLISHED; they get 200).
-describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
+describe('addSetChild POST /problems/{id}/children', () => {
   const ctx = useTestApp();
   const P = seed.problems;
   const add = (who: 'jan' | 'eva' | 'petr', setId: string, body: object) => ctx().api.as(who).post(`/problems/${setId}/children`, body);
 
   describe('move your own problem in (problemId)', () => {
-    it.skip('keeps the id, creates no record, sets parentId; returns the whole set [R-002 not in mock]', async () => {
+    it('keeps the id, creates no record, sets parentId; returns the whole set', async () => {
       const { api, store } = ctx();
       const set = await createProblem(api, 'eva');
       const p = await createProblem(api, 'eva', { tagIds: [seed.tags.geometry] });
@@ -38,7 +38,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       expect((await getProblem(api, 'eva', p.id)).parentId).toBe(set.id);
     });
 
-    it.skip('a standalone problem becomes a set with its first child; the moved problem leaves the list [R-002 not in mock]', async () => {
+    it('a standalone problem becomes a set with its first child; the moved problem leaves the list', async () => {
       const { api } = ctx();
       const set = await createProblem(api, 'eva');
       const p = await createProblem(api, 'eva');
@@ -49,7 +49,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       expect(mine.body.items.find((i: { id: string }) => i.id === set.id).childCount).toBe(1);
     });
 
-    it.skip('raises the set’s lockVersion by one (response and store) [R-002 not in mock]', async () => {
+    it('raises the set’s lockVersion by one (response and store)', async () => {
       const { api, store } = ctx();
       const set = await createProblem(api, 'eva');
       const p = await createProblem(api, 'eva');
@@ -58,7 +58,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       await store.expectRecord('problems', set.id, { lockVersion: 2 });
     });
 
-    it.skip('the moved child takes the set’s status and, in a published set, the set’s licence [R-002 not in mock]', async () => {
+    it('the moved child takes the set’s status and, in a published set, the set’s licence', async () => {
       const { api, store } = ctx();
       const set = await createPublished(api, 'jan', seed.licenses.ccBy);
       const p = await createProblem(api, 'jan'); // PRIVATE, no licence
@@ -68,7 +68,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
   });
 
   describe('copy a problem in (copyFromId)', () => {
-    it.skip('creates a NEW record under the set, linked to the original; the original is unchanged [R-002 not in mock]', async () => {
+    it('creates a NEW record under the set, linked to the original; the original is unchanged', async () => {
       const { api, store } = ctx();
       const set = await createProblem(api, 'eva');
       const original = structuredClone(await store.expectRecord('problems', P.circle));
@@ -89,7 +89,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       expect(await store.expectRecord('problems', P.circle)).toEqual(original);
     });
 
-    it.skip('usual copy rules: foreign OWN → LICENSED_USE citing the author, licence inherited, only global tags [R-002 not in mock]', async () => {
+    it('usual copy rules: foreign OWN → LICENSED_USE citing the author, licence inherited, only global tags', async () => {
       const { api, store } = ctx();
       const set = await createProblem(api, 'eva');
       const res = await add('eva', set.id, { lockVersion: 1, copyFromId: P.circle }).expect(200);
@@ -97,7 +97,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       await store.expectRecord('problems', res.body.children[0].id, { tagIds: [3], chapterIds: [3], source: { originType: 'LICENSED_USE', licenseId: 2 } });
     });
 
-    it.skip('your own published problem can be copied in (it is not moved) [R-002 not in mock]', async () => {
+    it('your own published problem can be copied in (it is not moved)', async () => {
       const { api, store } = ctx();
       const set = await createProblem(api, 'jan');
       const res = await add('jan', set.id, { lockVersion: 1, copyFromId: P.circle }).expect(200);
@@ -105,7 +105,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       await store.expectRecord('problems', P.circle, { parentId: null, publishStatus: 'PUBLISHED' });
     });
 
-    it.skip('the copied child takes the set’s status (PRIVATE set → PRIVATE child) [R-002 not in mock]', async () => {
+    it('the copied child takes the set’s status (PRIVATE set → PRIVATE child)', async () => {
       const { api, store } = ctx();
       const set = await createProblem(api, 'eva');
       const res = await add('eva', set.id, { lockVersion: 1, copyFromId: P.circle }).expect(200);
@@ -121,7 +121,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       return { set, children };
     }
 
-    it.skip('missing afterId → at the end [R-002 not in mock]', async () => {
+    it('missing afterId → at the end', async () => {
       const { set, children } = await threeChildren();
       expect(ids(set.children)).toEqual(children);
       const p = await createProblem(ctx().api, 'eva');
@@ -129,14 +129,14 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       expect(ids(res.body.children)).toEqual([...children, p.id]);
     });
 
-    it.skip('afterId null → first [R-002 not in mock]', async () => {
+    it('afterId null → first', async () => {
       const { set, children } = await threeChildren();
       const p = await createProblem(ctx().api, 'eva');
       const res = await add('eva', set.id, { lockVersion: set.lockVersion, problemId: p.id, afterId: null }).expect(200);
       expect(ids(res.body.children)).toEqual([p.id, ...children]);
     });
 
-    it.skip('afterId = a child → right after that child (response and store order) [R-002 not in mock]', async () => {
+    it('afterId = a child → right after that child (response and store order)', async () => {
       const { api, store } = ctx();
       const { set, children } = await threeChildren();
       const p = await createProblem(api, 'eva');
@@ -146,14 +146,14 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       expect((await store.children(set.id)).map((c) => c.id)).toEqual(expected.map((id) => store.toDbId(id)));
     });
 
-    it.skip('afterId = the last child → at the end [R-002 not in mock]', async () => {
+    it('afterId = the last child → at the end', async () => {
       const { set, children } = await threeChildren();
       const res = await add('eva', set.id, { lockVersion: set.lockVersion, copyFromId: P.circle, afterId: children[2] }).expect(200);
       expect(ids(res.body.children).slice(0, 3)).toEqual(children);
       expect(res.body.children).toHaveLength(4);
     });
 
-    it.skip('the existing children keep their ids and records when one is inserted [R-002 not in mock]', async () => {
+    it('the existing children keep their ids and records when one is inserted', async () => {
       const { api, store } = ctx();
       const { set, children } = await threeChildren();
       const p = await createProblem(api, 'eva');
@@ -163,7 +163,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
   });
 
   describe('400 VALIDATION_FAILED, nothing changes', () => {
-    it.skip.each([
+    it.each([
       ['both problemId and copyFromId', (p: string) => ({ problemId: p, copyFromId: seed.problems.circle })],
       ['neither problemId nor copyFromId', () => ({})],
       ['unknown afterId', (p: string) => ({ problemId: p, afterId: unknownId })],
@@ -172,7 +172,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       ['copyFromId not found', () => ({ copyFromId: unknownId })],
       ['copyFromId not visible (another teacher’s private problem)', () => ({ copyFromId: seed.problems.evaPrivate })],
       ['missing lockVersion', (p: string) => ({ lockVersion: undefined, problemId: p })],
-    ])('%s [R-002 not in mock]', async (_, body) => {
+    ])('%s', async (_, body) => {
       const { api, store } = ctx();
       const set = await createProblem(api, 'jan');
       const p = await createProblem(api, 'jan');
@@ -185,7 +185,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
   });
 
   describe('409, nothing changes', () => {
-    it.skip('LOCK_MISMATCH for a stale set lockVersion [R-002 not in mock]', async () => {
+    it('LOCK_MISMATCH for a stale set lockVersion', async () => {
       const { api, store } = ctx();
       const set = await createProblem(api, 'eva');
       const p = await createProblem(api, 'eva');
@@ -193,7 +193,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       await store.expectRecord('problems', p.id, { parentId: null });
     });
 
-    it.skip('SET_PARENT_HAS_RESULT when the target still has a result [R-002 not in mock]', async () => {
+    it('SET_PARENT_HAS_RESULT when the target still has a result', async () => {
       const { api, store } = ctx();
       const target = await createProblem(api, 'eva', { result: 'x = 1' });
       const p = await createProblem(api, 'eva');
@@ -201,7 +201,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       await store.expectRecord('problems', p.id, { parentId: null });
     });
 
-    it.skip('IS_SET_CHILD when the target is itself a set child [R-002 not in mock]', async () => {
+    it('IS_SET_CHILD when the target is itself a set child', async () => {
       const { api, store } = ctx();
       const p = await createProblem(api, 'jan');
       expectError(await add('jan', P.childA, { lockVersion: 1, problemId: p.id }), 409, 'IS_SET_CHILD');
@@ -219,7 +219,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       ['copy: the problem is a set', 'eva', async () => ({ copyFromId: (await buildSet(ctx().api, 'eva', 1)).set.id })],
       ['copy: the problem is the target itself', 'eva', async (target) => ({ copyFromId: target })],
     ];
-    it.skip.each(cases)('CANNOT_ADD_TO_SET: %s [R-002 not in mock]', async (_, who, arrange) => {
+    it.each(cases)('CANNOT_ADD_TO_SET: %s', async (_, who, arrange) => {
       const { api, store } = ctx();
       const target = await createProblem(api, who);
       const body = await arrange(target.id);
@@ -230,7 +230,7 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
       expect(await store.children(target.id)).toEqual([]);
     });
 
-    it.skip('LICENSE_REQUIRED: copying a problem whose licence forbids publication into a PUBLISHED set [R-002 not in mock]', async () => {
+    it('LICENSE_REQUIRED: copying a problem whose licence forbids publication into a PUBLISHED set', async () => {
       const { api, store } = ctx();
       const set = await createPublished(api, 'jan', seed.licenses.ccBy);
       const count = await store.countRecords('problems');
@@ -241,29 +241,27 @@ describe('addSetChild POST /problems/{id}/children [R-002 not in mock]', () => {
   });
 
   describe('auth and ownership', () => {
-    // The two 404 tests below already pass under test:unskipped, by accident: Nest's 404 for the missing
-    // route goes through the RFC 9457 filter and looks like the spec's 404. Keep them skipped until R-002 lands.
-    it.skip('401 without a token [R-002 not in mock]', async () => {
+    it('401 without a token', async () => {
       expectError(await ctx().api.post(`/problems/${P.set}/children`, { lockVersion: 3, copyFromId: P.circle }), 401, 'UNAUTHENTICATED');
     });
 
-    it.skip('403 FORBIDDEN on another teacher’s PUBLISHED problem; nothing changes [R-002 not in mock]', async () => {
+    it('403 FORBIDDEN on another teacher’s PUBLISHED problem; nothing changes', async () => {
       const { store } = ctx();
       const count = await store.countRecords('problems');
       expectError(await add('eva', P.circle, { lockVersion: 1, copyFromId: P.pythagoras }), 403, 'FORBIDDEN');
       expect(await store.countRecords('problems')).toBe(count);
     });
 
-    it.skip('404 NOT_FOUND on another teacher’s PRIVATE set [R-002 not in mock]', async () => {
+    it('404 NOT_FOUND on another teacher’s PRIVATE set', async () => {
       expectError(await add('eva', P.set, { lockVersion: 3, copyFromId: P.circle }), 404, 'NOT_FOUND');
     });
 
-    it.skip('404 NOT_FOUND for an unknown or malformed set id [R-002 not in mock]', async () => {
+    it('404 NOT_FOUND for an unknown or malformed set id', async () => {
       expectError(await add('jan', unknownId, { lockVersion: 1, copyFromId: P.circle }), 404, 'NOT_FOUND');
       for (const bad of malformedIds) expectError(await add('jan', encodeURIComponent(bad), { lockVersion: 1, copyFromId: P.circle }), 404, 'NOT_FOUND');
     });
 
-    it.skip('petr (registered) may build his own private sets [R-002 not in mock]', async () => {
+    it('petr (registered) may build his own private sets', async () => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'petr', 2);
       expect(ids(set.children)).toEqual(children);

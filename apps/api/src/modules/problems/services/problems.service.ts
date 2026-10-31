@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type {
+  AddChildRequest,
   ProblemCreate,
   ProblemDetail,
   ProblemList,
@@ -156,6 +157,13 @@ export class ProblemsService {
     const freed = this.sets.dissolve(row, children);
     const lk = this.lookups(freed);
     return { items: freed.map((r) => toListItem(r, lk)) };
+  }
+
+  /** addSetChild – the set's author. Returns the whole set; `accepted` means 202 (waiting for review). */
+  addSetChild(user: CurrentUserData, id: number, body: AddChildRequest): { accepted: boolean; problem: ProblemDetail } {
+    const set = this.findOwn(user, id);
+    const { accepted } = this.sets.addChild(user, set, body);
+    return { accepted, problem: this.detail(this.repo.findById(id)!, user) };
   }
 
   // ---------- facade for other modules (publication) ----------

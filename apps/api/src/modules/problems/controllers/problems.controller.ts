@@ -1,8 +1,10 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import {
+  zAddSetChildBody,
   zCreateProblemBody,
   zUpdateProblemBody,
+  type AddChildRequest,
   type ProblemCreate,
   type ProblemDetail,
   type ProblemList,
@@ -68,6 +70,19 @@ export class ProblemsController {
   @Post(':id/copy')
   copy(@CurrentUser() user: CurrentUserData, @Param('id', ParseIdPipe) id: number): ProblemDetail {
     return this.problems.copy(user, id);
+  }
+
+  /** addSetChild – the set's author. 200 applied, 202 waiting for review. */
+  @Post(':id/children')
+  addChild(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id', ParseIdPipe) id: number,
+    @Body(new ZodValidationPipe(zAddSetChildBody)) body: AddChildRequest,
+    @Res({ passthrough: true }) res: Response,
+  ): ProblemDetail {
+    const { accepted, problem } = this.problems.addSetChild(user, id, body);
+    res.status(accepted ? 202 : 200);
+    return problem;
   }
 
   /** dissolveSet – author only, only on a set. */
