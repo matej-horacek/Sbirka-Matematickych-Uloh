@@ -2,7 +2,7 @@
 
 Branch `overnight/2026-10-31`, 30 commits on top of `06b6dcb` (your spec 2.0.0 commit). Nothing pushed, merged or rewritten.
 **No changes** to `apps/api/src`, the spec, `packages/shared/contracts/src`, or frontend code (`git diff 06b6dcb -- apps/api/src packages/shared/contracts` is empty).
-The run had two sessions: 01:45–02:12, then resumed 10:40–11:30. About 20 minutes of reading.
+The run had two sessions: 01:45–02:12, then resumed 10:40–11:21. About 20 minutes of reading.
 
 ---
 

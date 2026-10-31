@@ -34,6 +34,6 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 
 | T9 | done | docs/overnight/architecture.md, codebase-walkthrough.md (27 steps in reading order), defense-questions.md (30 Q, answers at the end with file:line). | 11:30 |
 | T8 (fix) | done | fast-check flake traced to a real bug, R-021 (overflowing Sqids → 500); deterministic skipped tests; suite stable 5/5 runs. | 11:18 |
-| T10 | done | MORNING_REPORT.md: verify passes; 335 tests (203 pass / 0 fail / 132 skip); 0 critical, 9 high, 5 medium, 7 low findings; 6 decision files; Phase B first 3 steps. | 11:28 |
+| T10 | done | MORNING_REPORT.md: verify passes; 335 tests (203 pass / 0 fail / 132 skip); 0 critical, 9 high, 5 medium, 7 low findings; 6 decision files; Phase B first 3 steps. | 11:21 |
 
 **RUN COMPLETE**
