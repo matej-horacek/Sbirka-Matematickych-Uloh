@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type {
   AddChildRequest,
+  ReorderChildRequest,
   ProblemCreate,
   ProblemDetail,
   ProblemList,
@@ -25,6 +26,13 @@ import { ProblemsRepository } from '../repositories/problems.repository';
 import { ProblemCopiesService } from './problem-copies.service';
 import { ProblemRelationsService } from './problem-relations.service';
 import { ProblemSetsService } from './problem-sets.service';
+
+/** If-Match carries the set's lockVersion as an ETag: "4". Missing or malformed → 400. */
+function parseIfMatch(header: string | undefined): number {
+  const match = /^"(\d+)"$/.exec(header ?? '');
+  if (!match) throw ApiError.badRequest('If-Match must carry the set lockVersion in quotes, e.g. "4".');
+  return Number(match[1]);
+}
 
 /**
  * Facade of the problems module: the only service other modules may use.
@@ -163,6 +171,20 @@ export class ProblemsService {
   addSetChild(user: CurrentUserData, id: number, body: AddChildRequest): { accepted: boolean; problem: ProblemDetail } {
     const set = this.findOwn(user, id);
     const { accepted } = this.sets.addChild(user, set, body);
+    return { accepted, problem: this.detail(this.repo.findById(id)!, user) };
+  }
+
+  /** reorderSetChild – the set's author. */
+  reorderSetChild(user: CurrentUserData, id: number, childId: number, body: ReorderChildRequest): { accepted: boolean; problem: ProblemDetail } {
+    const set = this.findOwn(user, id);
+    const { accepted } = this.sets.reorderChild(user, set, childId, body);
+    return { accepted, problem: this.detail(this.repo.findById(id)!, user) };
+  }
+
+  /** removeSetChild – the set's author; the lock comes from the If-Match header. */
+  removeSetChild(user: CurrentUserData, id: number, childId: number, ifMatch: string | undefined): { accepted: boolean; problem: ProblemDetail } {
+    const set = this.findOwn(user, id);
+    const { accepted } = this.sets.removeChild(user, set, childId, parseIfMatch(ifMatch));
     return { accepted, problem: this.detail(this.repo.findById(id)!, user) };
   }
 

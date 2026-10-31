@@ -3,14 +3,14 @@ import { expectError, ids } from '../support/expect';
 import { buildSet, createProblem, getProblem } from '../support/factory';
 import { malformedIds, seed, unknownId } from '../support/seed';
 
-// removeSetChild — DELETE /problems/{id}/children/{childId}        NOT IN MOCK (R-004): every test is skipped.
+// removeSetChild — DELETE /problems/{id}/children/{childId}
 // Spec 2.0.0: the set's author. The child is NOT deleted: it becomes a standalone PRIVATE problem.
 //   Last child out → the set is a plain problem again (childCount 0). The set's lockVersion travels in
 //   If-Match as an ETag ("4"). 200 with the whole set (not 204). 400 missing/malformed If-Match;
 //   403; 404 (set, or childId not in this set); 412 LOCK_MISMATCH.
 // Not asserted: the set's `version` after a structure change (Q-004).
 // Not reachable through the API: the 202 path (see add-child.e2e-spec.ts).
-describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in mock]', () => {
+describe('removeSetChild DELETE /problems/{id}/children/{childId}', () => {
   const ctx = useTestApp();
   const etag = (lockVersion: number) => `"${lockVersion}"`;
   const takeOut = (who: 'jan' | 'eva', setId: string, childId: string, ifMatch?: string) => {
@@ -19,7 +19,7 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
   };
 
   describe('happy path (200, whole set + store)', () => {
-    it.skip('the child becomes a standalone PRIVATE problem: same record, not deleted [R-004 not in mock]', async () => {
+    it('the child becomes a standalone PRIVATE problem: same record, not deleted', async () => {
       const { api, store } = ctx();
       const { set, children: [c1, c2] } = await buildSet(api, 'eva', 2);
       const before = await store.countRecords('problems', undefined, { includeDeleted: true });
@@ -36,7 +36,7 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
       expect(ids(mine.body.items)).toContain(c1);
     });
 
-    it.skip('raises the set’s lockVersion by one (response and store) [R-004 not in mock]', async () => {
+    it('raises the set’s lockVersion by one (response and store)', async () => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'eva', 2);
       const res = await takeOut('eva', set.id, children[1], etag(set.lockVersion)).expect(200);
@@ -44,14 +44,14 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
       await store.expectRecord('problems', set.id, { lockVersion: set.lockVersion + 1 });
     });
 
-    it.skip('the remaining children keep their order [R-004 not in mock]', async () => {
+    it('the remaining children keep their order', async () => {
       const { api } = ctx();
       const { set, children: [c1, c2, c3] } = await buildSet(api, 'eva', 3);
       const res = await takeOut('eva', set.id, c2, etag(set.lockVersion)).expect(200);
       expect(ids(res.body.children)).toEqual([c1, c3]);
     });
 
-    it.skip('last child out → the set is a plain problem again (childCount 0) [R-004 not in mock]', async () => {
+    it('last child out → the set is a plain problem again (childCount 0)', async () => {
       const { api, store } = ctx();
       const { set, children: [c1] } = await buildSet(api, 'eva', 1);
       const res = await takeOut('eva', set.id, c1, etag(set.lockVersion)).expect(200);
@@ -62,7 +62,7 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
       await api.as('eva').patch(`/problems/${set.id}`, { lockVersion: res.body.lockVersion, result: 'x = 1' }).expect(200);
     });
 
-    it.skip('a child of a PUBLISHED set becomes PRIVATE when taken out [R-004 not in mock]', async () => {
+    it('a child of a PUBLISHED set becomes PRIVATE when taken out', async () => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'jan', 2);
       const pub = (await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)).body;
@@ -71,7 +71,7 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
       await store.expectRecord('problems', set.id, { publishStatus: 'PUBLISHED' });
     });
 
-    it.skip('taken out, then deleted with DELETE /problems/{childId} (the documented two-step delete) [R-004 not in mock]', async () => {
+    it('taken out, then deleted with DELETE /problems/{childId} (the documented two-step delete)', async () => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'eva', 2);
       await takeOut('eva', set.id, children[0], etag(set.lockVersion)).expect(200);
@@ -82,7 +82,7 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
   });
 
   describe('If-Match (optimistic lock on DELETE)', () => {
-    it.skip('412 LOCK_MISMATCH when If-Match does not match; nothing changes [R-004 not in mock]', async () => {
+    it('412 LOCK_MISMATCH when If-Match does not match; nothing changes', async () => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'eva', 2);
       expectError(await takeOut('eva', set.id, children[0], etag(set.lockVersion - 1)), 412, 'LOCK_MISMATCH');
@@ -90,19 +90,19 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
       await store.expectRecord('problems', set.id, { lockVersion: set.lockVersion });
     });
 
-    it.skip('412 when the set changed in between (a stale ETag from an earlier response) [R-004 not in mock]', async () => {
+    it('412 when the set changed in between (a stale ETag from an earlier response)', async () => {
       const { api } = ctx();
       const { set, children: [c1, c2] } = await buildSet(api, 'eva', 2);
       await takeOut('eva', set.id, c1, etag(set.lockVersion)).expect(200);
       expectError(await takeOut('eva', set.id, c2, etag(set.lockVersion)), 412, 'LOCK_MISMATCH');
     });
 
-    it.skip.each([
+    it.each([
       ['missing', undefined],
       ['empty', ''],
       ['not quoted', 'abc'],
       ['quoted, not a number', '"abc"'],
-    ])('400 VALIDATION_FAILED for a %s If-Match; nothing changes [R-004 not in mock]', async (_, header) => {
+    ])('400 VALIDATION_FAILED for a %s If-Match; nothing changes', async (_, header) => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'eva', 1);
       expectError(await takeOut('eva', set.id, children[0], header), 400, 'VALIDATION_FAILED');
@@ -113,7 +113,7 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
   });
 
   describe('404', () => {
-    it.skip('childId is not a child of this set (a standalone problem) [R-004 not in mock]', async () => {
+    it('childId is not a child of this set (a standalone problem)', async () => {
       const { api, store } = ctx();
       const { set } = await buildSet(api, 'eva', 1);
       const other = await createProblem(api, 'eva');
@@ -121,14 +121,14 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
       await store.expectRecord('problems', set.id, { lockVersion: set.lockVersion });
     });
 
-    it.skip('childId is a child of another set [R-004 not in mock]', async () => {
+    it('childId is a child of another set', async () => {
       const { api } = ctx();
       const a = await buildSet(api, 'eva', 1);
       const b = await buildSet(api, 'eva', 1);
       expectError(await takeOut('eva', a.set.id, b.children[0], etag(a.set.lockVersion)), 404, 'NOT_FOUND');
     });
 
-    it.skip('unknown or malformed ids [R-004 not in mock]', async () => {
+    it('unknown or malformed ids', async () => {
       const { api } = ctx();
       const { set, children } = await buildSet(api, 'eva', 1);
       expectError(await takeOut('eva', unknownId, children[0], etag(1)), 404, 'NOT_FOUND');
@@ -140,18 +140,18 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId} [R-004 not in 
   describe('auth and ownership', () => {
     // The 404 test for a foreign PRIVATE set already passes under test:unskipped, by accident (Nest's 404 for
     // the missing route looks like the spec's 404). Keep it skipped until the route exists.
-    it.skip('401 without a token [R-004 not in mock]', async () => {
+    it('401 without a token', async () => {
       const res = await ctx().api.delete(`/problems/${seed.problems.set}/children/${seed.problems.childA}`).set('If-Match', etag(3));
       expectError(res, 401, 'UNAUTHENTICATED');
     });
 
-    it.skip('404 on another teacher’s PRIVATE set; nothing changes [R-004 not in mock]', async () => {
+    it('404 on another teacher’s PRIVATE set; nothing changes', async () => {
       const { store } = ctx();
       expectError(await takeOut('eva', seed.problems.set, seed.problems.childA, etag(3)), 404, 'NOT_FOUND');
       await store.expectRecord('problems', seed.problems.childA, { parentId: 1 });
     });
 
-    it.skip('403 on another teacher’s PUBLISHED set; nothing changes [R-004 not in mock]', async () => {
+    it('403 on another teacher’s PUBLISHED set; nothing changes', async () => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'jan', 1);
       const pub = (await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)).body;

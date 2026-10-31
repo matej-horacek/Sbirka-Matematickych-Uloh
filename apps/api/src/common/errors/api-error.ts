@@ -30,6 +30,11 @@ export class ApiError extends HttpException {
     return new ApiError(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, detail);
   }
 
+  /** 412: the If-Match header (optimistic lock on DELETE) does not match. */
+  static preconditionFailed(code: ErrorCode, detail: string) {
+    return new ApiError(HttpStatus.PRECONDITION_FAILED, code, detail);
+  }
+
   static conflict(code: ErrorCode, detail: string) {
     return new ApiError(HttpStatus.CONFLICT, code, detail);
   }

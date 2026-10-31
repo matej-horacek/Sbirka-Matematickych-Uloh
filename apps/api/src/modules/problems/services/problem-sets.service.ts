@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode, type AddChildRequest } from '@matematika/contracts';
+import { ErrorCode, type AddChildRequest, type ReorderChildRequest } from '@matematika/contracts';
 import type { ProblemRow } from '../../../database/mock-database';
 import type { CurrentUserData } from '../../../common/decorators/current-user.decorator';
 import { ApiError } from '../../../common/errors/api-error';
@@ -90,8 +90,7 @@ export class ProblemSetsService {
       }
     }
 
-    // TODO Phase B: store the change as a revision waiting for review. The mock stores nothing.
-    if (published && user.trust !== 'TRUSTED' && user.role !== 'ADMIN') return { accepted: true };
+    if (this.needsReview(user, set)) return { accepted: true };
 
     const child = isMove ? source : this.copies.copy(user.id, source);
     this.repo.update(child.id, {
@@ -107,6 +106,59 @@ export class ProblemSetsService {
 
     this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
     return { accepted: false };
+  }
+
+  /**
+   * reorderSetChild: `set` is the caller's own problem. Order of checks: child belongs to the set (404),
+   * afterId (400), lock (409). Returns `accepted: true` for the 202 path (nothing stored).
+   */
+  reorderChild(user: CurrentUserData, set: ProblemRow, childId: number, body: ReorderChildRequest): { accepted: boolean } {
+    const children = this.repo.findChildren(set.id);
+    if (!children.some((c) => c.id === childId)) throw ApiError.notFound();
+
+    // DOMAIN-REVIEW (reorder): afterId is required; null = first, a child id = right after that child.
+    let rest = children.filter((c) => c.id !== childId).map((c) => c.id);
+    let insertAt = 0;
+    if (body.afterId !== null) {
+      const afterId = decodeId(body.afterId);
+      if (afterId === childId) throw ApiError.badRequest('afterId must not be the child itself.');
+      const index = afterId === null ? -1 : rest.indexOf(afterId);
+      if (index < 0) throw ApiError.badRequest('afterId is not a child of this set.');
+      insertAt = index + 1;
+    }
+    if (body.lockVersion !== set.lockVersion) {
+      throw ApiError.conflict(ErrorCode.LOCK_MISMATCH, 'Someone saved this set in between. Reload and try again.');
+    }
+    if (this.needsReview(user, set)) return { accepted: true };
+
+    rest = [...rest.slice(0, insertAt), childId, ...rest.slice(insertAt)];
+    rest.forEach((id, i) => this.repo.update(id, { position: positionAt(i) }));
+    this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
+    return { accepted: false };
+  }
+
+  /**
+   * removeSetChild: the set's lockVersion comes from If-Match (412 on a mismatch).
+   * The child is not deleted: it becomes a standalone PRIVATE problem.
+   */
+  removeChild(user: CurrentUserData, set: ProblemRow, childId: number, lockVersion: number): { accepted: boolean } {
+    const child = this.repo.findChildren(set.id).find((c) => c.id === childId);
+    if (!child) throw ApiError.notFound();
+    if (lockVersion !== set.lockVersion) {
+      throw ApiError.preconditionFailed(ErrorCode.LOCK_MISMATCH, 'Someone saved this set in between. Reload and try again.');
+    }
+    if (this.needsReview(user, set)) return { accepted: true };
+
+    // DOMAIN-REVIEW (last child out): the child becomes a standalone PRIVATE problem; when it was the
+    // last one, the set is a plain problem again (a set is just a problem with children).
+    this.repo.update(child.id, { parentId: null, position: null, publishStatus: 'PRIVATE' });
+    this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
+    return { accepted: false };
+  }
+
+  /** TODO Phase B: store the change as a revision waiting for review. The mock stores nothing. */
+  private needsReview(user: CurrentUserData, set: ProblemRow): boolean {
+    return set.publishStatus === 'PUBLISHED' && user.trust !== 'TRUSTED' && user.role !== 'ADMIN';
   }
 
   /** The problem named by problemId / copyFromId; 400 when it doesn't exist or the caller can't see it. */

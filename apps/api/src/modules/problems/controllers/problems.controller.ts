@@ -1,10 +1,12 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Patch, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import {
   zAddSetChildBody,
   zCreateProblemBody,
+  zReorderSetChildBody,
   zUpdateProblemBody,
   type AddChildRequest,
+  type ReorderChildRequest,
   type ProblemCreate,
   type ProblemDetail,
   type ProblemList,
@@ -81,6 +83,34 @@ export class ProblemsController {
     @Res({ passthrough: true }) res: Response,
   ): ProblemDetail {
     const { accepted, problem } = this.problems.addSetChild(user, id, body);
+    res.status(accepted ? 202 : 200);
+    return problem;
+  }
+
+  /** reorderSetChild – the set's author. 200 applied, 202 waiting for review. */
+  @Patch(':id/children/:childId')
+  reorderChild(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id', ParseIdPipe) id: number,
+    @Param('childId', ParseIdPipe) childId: number,
+    @Body(new ZodValidationPipe(zReorderSetChildBody)) body: ReorderChildRequest,
+    @Res({ passthrough: true }) res: Response,
+  ): ProblemDetail {
+    const { accepted, problem } = this.problems.reorderSetChild(user, id, childId, body);
+    res.status(accepted ? 202 : 200);
+    return problem;
+  }
+
+  /** removeSetChild – the set's author; the lock travels in If-Match. 200 with the whole set. */
+  @Delete(':id/children/:childId')
+  removeChild(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id', ParseIdPipe) id: number,
+    @Param('childId', ParseIdPipe) childId: number,
+    @Headers('if-match') ifMatch: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ): ProblemDetail {
+    const { accepted, problem } = this.problems.removeSetChild(user, id, childId, ifMatch);
     res.status(accepted ? 202 : 200);
     return problem;
   }
