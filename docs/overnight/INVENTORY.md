@@ -130,3 +130,26 @@ Run on 2026-10-31 (T4). Totals: **189 passed, 0 failed, 126 skipped** (315 tests
 The listProblems row counts the 3 filter tests in `copies/update-available`; the "updateAvailable (field on read)" row is the other 7 tests in that block.
 Every passing test validates the response against `openapi.yaml` automatically; every happy path also checks the store
 (`StoreProbe`): owner, status, versions, parent/position, links to the original, and soft-deletes.
+
+## 6. Coverage (T8)
+
+`pnpm --filter @matematika/api test:cov` writes `apps/api/coverage/lcov.info` (+ HTML in `coverage/lcov-report/`; the folder is gitignored).
+Run on 2026-10-31 (204 passing tests, skipped ones excluded):
+
+| Metric | Covered |
+|---|---|
+| Statements | 98.37 % (726/738) |
+| Branches | 85.54 % (355/415) |
+| Functions | 100 % (186/186) |
+| Lines | 99.16 % (594/599) |
+
+Five least-covered files in `src` (by uncovered lines and branches). Every controller shows 75 % branches: that is
+TypeScript decorator metadata (`typeof X === "function"` emitted by ts-jest), not real code paths.
+
+| File | Lines / branches | What is not covered | Why |
+|---|---|---|---|
+| `modules/problems/services/problems.service.ts` | 97.9 % / 87.6 % | `:114` set-child guard in `update`; `:71-73` 1.0.x `children` errors on create; constructor metadata branches | the guard is the subject of R-009 (tests skipped); `children` is 1.0.x (R-011), removed by T7.0 step 0 |
+| `modules/problems/services/problem-sets.service.ts` | 98.0 % / 80 % | `:46-55` error paths of the 1.0.x `children` plan (bad `id`, `copyFromId` not found / a set) | 1.0.x whole-set editing; not tested on purpose; deleted by T7.0 step 0 |
+| `modules/problems/domain/set-rules.ts` | 88.9 % / 81.3 % | `:8-11` 1.0.x child input checks | same: 1.0.x only |
+| `common/filters/problem-details.filter.ts` | 95.8 % / 83.3 % | `:48` an unexpected (non-HTTP) exception → 500; `:42` a Nest `HttpException` with a status outside 400–404 | **real gap**: no test provokes a 500 (no route can fail that way through the public API without changing `src`) |
+| `modules/problems/services/problem-copies.service.ts` | 100 % / 78.3 % | `:28` the `'?'` fallback for a missing author; `:54` copying a set while giving a parent target | defensive fallbacks that seed data never hits; the second is the 2.0.0 `copyFromId` path (R-002) |

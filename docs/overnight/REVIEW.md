@@ -38,8 +38,9 @@ pass today by accident (Nest's own 404 for a missing route looks like the spec's
 | R-017 | low | `ProblemDetailsFilter` has no title for 412 and no code mapping for it | `common/filters/problem-details.filter.ts:7-21` | `PreconditionFailed` response | none (needed by R-004) |
 | R-018 | low | Error `requestId` echoes the client's `X-Request-Id` header unchecked | `problem-details.filter.ts:32` | (hygiene) | none |
 | R-019 | low (Phase B) | Data-access shapes that make the Prisma swap harder | see details | T5.2 | none |
+| R-020 | low now, medium in Phase B | Set children are ordered with locale-dependent `localeCompare` (cs-CZ: "ch" after "i"; case order ignored) | `problems.repository.ts:32` | §6 "positions are string fractional-indexing values" | `properties` 1 |
 
-Counts: high 9, medium 4, low 6. No critical findings: the ownership and visibility checks hold everywhere the tests looked (see T5.3 below).
+Counts: high 9, medium 4, low 7. No critical findings: the ownership and visibility checks hold everywhere the tests looked (see T5.3 below).
 
 ## Details
 
@@ -143,6 +144,19 @@ the implementation checklist for the mock's 2.0.0 catch-up (`PHASE_B_PLAN.md` T7
   take-over of a set) needs `prisma.$transaction` in Phase B.
 - `positionAt(i)` renumbers every child on each save (B2). With the 2.0.0 single-child operations, real fractional
   indexing (insert between neighbours) is needed so a move touches one row.
+
+### R-020 — locale-dependent ordering of positions (low now, medium in Phase B)
+- **Where:** `ProblemsRepository.findChildren` (`problems.repository.ts:32`) sorts by `position.localeCompare(other)` with
+  **no locale**, so the result depends on the server's default ICU locale. On this machine it is `cs-CZ`.
+- **Found by:** fast-check (T8, `test/properties.spec.ts`). Under cs-CZ, "ch" is one letter sorted after "h" and even after "i":
+  `positionAt(583200) = "aci00"` sorts before `positionAt(581904) = "ach00"`. localeCompare also puts `"ab"` before `"aB"`;
+  fractional-indexing keys need byte order (`"aB" < "ab"`).
+- **Today:** harmless in practice (needs > 580 000 children, because `positionAt` pads to 4 base-36 digits).
+- **Phase B (B2):** real fractional-indexing keys are short, mixed-case base62 strings ("a0", "a0V", "Zz"…), so a set's
+  order would come out wrong, and differently on servers with different locales. Postgres `ORDER BY position` also depends on
+  the column collation: use `COLLATE "C"` (or a `bytea`/C-collated column) for positions.
+- **Suggested fix:** compare with `<`/`>` (byte order) in the repository; in Prisma, a C-collated column. The test StoreProbe
+  (`test/support/store.ts`) had copied the same comparator and was switched to byte order tonight (test code only).
 
 ## T5.1 — what else was checked and found consistent with the spec
 

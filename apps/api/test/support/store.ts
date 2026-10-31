@@ -112,7 +112,8 @@ export class MockStoreProbe implements StoreProbe {
     const pid = this.toDbId(parentId);
     return this.rows('problems')
       .filter((p) => p.parentId === pid && p.deletedAt === null)
-      .sort((a, b) => (a.position ?? '').localeCompare(b.position ?? ''));
+      // Byte order, like fractional-indexing keys and Postgres text with C collation (not localeCompare: R-020).
+      .sort((a, b) => ((a.position ?? '') < (b.position ?? '') ? -1 : (a.position ?? '') > (b.position ?? '') ? 1 : 0));
   }
 }
 

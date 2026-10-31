@@ -4,3 +4,4 @@ dist/
 apps/api/src/generated/
 *.tsbuildinfo
 packages/shared/contracts/src/generated/
+coverage/
