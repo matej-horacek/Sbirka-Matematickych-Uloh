@@ -52,3 +52,5 @@ Started 2026-10-31 from `IMPLEMENT_2.0.0.md`. Baseline before: 203 pass / 0 fail
 | I5 | done | `PATCH /problems/{id}/children/{childId}` (`ProblemSetsService.reorderChild`): child not in set 404, afterId 400 (missing, unknown, not in set, itself), lock 409. 21 tests un-skipped. |
 | I6 | done | `DELETE /problems/{id}/children/{childId}` (`removeChild`): lock in `If-Match` (`"4"`; missing/malformed 400, mismatch 412 via new `ApiError.preconditionFailed` + 412 title in the filter, R-017), child becomes standalone PRIVATE, last child out leaves a plain problem, 200 with the whole set. 18 tests un-skipped. Now 286 pass / 50 skip. |
 | I7 | done | `requests.http`: scenarios 4/5 (1.0.x `children`) replaced by the 2.0.0 flow (create A, B, set parent; add by move, add by copy with `afterId: null`, add after A; reorder; take out with `If-Match`), ids and lockVersion carried by response handlers. `requests-http.e2e-spec.ts` scenarios 4-5 replay the same flow. Now 287 pass / 48 skip. |
+
+**IMPLEMENTATION COMPLETE** (2026-10-31): I1-I8 done, `pnpm verify` passes, 287 pass / 48 skip. See docs/IMPLEMENT_2.0.0_REPORT.md.
