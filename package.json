@@ -10,6 +10,7 @@
     "spec:lint": "redocly lint packages/shared/contracts/openapi.yaml",
     "spec:examples": "node scripts/check-spec-examples.mjs",
     "spec:drift": "node scripts/spec-drift.mjs",
+    "spec:version": "node scripts/check-spec-version.mjs",
     "lint": "eslint .",
     "verify": "node scripts/verify.mjs",
     "verify:quick": "node scripts/verify.mjs --quick"

@@ -29,7 +29,8 @@ describe('requests.http (baseline scenarios, in file order)', () => {
     expect(res.body.children).toHaveLength(2);
   });
 
-  it('4. Create a set (1.0.x `children` body)', async () => {
+  // I1: skipped, 1.0.x `children` body is gone in 2.0.0 (R-011). Replaced by the 2.0.0 flow in I7.
+  it.skip('4. Create a set (1.0.x `children` body)', async () => {
     const { api, store } = ctx();
     const before = await store.countRecords('problems');
     const res = await api
@@ -51,7 +52,8 @@ describe('requests.http (baseline scenarios, in file order)', () => {
     expect(res.body.childCount).toBe(2);
   });
 
-  it('5. Edit the whole set: keep a), drop b), add c), copy Obsah kruhu in (1.0.x `children` body)', async () => {
+  // I1: skipped, same reason as 4. Replaced by the 2.0.0 flow in I7.
+  it.skip('5. Edit the whole set: keep a), drop b), add c), copy Obsah kruhu in (1.0.x `children` body)', async () => {
     const { api, store } = ctx();
     const res = await api
       .as('jan')
@@ -84,7 +86,8 @@ describe('requests.http (baseline scenarios, in file order)', () => {
   it('8. Dissolve a set (children become standalone)', async () => {
     const { api, store } = ctx();
     const res = await api.as('jan').post(`/problems/${P.set}/dissolve`).expect(200);
-    expect(res.body.items).toHaveLength(3);
+    // I1: 2 children (the seed set); scenario 5 no longer adds a third one.
+    expect(res.body.items).toHaveLength(2);
     await store.expectDeleted('problems', P.set);
   });
 

@@ -16,7 +16,7 @@ import { LicensesService } from '../../licenses/services/licenses.service';
 import { TagsService } from '../../tags/services/tags.service';
 import { UsersService } from '../../users/services/users.service';
 import { contentFields } from '../domain/content-fields';
-import { checkChildInputs, parentMayHaveResult } from '../domain/set-rules';
+import { parentMayHaveResult } from '../domain/set-rules';
 import { canView } from '../domain/visibility';
 import type { ListProblemsQuery } from '../dto/list-problems.query';
 import { toDetail, toListItem, type ProblemLookups } from '../mappers/problem.mapper';
@@ -66,15 +66,8 @@ export class ProblemsService {
   }
 
   create(user: CurrentUserData, body: ProblemCreate): ProblemDetail {
-    const children = body.children ?? [];
-    const childError = checkChildInputs(children, 'create');
-    if (childError) throw ApiError.badRequest(childError);
-    if (!parentMayHaveResult(body.result, children.length)) {
-      throw ApiError.badRequest('result: a set parent must not have a result');
-    }
     const tagIds = this.relations.tagIds(user.id, body.tagIds) ?? [];
     const chapterIds = this.relations.chapterIds(user.id, body.chapterIds) ?? [];
-    const plan = this.sets.planChildren(user.id, null, children);
 
     const row = this.repo.insert({
       name: body.name!,
@@ -103,7 +96,6 @@ export class ProblemsService {
       tagIds,
       chapterIds,
     });
-    this.sets.applyChildren(user.id, row, plan);
     return this.detail(row, user);
   }
 
@@ -116,17 +108,14 @@ export class ProblemsService {
     if (body.lockVersion !== row.lockVersion) {
       throw ApiError.conflict(ErrorCode.LOCK_MISMATCH, 'Someone saved this problem in between. Reload and try again.');
     }
-    const childError = body.children && checkChildInputs(body.children, 'patch');
-    if (childError) throw ApiError.badRequest(childError);
 
-    const childCount = body.children ? body.children.length : this.repo.findChildren(row.id).length;
+    const childCount = this.repo.findChildren(row.id).length;
     const result = body.result !== undefined ? body.result : row.result;
     if (!parentMayHaveResult(result, childCount)) {
       throw ApiError.conflict(ErrorCode.SET_PARENT_HAS_RESULT, 'A set parent must not have a result.');
     }
     const tagIds = this.relations.tagIds(user.id, body.tagIds);
     const chapterIds = this.relations.chapterIds(user.id, body.chapterIds);
-    const plan = body.children && this.sets.planChildren(user.id, row.id, body.children);
 
     if (row.publishStatus === 'PUBLISHED' && user.trust !== 'TRUSTED' && user.role !== 'ADMIN') {
       // TODO Phase B: store the change as a problem_revision waiting for review.
@@ -141,7 +130,6 @@ export class ProblemsService {
       version: row.version + 1,
       lockVersion: row.lockVersion + 1,
     });
-    if (plan) this.sets.applyChildren(user.id, updated, plan);
     return { accepted: false, problem: this.detail(updated, user) };
   }
 

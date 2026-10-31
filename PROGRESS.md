@@ -37,3 +37,12 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 | T10 | done | MORNING_REPORT.md: verify passes; 335 tests (203 pass / 0 fail / 132 skip); 0 critical, 9 high, 5 medium, 7 low findings; 6 decision files; Phase B first 3 steps. | 11:21 |
 
 **RUN COMPLETE**
+
+## Implementation 2.0.0
+
+Started 2026-10-31 from `IMPLEMENT_2.0.0.md`. Baseline before: 203 pass / 0 fail / 132 skip.
+
+| Step | Status | Notes |
+|---|---|---|
+| I1 | done | `pnpm generate` from the 2.0.0 spec; `children` removed from create/patch and the whole-set code (`planChildren`/`applyChildren`, `checkChildInputs`) deleted. `main.ts` parses the spec with `maxAliasCount: -1` (R-001; the spec still has anchors). `verify` now runs `spec:drift` and regenerates the contracts when `src/generated` is missing. requests.http scenarios 4 and 5 skipped (1.0.x body), 8 expects 2 children; the 2.0.0 versions come in I7. Now 201 pass / 134 skip. |
+| I2 (part) | done | O-8: `scripts/check-spec-version.mjs` (`pnpm spec:version`) is a `verify` step. |
