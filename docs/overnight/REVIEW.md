@@ -172,7 +172,7 @@ the implementation checklist for the mock's 2.0.0 catch-up (`PHASE_B_PLAN.md` T7
 
 ## T5.1 — what else was checked and found consistent with the spec
 
-- Response shapes: every response in 189 passing tests passes the strict contract check (undeclared fields fail).
+- Response shapes: every response in 203 passing tests passes the strict contract check (undeclared fields fail).
 - Status codes and error codes: 401/403/404/409 and their codes match the spec on all implemented operations, apart from R-010.
 - Pagination: `page`/`limit` defaults, max 100, empty page past the end with the real `total` (list and tags).
 - Filters: several `tagId`/`chapterId` = ANY; different filters = AND; **a parent chapter includes its child chapters** (and not the reverse).

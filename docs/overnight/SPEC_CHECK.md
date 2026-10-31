@@ -136,6 +136,7 @@ Severity scale: **critical** (blocks use) · **high** (breaks a client or the se
 | S-8 | low | Tag `Problems` description still says "whole sets". | C-8 |
 | S-9 | low | "Exactly one of `problemId` / `copyFromId`" is prose only; generated Zod won't enforce it. | C-9 |
 | S-10 | low | Nullable id fields are plain strings, not Sqid refs; `Sqid` has no pattern. | C-10, T2.4 |
+| S-13 | **medium** | Added in T4: `ProblemCreate` puts `required: [name, assignment]` in an `allOf` branch that doesn't declare those properties (they live in `ProblemBase`). Valid OpenAPI, but `@hey-api/openapi-ts` drops the requirement, so the generated `zProblemCreate` accepts a body without a name, and the mock stores a nameless problem (REVIEW R-015). Declaring `name`/`assignment` in the same branch (or in `ProblemCreate` directly) avoids it. | R-015 |
 | S-11 | info | `info.license` missing (Redocly `info-license`). | T2.1 |
 | S-12 | info | Real seed Sqids in examples; unusual nullable-`$ref` form in `SourceRef.license`; chapters/licences not paginated by design. | C-11, C-12, C-13 |
 

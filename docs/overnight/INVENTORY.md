@@ -103,22 +103,22 @@ Totals: 4 yes · 7 partial · 5 no.
 
 ## 5. Test results per operation (T4.5)
 
-Run on 2026-10-31 (T4). Totals: **189 passed, 0 failed, 126 skipped** (315 tests, 16 files).
-`pnpm --filter @matematika/api test:unskipped` runs the skipped ones too: 122 fail (each one proves its finding),
+Run on 2026-10-31 (T4, updated after T8). Totals: **203 passed, 0 failed, 132 skipped** (335 tests, 18 files).
+`pnpm --filter @matematika/api test:unskipped` runs the skipped ones too: 128 fail (each one proves its finding),
 4 pass by accident (Nest's 404 for a missing route looks like the spec's 404; marked in the files).
 
 | operation | in mock? | tests | passing | skipped (finding IDs) | file |
 |---|---|---|---|---|---|
-| listProblems | partial | 35 | 27 | 8 (R-007 ×7, R-013) | `problems/list`, `copies/update-available` (filter) |
-| createProblem | partial | 21 | 18 | 3 (R-015, R-011, R-008) | `problems/create` |
-| getProblem | partial | 16 | 14 | 2 (R-008) | `problems/get` |
+| listProblems | partial | 36 | 27 | 9 (R-007 ×7, R-013, R-021) | `problems/list`, `copies/update-available` (filter) |
+| createProblem | partial | 22 | 18 | 4 (R-015, R-011, R-008, R-021) | `problems/create` |
+| getProblem | partial | 17 | 14 | 3 (R-008 ×2, R-021) | `problems/get` |
 | updateProblem | partial | 31 | 26 | 5 (R-009) | `problems/update` |
 | deleteProblem | partial | 13 | 12 | 1 (R-010) | `problems/delete` |
 | addSetChild | **no** | 37 | 0 | 37 (R-002) | `sets/add-child` |
 | reorderSetChild | **no** | 21 | 0 | 21 (R-003) | `sets/reorder-child` |
 | removeSetChild | **no** | 18 | 0 | 18 (R-004) | `sets/remove-child` |
 | copyProblem | yes | 22 | 20 | 2 (R-008, R-007) | `actions/copy` |
-| publishProblem | yes | 18 | 17 | 1 (needs R-002 to arrange) | `actions/publish` |
+| publishProblem | yes | 19 | 17 | 2 (needs R-002 to arrange; R-021) | `actions/publish` |
 | dissolveSet | partial | 10 | 9 | 1 (R-010) | `actions/dissolve` |
 | takeOverUpdate | **no** | 13 | 0 | 13 (R-005) | `copies/update-available` |
 | dismissUpdate | **no** | 6 | 0 | 6 (R-006) | `copies/update-available` |
@@ -126,6 +126,8 @@ Run on 2026-10-31 (T4). Totals: **189 passed, 0 failed, 126 skipped** (315 tests
 | listTags / listChapters / listLicenses | yes | 21 | 20 | 1 (R-014, auth) | `pickers` |
 | baseline `requests.http` (T4.1 port) | | 11 | 11 | 0 | `requests-http` |
 | harness self-tests + contract unit tests | | 15 | 15 | 0 | `harness`, `support/contract.spec` |
+| T8: pagination / filter edge cases | | 8 | 8 | 0 | `problems/pagination` |
+| T8: property tests (Sqids, positions) | | 8 | 6 | 2 (R-020, R-021) | `properties.spec` |
 
 The listProblems row counts the 3 filter tests in `copies/update-available`; the "updateAvailable (field on read)" row is the other 7 tests in that block.
 Every passing test validates the response against `openapi.yaml` automatically; every happy path also checks the store

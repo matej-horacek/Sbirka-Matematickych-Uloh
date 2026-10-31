@@ -124,7 +124,7 @@ Line numbers are from 2026-10-31.
 26. With the `StoreProbe` (`apps/api/test/support/store.ts`): count rows before/after, `expectRecord` on each new id with
     `originalProblemId`, owner, status, and deep-compare the original row before/after. See `test/actions/copy.e2e-spec.ts` ("a set" block).
 27. They are tests of what the spec requires but the mock does not do yet (2.0.0 operations) or does wrong (`[R-0xx]`).
-    `pnpm --filter @matematika/api test:unskipped` runs them: 122 fail for the stated reason, and the 4 that pass are explained in the files.
+    `pnpm --filter @matematika/api test:unskipped` runs them: 128 fail for the stated reason, and the 4 that pass are explained in the files.
     Each skip names a finding in `docs/overnight/REVIEW.md`.
 28. `scripts/verify.mjs`: spec lint → spec examples → (spec drift, skipped for now) → typecheck → lint → tests. Cheapest and
     most fundamental first: a broken spec makes everything after it meaningless; tests are the slowest step.

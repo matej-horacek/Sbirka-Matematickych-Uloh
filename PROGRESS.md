@@ -33,5 +33,7 @@ Runbook: `OVERNIGHT_RUN.md`. Branch: `overnight/2026-10-31`. Each session reads 
 | T8 | done | fast-check properties (Sqids round-trip, positions) found R-020 (localeCompare + cs-CZ breaks position order); pagination/filter edge cases (8 tests, property over limit 1..14); coverage 99.2 % lines / 85.5 % branches, 5 least-covered files in INVENTORY §6. New dev dep fast-check; .gitignore += coverage/. | 11:20 |
 
 | T9 | done | docs/overnight/architecture.md, codebase-walkthrough.md (27 steps in reading order), defense-questions.md (30 Q, answers at the end with file:line). | 11:30 |
+| T8 (fix) | done | fast-check flake traced to a real bug, R-021 (overflowing Sqids → 500); deterministic skipped tests; suite stable 5/5 runs. | 11:18 |
+| T10 | done | MORNING_REPORT.md: verify passes; 335 tests (203 pass / 0 fail / 132 skip); 0 critical, 9 high, 5 medium, 7 low findings; 6 decision files; Phase B first 3 steps. | 11:28 |
 
-**Next task:** T10 (MORNING_REPORT.md)
+**RUN COMPLETE**
