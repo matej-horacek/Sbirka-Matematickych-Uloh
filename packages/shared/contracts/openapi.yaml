@@ -6,12 +6,19 @@ info:
     (Komunitní sbírka úloh z matematiky).
 
     ## Changelog
+    - 2.0.0 (2026-10-29): block model. Problems are created one at a time (`children` removed
+      from create and patch); sets are built with POST/PATCH/DELETE /problems/{id}/children
+      (move your own problem in, or copy a foreign one; position with `afterId`). A set child is
+      edited directly with its own lockVersion. Batch read (`ids`) and `updateAvailable` filter
+      on the list; copy updates with take-over-update and dismiss-update. New codes
+      CANNOT_ADD_TO_SET and NO_UPDATE_AVAILABLE; SET_CHILD_EDIT_VIA_PARENT renamed to IS_SET_CHILD;
+      412 for a failed If-Match.
     - 1.0.1 (2026-10-25): documentation only. operationId on every endpoint, grouping
       sections (Problems, Problem actions, Pickers), realistic request and response examples.
     - 1.0.0 (2026-10-25): frozen contract for the problem part. Problems CRUD with whole-set
       editing (`children`), copy, publish, dissolve; read-only pickers for tags, chapters
       and licences; RFC 9457 errors with `code` values; bearer (JWT) auth on all endpoints.
-  version: 1.0.1
+  version: 1.0.0
 
 servers:
 - url: https://main.server.com/api/v1
@@ -23,8 +30,10 @@ security:
 tags:
 - name: Problems
   description: Create, read, update and delete problems and whole sets.
+- name: Sets
+  description: 'Build a set from blocks: add (move or copy), reorder and take out children.'
 - name: Problem actions
-  description: Copy, publish and dissolve.
+  description: Copy, publish, dissolve and copy updates.
 - name: Pickers
   description: Read-only lists for the editor (tags, chapters, licences).
 paths:
@@ -40,6 +49,8 @@ paths:
         scope=public returns published problems (public browser).
         Set children are not listed on their own; only standalone problems
         and set parents appear (see childCount).
+        Several tagId / chapterId values match problems having any of them.
+        Codes: 400 VALIDATION_FAILED (e.g. updateAvailable with scope=public).
       parameters:
       - $ref: '#/components/parameters/Scope'
       - $ref: '#/components/parameters/Page'
@@ -47,6 +58,8 @@ paths:
       - $ref: '#/components/parameters/TagIdFilter'
       - $ref: '#/components/parameters/ChapterIdFilter'
       - $ref: '#/components/parameters/LanguageFilter'
+      - $ref: '#/components/parameters/IdsFilter'
+      - $ref: '#/components/parameters/UpdateAvailableFilter'
       responses:
         '200':
           description: Problems received successfully.
@@ -87,11 +100,11 @@ paths:
                   language: cs
                   difficulty: 2
                   author: *id001
-                  tags: &id015
+                  tags: &id016
                   - id: t5Gh6
                     name: geometrie
                     scope: global
-                  chapters: &id016
+                  chapters: &id017
                   - id: c2Xy5
                     name: Planimetrie
                     scope: global
@@ -111,10 +124,10 @@ paths:
       - Problems
       description: |
         Who: any logged-in teacher (registered teachers too; creating is private).
-        The new problem is PRIVATE, owned by the caller, with source OWN and no licence
-        (the licence is chosen when publishing).
-        Sending `children` creates a set; then `result` must be null.
-        Codes: 400 VALIDATION_FAILED (includes a set parent with a result).
+        Creates one problem. The new problem is PRIVATE, owned by the caller, with source OWN
+        and no licence (the licence is chosen when publishing).
+        To build a set, create the problems, then add them with POST /problems/{id}/children.
+        Codes: 400 VALIDATION_FAILED.
       requestBody:
         required: true
         content:
@@ -122,36 +135,18 @@ paths:
             schema:
               $ref: '#/components/schemas/ProblemCreate'
             examples:
-              newSet:
-                summary: A new set with two children
+              single:
+                summary: One problem (a block)
                 value:
-                  name: Řešte rovnice
-                  assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                  result:
+                  name: Rovnice a)
+                  assignment: \( 2x + 3 = 11 \)
+                  result: \( x = 4 \)
                   language: cs
-                  difficulty: 3
+                  difficulty: 2
                   tagIds:
                   - t1Ab3
-                  - t2Cd4
                   chapterIds:
-                  - c9Kd1
-                  children:
-                  - name: Rovnice a)
-                    assignment: \( 2x + 3 = 11 \)
-                    result: \( x = 4 \)
-                    difficulty: 2
-                    tagIds:
-                    - t1Ab3
-                    chapterIds:
-                    - c9Kd1
-                  - name: Rovnice b)
-                    assignment: \( x^2 = 9 \)
-                    result: \( x = \pm 3 \)
-                    difficulty: 3
-                    tagIds:
-                    - t2Cd4
-                    chapterIds:
-                    - c9Kd1
+                  - c4Lm7
       responses:
         '201':
           description: Created successfully.
@@ -274,6 +269,7 @@ paths:
                 status: PRIVATE
                 version: 1
                 lockVersion: 3
+                originalId:
                 parentId:
                 children:
                 - &id013
@@ -284,14 +280,15 @@ paths:
                   language: cs
                   difficulty: 2
                   author: *id001
-                  tags: &id022
+                  tags: &id023
                   - *id009
-                  chapters: &id023
+                  chapters: &id024
                   - *id010
                   childCount: 0
                   createdAt: '2026-10-20T09:15:00Z'
                   updatedAt: '2026-10-25T14:02:00Z'
                   source: *id011
+                  lockVersion: 1
                 - id: d4E5f
                   name: Rovnice b)
                   assignment: \( x^2 = 9 \)
@@ -299,14 +296,15 @@ paths:
                   language: cs
                   difficulty: 3
                   author: *id001
-                  tags: &id024
+                  tags: &id025
                   - *id012
-                  chapters: &id025
+                  chapters: &id026
                   - *id010
                   childCount: 0
                   createdAt: '2026-10-20T09:15:00Z'
                   updatedAt: '2026-10-25T14:02:00Z'
                   source: *id011
+                  lockVersion: 1
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -317,13 +315,15 @@ paths:
       tags:
       - Problems
       description: |
-        Who: the author only. Not allowed on a set child (edit the set through its parent).
+        Who: the author only. Works on any problem, including a set child.
+        Send the problem's own lockVersion. Editing a set child also raises the set's version
+        (copy holders of the set are notified); it does not change the set's lockVersion.
         A non-author gets 403 on a published problem and 404 on a private one.
         - 200: the change is applied (private problem, or author is a trusted teacher/admin).
-        - 202: the problem is published and the author is not trusted; the change is saved
-          as a revision waiting for review, and the returned problem is still unchanged.
+        - 202: the problem (or the set it belongs to) is published and the author is not trusted;
+          the change is saved as a revision waiting for review, and the returned problem is unchanged.
         Codes: 400 VALIDATION_FAILED; 403 FORBIDDEN; 404 NOT_FOUND;
-        409 LOCK_MISMATCH, SET_PARENT_HAS_RESULT, SET_CHILD_EDIT_VIA_PARENT.
+        409 LOCK_MISMATCH, SET_PARENT_HAS_RESULT (a result on a set).
       parameters:
       - $ref: '#/components/parameters/Id'
       requestBody:
@@ -333,23 +333,11 @@ paths:
             schema:
               $ref: '#/components/schemas/ProblemPatch'
             examples:
-              editSet:
-                summary: 'Edit a set: keep a), remove b) by leaving it out, add new c), copy problem Zz9Yy in as d)'
+              edit:
+                summary: Edit the assignment
                 value:
                   lockVersion: 3
                   assignment: 'Vyřešte rovnice v oboru reálných čísel a proveďte zkoušku:'
-                  children:
-                  - id: a1B2c
-                  - name: Rovnice c)
-                    assignment: \( 3x - 1 = 2x + 4 \)
-                    result: \( x = 5 \)
-                    difficulty: 2
-                    tagIds:
-                    - t1Ab3
-                    chapterIds:
-                    - c9Kd1
-                  - copyFromId: Zz9Yy
-                    name: Rovnice d)
       responses:
         '200':
           description: Updated successfully.
@@ -425,7 +413,7 @@ paths:
                   updatedAt: '2026-10-25T14:02:00Z'
                   source:
                     type: LICENSED_USE
-                    license: &id017
+                    license: &id018
                       id: L2bY4
                       name: CC BY 4.0
                       url: https://creativecommons.org/licenses/by/4.0/
@@ -456,10 +444,11 @@ paths:
       tags:
       - Problems
       description: |
-        Who: the author only. Not allowed on a set child (edit the set through its parent).
-        Soft delete (hidden). On a set, deletes the parent together with its children.
+        Who: the author only. Not allowed on a set child: take it out of the set first
+        (DELETE /problems/{setId}/children/{childId}), then delete it.
+        Soft delete (hidden). On a set, deletes the set together with its children.
         To keep the children, use POST /problems/{id}/dissolve instead.
-        Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 SET_CHILD_EDIT_VIA_PARENT.
+        Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 IS_SET_CHILD.
       parameters:
       - $ref: '#/components/parameters/Id'
       responses:
@@ -474,6 +463,160 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /problems/{id}/children:
+    post:
+      summary: Add a child to a set
+      operationId: addSetChild
+      tags:
+      - Sets
+      description: |
+        Who: the set's author. `id` is the set (or a standalone problem that becomes a set with its first child).
+        - `problemId`: moves your own PRIVATE standalone problem into the set (no copy).
+        - `copyFromId`: copies any problem you can see into the set (usual copy rules).
+        Position with `afterId`: missing = at the end, null = first, a child id = after it.
+        The set must not be a child itself and must have no result. The added child takes the set's status;
+        in a published set, a child without a licence takes the set's licence.
+        Returns the whole set, so the editor gets the new order and lockVersion in one response.
+        Codes: 400 VALIDATION_FAILED (both or neither ids, unknown afterId, problem not found);
+        403 FORBIDDEN; 404 NOT_FOUND (the set); 409 LOCK_MISMATCH, SET_PARENT_HAS_RESULT,
+        IS_SET_CHILD, CANNOT_ADD_TO_SET, LICENSE_REQUIRED.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddChildRequest'
+            examples:
+              moveToEnd:
+                summary: Move your own problem in, at the end
+                value:
+                  lockVersion: 1
+                  problemId: a1B2c
+              copyAfter:
+                summary: Copy a foreign problem in, right after child a1B2c
+                value:
+                  lockVersion: 2
+                  copyFromId: VqXmZ
+                  afterId: a1B2c
+              first:
+                summary: Move in as the first child
+                value:
+                  lockVersion: 3
+                  problemId: d4E5f
+                  afterId:
+      responses:
+        '200':
+          description: Child added. Returns the whole set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example: *id014
+        '202': &id015
+          description: 'The set is published and you are not trusted: the change waits for review; the returned set is unchanged.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example: *id014
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /problems/{id}/children/{childId}:
+    patch:
+      summary: Move a child within its set
+      operationId: reorderSetChild
+      tags:
+      - Sets
+      description: |
+        Who: the set's author.
+        `afterId` is required: null = first, a child id = right after that child.
+        Codes: 400 VALIDATION_FAILED (missing afterId, afterId not in the set or the child itself);
+        403 FORBIDDEN; 404 NOT_FOUND (set, or childId not in this set); 409 LOCK_MISMATCH.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/ChildId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderChildRequest'
+            examples:
+              toFirst:
+                summary: Move to first
+                value:
+                  lockVersion: 4
+                  afterId:
+              afterOther:
+                summary: Move right after child d4E5f
+                value:
+                  lockVersion: 4
+                  afterId: d4E5f
+      responses:
+        '200':
+          description: Child moved. Returns the whole set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example: *id014
+        '202': *id015
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Take a child out of its set
+      operationId: removeSetChild
+      tags:
+      - Sets
+      description: |
+        Who: the set's author. The child is not deleted: it becomes a standalone PRIVATE problem again.
+        (To delete it, call DELETE /problems/{childId} afterwards.) When the last child is taken out,
+        the set is a plain problem again (childCount 0).
+        The set's lockVersion goes in the If-Match header, because DELETE has no body.
+        Returns 200 with the whole set instead of 204, so the editor gets the new lockVersion (RFC 9110 allows a body).
+        Codes: 400 VALIDATION_FAILED (missing or malformed If-Match); 403 FORBIDDEN;
+        404 NOT_FOUND (set, or childId not in this set); 412 LOCK_MISMATCH.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      - $ref: '#/components/parameters/ChildId'
+      - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: Child taken out. Returns the whole set.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example: *id014
+        '202': *id015
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
   /problems/{id}/copy:
     post:
       summary: Copy a problem
@@ -512,14 +655,14 @@ paths:
                 author:
                   id: u3Kp8
                   displayName: Eva Svobodová
-                tags: *id015
-                chapters: *id016
+                tags: *id016
+                chapters: *id017
                 childCount: 0
                 createdAt: '2026-10-25T14:02:00Z'
                 updatedAt: '2026-10-25T14:02:00Z'
                 source:
                   type: LICENSED_USE
-                  license: *id017
+                  license: *id018
                   citation: 'Převzato od: Jan Novák'
                   licenseNote:
                   showInWeb: true
@@ -582,20 +725,20 @@ paths:
                 result:
                 language: cs
                 difficulty: 3
-                author: &id018
+                author: &id019
                   id: u7Hn2
                   displayName: Jan Novák
                 tags:
-                - &id019
+                - &id020
                   id: t1Ab3
                   name: lineární rovnice
                   scope: global
-                - &id021
+                - &id022
                   id: t2Cd4
                   name: kvadratické rovnice
                   scope: global
                 chapters:
-                - &id020
+                - &id021
                   id: c9Kd1
                   name: Rovnice
                   scope: global
@@ -604,7 +747,7 @@ paths:
                 updatedAt: '2026-10-25T14:02:00Z'
                 source:
                   type: OWN
-                  license: *id017
+                  license: *id018
                   citation:
                   licenseNote:
                   showInWeb: true
@@ -620,17 +763,17 @@ paths:
                   result: \( x = 4 \)
                   language: cs
                   difficulty: 2
-                  author: *id018
+                  author: *id019
                   tags:
-                  - *id019
-                  chapters:
                   - *id020
+                  chapters:
+                  - *id021
                   childCount: 0
                   createdAt: '2026-10-20T09:15:00Z'
                   updatedAt: '2026-10-25T14:02:00Z'
                   source:
                     type: OWN
-                    license: *id017
+                    license: *id018
                     citation:
                     licenseNote:
                     showInWeb: true
@@ -641,17 +784,17 @@ paths:
                   result: \( x = \pm 3 \)
                   language: cs
                   difficulty: 3
-                  author: *id018
+                  author: *id019
                   tags:
-                  - *id021
+                  - *id022
                   chapters:
-                  - *id020
+                  - *id021
                   childCount: 0
                   createdAt: '2026-10-20T09:15:00Z'
                   updatedAt: '2026-10-25T14:02:00Z'
                   source:
                     type: OWN
-                    license: *id017
+                    license: *id018
                     citation:
                     licenseNote:
                     showInWeb: true
@@ -676,7 +819,7 @@ paths:
         The parent is soft-deleted and every child becomes a standalone PRIVATE problem
         owned by the author (to be published again on its own if wanted).
         No request body. Returns the now-standalone problems in their former order.
-        Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 NOT_A_SET, SET_CHILD_EDIT_VIA_PARENT.
+        Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 NOT_A_SET, IS_SET_CHILD.
       parameters:
       - $ref: '#/components/parameters/Id'
       responses:
@@ -695,8 +838,8 @@ paths:
                   language: cs
                   difficulty: 2
                   author: *id001
-                  tags: *id022
-                  chapters: *id023
+                  tags: *id023
+                  chapters: *id024
                   childCount: 0
                 - id: d4E5f
                   name: Rovnice b)
@@ -705,8 +848,8 @@ paths:
                   language: cs
                   difficulty: 3
                   author: *id001
-                  tags: *id024
-                  chapters: *id025
+                  tags: *id025
+                  chapters: *id026
                   childCount: 0
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -717,6 +860,81 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /problems/{id}/take-over-update:
+    post:
+      summary: Take over the newer version of the original
+      operationId: takeOverUpdate
+      tags:
+      - Problem actions
+      description: |
+        Who: the author of a copy whose `updateAvailable` is true.
+        Replaces the copy's content (name, assignment, result, language, difficulty) with the original's
+        current version. On a set, the children are replaced with fresh copies of the original's children.
+        Tags, chapters and the source stay as they are. Your own edits to the copy are overwritten,
+        so the copy's lockVersion is required. Look at the original first via `originalId`.
+        On a published copy of a non-trusted author → 202 (review), like PATCH.
+        Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 LOCK_MISMATCH, NO_UPDATE_AVAILABLE, IS_SET_CHILD.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TakeOverRequest'
+            example:
+              lockVersion: 3
+      responses:
+        '200':
+          description: Update taken over.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example: *id014
+        '202':
+          description: Waiting for review; the returned problem is unchanged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example: *id014
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /problems/{id}/dismiss-update:
+    post:
+      summary: Dismiss the update notice
+      operationId: dismissUpdate
+      tags:
+      - Problem actions
+      description: |
+        Who: the author of a copy whose `updateAvailable` is true. No request body.
+        Hides the notice until the original gets another new version. Nothing else changes.
+        Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 NO_UPDATE_AVAILABLE.
+      parameters:
+      - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Notice dismissed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+              example: *id014
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /tags:
     get:
       summary: List tags (for pickers and autocomplete)
@@ -888,6 +1106,44 @@ components:
       in: query
       description: Text the tag name must contain (case-insensitive).
       schema: {type: string, minLength: 1, example: rovn}
+    ChildId:
+      name: childId
+      in: path
+      required: true
+      description: A child of the set given by `id`.
+      schema:
+        $ref: '#/components/schemas/Sqid'
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: |
+        The set's lockVersion in quotes, e.g. `"4"` (an ETag).
+        DELETE has no body, so the optimistic lock travels in this header.
+        Missing or malformed → 400; does not match → 412 LOCK_MISMATCH.
+      schema:
+        type: string
+        example: '"4"'
+    IdsFilter:
+      name: ids
+      in: query
+      description: |
+        Batch read: only these problems (`?ids=a&ids=b`). At most 100.
+        Same visibility and scope rules as the rest of the list;
+        set children are not returned (load the set instead).
+      schema:
+        type: array
+        maxItems: 100
+        items:
+          $ref: '#/components/schemas/Sqid'
+    UpdateAvailableFilter:
+      name: updateAvailable
+      in: query
+      description: |
+        Only with scope=mine. true = only your copies whose original has a newer version
+        you have not taken over or dismissed. With limit=1, meta.total is the badge count.
+      schema:
+        type: boolean
 
   responses:
     BadRequest:
@@ -946,6 +1202,18 @@ components:
             code: LOCK_MISMATCH
             detail: Someone saved this problem in between. Reload and try again.
 
+    PreconditionFailed:
+      description: The If-Match version does not match the current version (RFC 9110).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+          example:
+            type: about:blank
+            title: Precondition Failed
+            status: 412
+            code: LOCK_MISMATCH
+            detail: Someone changed this set in between. Reload and try again.
   schemas:
     # --- building blocks ---
     Sqid:
@@ -1013,34 +1281,6 @@ components:
         result: {type: string, nullable: true}
         language: {type: string, nullable: true, example: cs}
         difficulty: {type: integer, nullable: true, minimum: 1, maximum: 10}
-
-    ProblemChildInput:
-      description: |
-        One child of a set, sent inside `children` on create and patch.
-        - with `id`: update this existing child
-        - with `copyFromId`: copy that problem in, then apply any other sent fields
-        - with neither: create a new child (`name` and `assignment` required)
-        `id` and `copyFromId` are never both set. On create, `id` is not allowed.
-        Updating with `id`: same rules as PATCH (missing field = unchanged, null = clear);
-        the `id` must belong to this set.
-        Copying with `copyFromId`: same rules as POST /problems/{id}/copy. The problem must be
-        visible to the caller and must not be a set itself (sets have depth 1).
-        A child has no `children` of its own and no `lockVersion`
-        (the parent's lockVersion guards the whole set).
-        Breaking these rules returns 400 VALIDATION_FAILED.
-      allOf:
-      - $ref: '#/components/schemas/ProblemBase'
-      - type: object
-        properties:
-          id: {$ref: '#/components/schemas/Sqid'}
-          copyFromId: {$ref: '#/components/schemas/Sqid'}
-          tagIds:
-            type: array
-            items: {$ref: '#/components/schemas/Sqid'}
-          chapterIds:
-            type: array
-            items: {$ref: '#/components/schemas/Sqid'}
-
     ProblemCreate:
       allOf:
       - $ref: '#/components/schemas/ProblemBase'
@@ -1053,12 +1293,6 @@ components:
           chapterIds:
             type: array
             items: {$ref: '#/components/schemas/Sqid'}
-          children:
-            type: array
-            description: >
-              Optional. Sending children makes this problem a set
-              (then `result` must be null). Array order = position.
-            items: {$ref: '#/components/schemas/ProblemChildInput'}
 
     ProblemPatch:
       allOf:
@@ -1075,14 +1309,6 @@ components:
             type: array
             description: Missing = unchanged. Sent = replaces the whole list.
             items: {$ref: '#/components/schemas/Sqid'}
-          children:
-            type: array
-            description: >
-              Missing = children unchanged.
-              Sent = the complete new list: existing children not in it are removed,
-              array order = position. An empty array removes all children.
-              A set parent must have `result` null (409 SET_PARENT_HAS_RESULT).
-            items: {$ref: '#/components/schemas/ProblemChildInput'}
 
     # --- problem: output ---
     ProblemListItem:
@@ -1104,6 +1330,12 @@ components:
             minimum: 0
             description: 0 = standalone problem, more = set. Counted by the server, not stored.
 
+          updateAvailable:
+            type: boolean
+            description: |
+              Present only for the author of a copy (on a set: only on the set itself, never on its children).
+              true = the original has a newer version than the one taken over, and it was not dismissed.
+              Computed on read, not stored.
     ProblemDetailCore:
       description: Detail fields shared by a problem and by each child inside a set.
       allOf:
@@ -1114,6 +1346,12 @@ components:
           createdAt: {type: string, format: date-time}
           updatedAt: {type: string, format: date-time}
           source: {$ref: '#/components/schemas/SourceRef'}
+          lockVersion:
+            type: integer
+            description: |
+              Present only for the author. Send back in PATCH /problems/{id}.
+              For a set, also send it with the /children endpoints (structure changes).
+              Each child has its own lockVersion for editing its content.
 
     ProblemDetail:
       allOf:
@@ -1127,10 +1365,7 @@ components:
             description: Present only for the author.
           version:
             type: integer
-            description: Present only for the author.
-          lockVersion:
-            type: integer
-            description: Present only for the author. Send back in PATCH.
+            description: Present only for the author. A change to any child also raises the set's version.
           parentId:
             type: string
             nullable: true
@@ -1140,6 +1375,11 @@ components:
             type: array
             description: Ordered children of a set. Empty for a standalone problem or a child.
             items: {$ref: '#/components/schemas/ProblemDetailCore'}
+          originalId:
+            type: string
+            nullable: true
+            example: VqXmZ
+            description: Present only for the author. The problem this one was copied from (to look at a newer version before taking it over), or null.
 
     # --- pickers ---
     ChapterNode:
@@ -1196,6 +1436,53 @@ components:
           allOf:
           - $ref: '#/components/schemas/Sqid'
           description: Required only when the problem has no licence yet. Must allow publication.
+    AddChildRequest:
+      type: object
+      required:
+      - lockVersion
+      description: |
+        Exactly one of `problemId` (move your own problem in) or `copyFromId` (copy any visible problem in).
+        Both or neither → 400 VALIDATION_FAILED.
+      properties:
+        lockVersion:
+          type: integer
+          description: The set's lockVersion.
+        problemId:
+          allOf:
+          - $ref: '#/components/schemas/Sqid'
+          description: 'Move: your own PRIVATE standalone problem that is not a set. It becomes a child; no copy is made.'
+        copyFromId:
+          allOf:
+          - $ref: '#/components/schemas/Sqid'
+          description: 'Copy: any problem you can see that is not a set. The copy becomes the child (usual copy rules).'
+        afterId:
+          type: string
+          nullable: true
+          example: gbHJd
+          description: |
+            Where to put it. Missing = at the end. null = first. A child id = right after that child.
+    ReorderChildRequest:
+      type: object
+      required:
+      - lockVersion
+      - afterId
+      properties:
+        lockVersion:
+          type: integer
+          description: The set's lockVersion.
+        afterId:
+          type: string
+          nullable: true
+          example: gbHJd
+          description: Required. null = move to first. A child id = right after that child (to move last, use the current last child).
+    TakeOverRequest:
+      type: object
+      required:
+      - lockVersion
+      properties:
+        lockVersion:
+          type: integer
+          description: The copy's lockVersion (taking over overwrites your edits).
     ProblemList:
       type: object
       required: [items]
@@ -1241,9 +1528,13 @@ components:
             403 TRUST_TOO_LOW - registered user trying to publish
             404 NOT_FOUND - problem does not exist or is hidden
             409 LOCK_MISMATCH - lockVersion does not match
-            409 SET_PARENT_HAS_RESULT - set parent (or problem getting its first child) still has a result
-            409 LICENSE_REQUIRED - publishing without a licence that allows publication
+            412 LOCK_MISMATCH - If-Match version does not match (DELETE …/children/{childId})
+            409 SET_PARENT_HAS_RESULT - a set (or a problem getting its first child) still has a result
+            409 LICENSE_REQUIRED - publishing (or adding to a published set) without a licence that allows publication
             409 NOT_A_SET - dissolving something that is not a set
             409 SET_CHILD_NOT_PUBLISHABLE - publishing a child on its own
-            409 SET_CHILD_EDIT_VIA_PARENT - PATCH or DELETE sent directly to a set child
+            409 IS_SET_CHILD - delete, dissolve or add-children sent to a set child (take it out of the set first)
+            409 CANNOT_ADD_TO_SET - the problem cannot go into this set (already in a set, is a set, is the set itself,
+                or for a move: not yours or not private); `detail` says which
+            409 NO_UPDATE_AVAILABLE - take-over or dismiss when the copy has no update (or is not a copy)
         requestId: {type: string}
