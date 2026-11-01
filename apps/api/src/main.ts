@@ -1,3 +1,4 @@
+import './config/load-env';
 import 'reflect-metadata';
 import { readFileSync } from 'node:fs';
 import { NestFactory } from '@nestjs/core';

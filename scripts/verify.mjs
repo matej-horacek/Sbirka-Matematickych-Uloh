@@ -4,6 +4,7 @@
 //   2. spec examples   (AJV)
 //   3. spec version    (info.version = newest changelog entry, O-8)
 //   4. contracts built (generates + bundles from openapi.yaml when missing)
+//      prisma client   (generates apps/api/src/generated/prisma when missing; the app imports it in every mode)
 //   5. spec drift      (generated code the API compiles against = what the spec generates)
 //   6. typecheck       (contracts + API source + tests)
 //   7. lint            (ESLint)
@@ -28,6 +29,12 @@ const steps = [
       !existsSync(join(root, 'packages/shared/contracts/dist/index.cjs')) ||
       !existsSync(join(root, 'packages/shared/contracts/src/generated/types.gen.ts')),
     skip: 'packages/shared/contracts/dist and src/generated exist',
+  },
+  {
+    name: 'prisma client',
+    cmd: 'pnpm --filter @matematika/api db:generate',
+    when: () => !existsSync(join(root, 'apps/api/src/generated/prisma/client.ts')),
+    skip: 'apps/api/src/generated/prisma exists',
   },
   { name: 'spec drift', cmd: 'pnpm spec:drift' },
   { name: 'typecheck', cmd: 'pnpm -r typecheck && pnpm --filter @matematika/api typecheck:test' },
