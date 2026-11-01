@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TagsController } from './controllers/tags.controller';
-import { TagsRepository } from './repositories/tags.repository';
+import { MockTagsRepository } from './repositories/mock-tags.repository';
+import { TAGS_REPOSITORY } from './repositories/tags.repository';
 import { TagsService } from './services/tags.service';
 
 @Module({
   controllers: [TagsController],
-  providers: [TagsRepository, TagsService],
+  providers: [{ provide: TAGS_REPOSITORY, useClass: MockTagsRepository }, TagsService],
   exports: [TagsService],
 })
 export class TagsModule {}

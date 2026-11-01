@@ -1,15 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { MockDatabase, type LicenseRow } from '../../../database/mock-database';
+import type { LicenseRow } from '../../../database/mock-database';
 
-@Injectable()
-export class LicensesRepository {
-  constructor(private readonly db: MockDatabase) {}
+export const LICENSES_REPOSITORY = Symbol('LICENSES_REPOSITORY');
 
-  findPublishable(): LicenseRow[] {
-    return this.db.licenses.filter((l) => l.allowsPublication);
-  }
-
-  findByIds(ids: number[]): LicenseRow[] {
-    return this.db.licenses.filter((l) => ids.includes(l.id));
-  }
+/** Data access for licences. Only queries, no decisions. Implementations: Mock…, Prisma… */
+export interface LicensesRepository {
+  /** Licences with allowsPublication = true (the picker list). */
+  findPublishable(): Promise<LicenseRow[]>;
+  findByIds(ids: number[]): Promise<LicenseRow[]>;
 }

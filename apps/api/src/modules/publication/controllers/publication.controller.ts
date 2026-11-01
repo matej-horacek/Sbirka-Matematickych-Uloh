@@ -12,11 +12,11 @@ export class PublicationController {
   /** publishProblem – the author, if verified or trusted. */
   @Post(':id/publish')
   @HttpCode(200)
-  publish(
+  async publish(
     @CurrentUser() user: CurrentUserData,
     @Param('id', ParseIdPipe) id: number,
     @Body(new ZodValidationPipe(zPublishProblemBody)) body: PublishRequest,
-  ): ProblemDetail {
+  ): Promise<ProblemDetail> {
     return this.publication.publish(user, id, body);
   }
 }

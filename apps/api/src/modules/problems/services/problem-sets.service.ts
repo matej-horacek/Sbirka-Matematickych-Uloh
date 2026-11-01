@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ErrorCode, type AddChildRequest, type ReorderChildRequest } from '@matematika/contracts';
 import type { ProblemRow } from '../../../database/mock-database';
 import type { CurrentUserData } from '../../../common/decorators/current-user.decorator';
@@ -7,22 +7,23 @@ import { decodeId } from '../../../common/utils/ids';
 import { positionAt } from '../../../common/utils/position';
 import { LicensesService } from '../../licenses/services/licenses.service';
 import { canView } from '../domain/visibility';
-import { ProblemsRepository } from '../repositories/problems.repository';
+import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository';
 import { ProblemCopiesService } from './problem-copies.service';
 
 /** Set operations: dissolve, and adding, reordering and removing single children. */
 @Injectable()
 export class ProblemSetsService {
   constructor(
-    private readonly repo: ProblemsRepository,
+    @Inject(PROBLEMS_REPOSITORY) private readonly repo: ProblemsRepository,
     private readonly copies: ProblemCopiesService,
     private readonly licenses: LicensesService,
   ) {}
 
   /** Children become standalone PRIVATE problems; the parent is soft-deleted. */
-  dissolve(parent: ProblemRow, children: ProblemRow[]): ProblemRow[] {
-    const freed = children.map((c) => this.repo.update(c.id, { parentId: null, position: null, publishStatus: 'PRIVATE' }));
-    this.repo.softDelete([parent.id]);
+  async dissolve(parent: ProblemRow, children: ProblemRow[]): Promise<ProblemRow[]> {
+    const freed: ProblemRow[] = [];
+    for (const c of children) freed.push(await this.repo.update(c.id, { parentId: null, position: null, publishStatus: 'PRIVATE' }));
+    await this.repo.softDelete([parent.id]);
     return freed;
   }
 
@@ -31,7 +32,7 @@ export class ProblemSetsService {
    * Every check runs before the first write, so a refused request changes nothing.
    * Returns `accepted: true` when the change must wait for review (HTTP 202, nothing stored).
    */
-  addChild(user: CurrentUserData, set: ProblemRow, body: AddChildRequest): { accepted: boolean } {
+  async addChild(user: CurrentUserData, set: ProblemRow, body: AddChildRequest): Promise<{ accepted: boolean }> {
     if ((body.problemId === undefined) === (body.copyFromId === undefined)) {
       throw ApiError.badRequest('Send exactly one of problemId (move) or copyFromId (copy).');
     }
@@ -45,14 +46,14 @@ export class ProblemSetsService {
       throw ApiError.conflict(ErrorCode.SET_PARENT_HAS_RESULT, 'A set parent must not have a result. Clear it first.');
     }
 
-    const existing = this.repo.findChildren(set.id);
-    const source = this.findSource(user, body);
+    const existing = await this.repo.findChildren(set.id);
+    const source = await this.findSource(user, body);
     const isMove = body.problemId !== undefined;
 
     if (source.id === set.id) {
       throw ApiError.conflict(ErrorCode.CANNOT_ADD_TO_SET, 'A set cannot be added to itself.');
     }
-    if (this.repo.findChildren(source.id).length > 0) {
+    if ((await this.repo.findChildren(source.id)).length > 0) {
       throw ApiError.conflict(ErrorCode.CANNOT_ADD_TO_SET, 'A set cannot be added to another set.');
     }
     if (isMove) {
@@ -85,15 +86,15 @@ export class ProblemSetsService {
     let licenseId = source.source.licenseId;
     if (published) {
       licenseId = licenseId ?? set.source.licenseId;
-      if (licenseId !== null && !this.licenses.findById(licenseId)?.allowsPublication) {
+      if (licenseId !== null && !(await this.licenses.findById(licenseId))?.allowsPublication) {
         throw ApiError.conflict(ErrorCode.LICENSE_REQUIRED, `"${source.name}" has a licence that does not allow publication.`);
       }
     }
 
     if (this.needsReview(user, set)) return { accepted: true };
 
-    const child = isMove ? source : this.copies.copy(user.id, source);
-    this.repo.update(child.id, {
+    const child = isMove ? source : await this.copies.copy(user.id, source);
+    await this.repo.update(child.id, {
       parentId: set.id,
       publishStatus: set.publishStatus,
       source: { ...child.source, licenseId: published ? licenseId : child.source.licenseId },
@@ -102,9 +103,9 @@ export class ProblemSetsService {
     // The mock renumbers all positions (see common/utils/position.ts).
     const order = existing.map((c) => c.id);
     order.splice(insertAt, 0, child.id);
-    order.forEach((id, i) => this.repo.update(id, { position: positionAt(i) }));
+    for (const [i, id] of order.entries()) await this.repo.update(id, { position: positionAt(i) });
 
-    this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
+    await this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
     return { accepted: false };
   }
 
@@ -112,8 +113,8 @@ export class ProblemSetsService {
    * reorderSetChild: `set` is the caller's own problem. Order of checks: child belongs to the set (404),
    * afterId (400), lock (409). Returns `accepted: true` for the 202 path (nothing stored).
    */
-  reorderChild(user: CurrentUserData, set: ProblemRow, childId: number, body: ReorderChildRequest): { accepted: boolean } {
-    const children = this.repo.findChildren(set.id);
+  async reorderChild(user: CurrentUserData, set: ProblemRow, childId: number, body: ReorderChildRequest): Promise<{ accepted: boolean }> {
+    const children = await this.repo.findChildren(set.id);
     if (!children.some((c) => c.id === childId)) throw ApiError.notFound();
 
     // DOMAIN-REVIEW (reorder): afterId is required; null = first, a child id = right after that child.
@@ -132,8 +133,8 @@ export class ProblemSetsService {
     if (this.needsReview(user, set)) return { accepted: true };
 
     rest = [...rest.slice(0, insertAt), childId, ...rest.slice(insertAt)];
-    rest.forEach((id, i) => this.repo.update(id, { position: positionAt(i) }));
-    this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
+    for (const [i, id] of rest.entries()) await this.repo.update(id, { position: positionAt(i) });
+    await this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
     return { accepted: false };
   }
 
@@ -141,8 +142,8 @@ export class ProblemSetsService {
    * removeSetChild: the set's lockVersion comes from If-Match (412 on a mismatch).
    * The child is not deleted: it becomes a standalone PRIVATE problem.
    */
-  removeChild(user: CurrentUserData, set: ProblemRow, childId: number, lockVersion: number): { accepted: boolean } {
-    const child = this.repo.findChildren(set.id).find((c) => c.id === childId);
+  async removeChild(user: CurrentUserData, set: ProblemRow, childId: number, lockVersion: number): Promise<{ accepted: boolean }> {
+    const child = (await this.repo.findChildren(set.id)).find((c) => c.id === childId);
     if (!child) throw ApiError.notFound();
     if (lockVersion !== set.lockVersion) {
       throw ApiError.preconditionFailed(ErrorCode.LOCK_MISMATCH, 'Someone saved this set in between. Reload and try again.');
@@ -151,8 +152,8 @@ export class ProblemSetsService {
 
     // DOMAIN-REVIEW (last child out): the child becomes a standalone PRIVATE problem; when it was the
     // last one, the set is a plain problem again (a set is just a problem with children).
-    this.repo.update(child.id, { parentId: null, position: null, publishStatus: 'PRIVATE' });
-    this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
+    await this.repo.update(child.id, { parentId: null, position: null, publishStatus: 'PRIVATE' });
+    await this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
     return { accepted: false };
   }
 
@@ -162,10 +163,10 @@ export class ProblemSetsService {
   }
 
   /** The problem named by problemId / copyFromId; 400 when it doesn't exist or the caller can't see it. */
-  private findSource(user: CurrentUserData, body: AddChildRequest): ProblemRow {
+  private async findSource(user: CurrentUserData, body: AddChildRequest): Promise<ProblemRow> {
     const raw = body.problemId ?? body.copyFromId!;
     const id = decodeId(raw);
-    const row = id === null ? undefined : this.repo.findById(id);
+    const row = id === null ? undefined : await this.repo.findById(id);
     if (!row || !canView(row, user.id)) throw ApiError.badRequest('The problem was not found.');
     return row;
   }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type {
   AddChildRequest,
   ReorderChildRequest,
@@ -22,7 +22,7 @@ import { parentMayHaveResult } from '../domain/set-rules';
 import { canView } from '../domain/visibility';
 import type { ListProblemsQuery } from '../dto/list-problems.query';
 import { toDetail, toListItem, type ProblemLookups } from '../mappers/problem.mapper';
-import { ProblemsRepository } from '../repositories/problems.repository';
+import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository';
 import { ProblemCopiesService } from './problem-copies.service';
 import { ProblemRelationsService } from './problem-relations.service';
 import { ProblemSetsService } from './problem-sets.service';
@@ -41,7 +41,7 @@ function parseIfMatch(header: string | undefined): number {
 @Injectable()
 export class ProblemsService {
   constructor(
-    private readonly repo: ProblemsRepository,
+    @Inject(PROBLEMS_REPOSITORY) private readonly repo: ProblemsRepository,
     private readonly sets: ProblemSetsService,
     private readonly copies: ProblemCopiesService,
     private readonly relations: ProblemRelationsService,
@@ -53,32 +53,32 @@ export class ProblemsService {
 
   // ---------- endpoints ----------
 
-  list(user: CurrentUserData, q: ListProblemsQuery): ProblemPage {
+  async list(user: CurrentUserData, q: ListProblemsQuery): Promise<ProblemPage> {
     const tagIds = q.tagId?.map(decodeId).filter((id): id is number => id !== null);
     const chapterIds = q.chapterId?.map(decodeId).filter((id): id is number => id !== null);
-    const { rows, total } = this.repo.findMany(
+    const { rows, total } = await this.repo.findMany(
       {
         ...(q.scope === 'mine' ? { authorId: user.id } : { publishStatus: 'PUBLISHED' }),
         tagIds,
-        chapterIds: chapterIds && this.chapters.withDescendants(chapterIds),
+        chapterIds: chapterIds && (await this.chapters.withDescendants(chapterIds)),
         languageCode: q.language,
       },
       q.page,
       q.limit,
     );
-    const lk = this.lookups(rows);
+    const lk = await this.lookups(rows);
     return { items: rows.map((r) => toListItem(r, lk)), meta: { page: q.page, limit: q.limit, total } };
   }
 
-  get(user: CurrentUserData, id: number): ProblemDetail {
-    return this.detail(this.findVisible(user, id), user);
+  async get(user: CurrentUserData, id: number): Promise<ProblemDetail> {
+    return this.detail(await this.findVisible(user, id), user);
   }
 
-  create(user: CurrentUserData, body: ProblemCreate): ProblemDetail {
-    const tagIds = this.relations.tagIds(user.id, body.tagIds) ?? [];
-    const chapterIds = this.relations.chapterIds(user.id, body.chapterIds) ?? [];
+  async create(user: CurrentUserData, body: ProblemCreate): Promise<ProblemDetail> {
+    const tagIds = (await this.relations.tagIds(user.id, body.tagIds)) ?? [];
+    const chapterIds = (await this.relations.chapterIds(user.id, body.chapterIds)) ?? [];
 
-    const row = this.repo.insert({
+    const row = await this.repo.insert({
       name: body.name!,
       assignment: body.assignment!,
       result: body.result ?? null,
@@ -109,8 +109,8 @@ export class ProblemsService {
   }
 
   /** Returns `accepted: true` when the change must wait for review (HTTP 202). */
-  update(user: CurrentUserData, id: number, body: ProblemPatch): { accepted: boolean; problem: ProblemDetail } {
-    const row = this.findOwn(user, id);
+  async update(user: CurrentUserData, id: number, body: ProblemPatch): Promise<{ accepted: boolean; problem: ProblemDetail }> {
+    const row = await this.findOwn(user, id);
     if (row.parentId !== null) {
       throw ApiError.conflict(ErrorCode.IS_SET_CHILD, 'Edit a set child through its parent.');
     }
@@ -118,128 +118,128 @@ export class ProblemsService {
       throw ApiError.conflict(ErrorCode.LOCK_MISMATCH, 'Someone saved this problem in between. Reload and try again.');
     }
 
-    const childCount = this.repo.findChildren(row.id).length;
+    const childCount = (await this.repo.findChildren(row.id)).length;
     const result = body.result !== undefined ? body.result : row.result;
     if (!parentMayHaveResult(result, childCount)) {
       throw ApiError.conflict(ErrorCode.SET_PARENT_HAS_RESULT, 'A set parent must not have a result.');
     }
-    const tagIds = this.relations.tagIds(user.id, body.tagIds);
-    const chapterIds = this.relations.chapterIds(user.id, body.chapterIds);
+    const tagIds = await this.relations.tagIds(user.id, body.tagIds);
+    const chapterIds = await this.relations.chapterIds(user.id, body.chapterIds);
 
     if (row.publishStatus === 'PUBLISHED' && user.trust !== 'TRUSTED' && user.role !== 'ADMIN') {
       // TODO Phase B: store the change as a problem_revision waiting for review.
-      return { accepted: true, problem: this.detail(row, user) };
+      return { accepted: true, problem: await this.detail(row, user) };
     }
 
     // TODO Phase B: a trusted user's minor edit bumps minor_version instead of version.
-    const updated = this.repo.update(row.id, {
+    const updated = await this.repo.update(row.id, {
       ...contentFields(body),
       ...(tagIds && { tagIds }),
       ...(chapterIds && { chapterIds }),
       version: row.version + 1,
       lockVersion: row.lockVersion + 1,
     });
-    return { accepted: false, problem: this.detail(updated, user) };
+    return { accepted: false, problem: await this.detail(updated, user) };
   }
 
-  remove(user: CurrentUserData, id: number): void {
-    const row = this.findOwn(user, id);
+  async remove(user: CurrentUserData, id: number): Promise<void> {
+    const row = await this.findOwn(user, id);
     if (row.parentId !== null) {
       throw ApiError.conflict(ErrorCode.IS_SET_CHILD, 'Delete a set child through its parent.');
     }
-    this.repo.softDelete([row.id, ...this.repo.findChildren(row.id).map((c) => c.id)]);
+    await this.repo.softDelete([row.id, ...(await this.repo.findChildren(row.id)).map((c) => c.id)]);
   }
 
-  copy(user: CurrentUserData, id: number): ProblemDetail {
-    const original = this.findVisible(user, id);
-    return this.detail(this.copies.copy(user.id, original), user);
+  async copy(user: CurrentUserData, id: number): Promise<ProblemDetail> {
+    const original = await this.findVisible(user, id);
+    return this.detail(await this.copies.copy(user.id, original), user);
   }
 
-  dissolve(user: CurrentUserData, id: number): ProblemList {
-    const row = this.findOwn(user, id);
+  async dissolve(user: CurrentUserData, id: number): Promise<ProblemList> {
+    const row = await this.findOwn(user, id);
     if (row.parentId !== null) {
       throw ApiError.conflict(ErrorCode.IS_SET_CHILD, 'A set child cannot be dissolved.');
     }
-    const children = this.repo.findChildren(row.id);
+    const children = await this.repo.findChildren(row.id);
     if (!children.length) throw ApiError.conflict(ErrorCode.NOT_A_SET, 'This problem is not a set.');
-    const freed = this.sets.dissolve(row, children);
-    const lk = this.lookups(freed);
+    const freed = await this.sets.dissolve(row, children);
+    const lk = await this.lookups(freed);
     return { items: freed.map((r) => toListItem(r, lk)) };
   }
 
   /** addSetChild – the set's author. Returns the whole set; `accepted` means 202 (waiting for review). */
-  addSetChild(user: CurrentUserData, id: number, body: AddChildRequest): { accepted: boolean; problem: ProblemDetail } {
-    const set = this.findOwn(user, id);
-    const { accepted } = this.sets.addChild(user, set, body);
-    return { accepted, problem: this.detail(this.repo.findById(id)!, user) };
+  async addSetChild(user: CurrentUserData, id: number, body: AddChildRequest): Promise<{ accepted: boolean; problem: ProblemDetail }> {
+    const set = await this.findOwn(user, id);
+    const { accepted } = await this.sets.addChild(user, set, body);
+    return { accepted, problem: await this.detail((await this.repo.findById(id))!, user) };
   }
 
   /** reorderSetChild – the set's author. */
-  reorderSetChild(user: CurrentUserData, id: number, childId: number, body: ReorderChildRequest): { accepted: boolean; problem: ProblemDetail } {
-    const set = this.findOwn(user, id);
-    const { accepted } = this.sets.reorderChild(user, set, childId, body);
-    return { accepted, problem: this.detail(this.repo.findById(id)!, user) };
+  async reorderSetChild(user: CurrentUserData, id: number, childId: number, body: ReorderChildRequest): Promise<{ accepted: boolean; problem: ProblemDetail }> {
+    const set = await this.findOwn(user, id);
+    const { accepted } = await this.sets.reorderChild(user, set, childId, body);
+    return { accepted, problem: await this.detail((await this.repo.findById(id))!, user) };
   }
 
   /** removeSetChild – the set's author; the lock comes from the If-Match header. */
-  removeSetChild(user: CurrentUserData, id: number, childId: number, ifMatch: string | undefined): { accepted: boolean; problem: ProblemDetail } {
-    const set = this.findOwn(user, id);
-    const { accepted } = this.sets.removeChild(user, set, childId, parseIfMatch(ifMatch));
-    return { accepted, problem: this.detail(this.repo.findById(id)!, user) };
+  async removeSetChild(user: CurrentUserData, id: number, childId: number, ifMatch: string | undefined): Promise<{ accepted: boolean; problem: ProblemDetail }> {
+    const set = await this.findOwn(user, id);
+    const { accepted } = await this.sets.removeChild(user, set, childId, parseIfMatch(ifMatch));
+    return { accepted, problem: await this.detail((await this.repo.findById(id))!, user) };
   }
 
   // ---------- facade for other modules (publication) ----------
 
   /** The caller's own problem with its children; 404/403 like the endpoints. */
-  findOwnWithChildren(user: CurrentUserData, id: number): { problem: ProblemRow; children: ProblemRow[] } {
-    const problem = this.findOwn(user, id);
-    return { problem, children: this.repo.findChildren(problem.id) };
+  async findOwnWithChildren(user: CurrentUserData, id: number): Promise<{ problem: ProblemRow; children: ProblemRow[] }> {
+    const problem = await this.findOwn(user, id);
+    return { problem, children: await this.repo.findChildren(problem.id) };
   }
 
   /** Sets the status on the given problems and the licence on those that have none. */
-  applyPublication(ids: number[], status: PublishStatus, licenseIdForUnlicensed: number | null): void {
+  async applyPublication(ids: number[], status: PublishStatus, licenseIdForUnlicensed: number | null): Promise<void> {
     for (const id of ids) {
-      const row = this.repo.findById(id)!;
+      const row = (await this.repo.findById(id))!;
       const source = row.source.licenseId === null && licenseIdForUnlicensed !== null
         ? { ...row.source, licenseId: licenseIdForUnlicensed }
         : row.source;
-      this.repo.update(id, { publishStatus: status, source });
+      await this.repo.update(id, { publishStatus: status, source });
     }
   }
 
-  detailFor(user: CurrentUserData, id: number): ProblemDetail {
+  async detailFor(user: CurrentUserData, id: number): Promise<ProblemDetail> {
     return this.get(user, id);
   }
 
   // ---------- helpers ----------
 
   /** 404 when the problem doesn't exist or the caller can't see it. */
-  private findVisible(user: CurrentUserData, id: number): ProblemRow {
-    const row = this.repo.findById(id);
+  private async findVisible(user: CurrentUserData, id: number): Promise<ProblemRow> {
+    const row = await this.repo.findById(id);
     if (!row || !canView(row, user.id)) throw ApiError.notFound();
     return row;
   }
 
   /** Author only: others get 403 on a published problem and 404 on a private one. */
-  private findOwn(user: CurrentUserData, id: number): ProblemRow {
-    const row = this.findVisible(user, id);
+  private async findOwn(user: CurrentUserData, id: number): Promise<ProblemRow> {
+    const row = await this.findVisible(user, id);
     if (row.authorId !== user.id) throw ApiError.forbidden();
     return row;
   }
 
-  private detail(row: ProblemRow, user: CurrentUserData): ProblemDetail {
-    const children = this.repo.findChildren(row.id);
-    return toDetail(row, children, this.lookups([row, ...children]), user.id);
+  private async detail(row: ProblemRow, user: CurrentUserData): Promise<ProblemDetail> {
+    const children = await this.repo.findChildren(row.id);
+    return toDetail(row, children, await this.lookups([row, ...children]), user.id);
   }
 
   /** Batch-loads everything the mapper needs: one lookup per related table. */
-  private lookups(rows: ProblemRow[]): ProblemLookups {
+  private async lookups(rows: ProblemRow[]): Promise<ProblemLookups> {
     return {
-      users: this.users.refsByIds(rows.map((r) => r.authorId)),
-      tags: this.tags.refsByIds(rows.flatMap((r) => r.tagIds)),
-      chapters: this.chapters.refsByIds(rows.flatMap((r) => r.chapterIds)),
-      licenses: this.licenses.refsByIds(rows.flatMap((r) => (r.source.licenseId === null ? [] : [r.source.licenseId]))),
-      childCounts: this.repo.countChildren(rows.map((r) => r.id)),
+      users: await this.users.refsByIds(rows.map((r) => r.authorId)),
+      tags: await this.tags.refsByIds(rows.flatMap((r) => r.tagIds)),
+      chapters: await this.chapters.refsByIds(rows.flatMap((r) => r.chapterIds)),
+      licenses: await this.licenses.refsByIds(rows.flatMap((r) => (r.source.licenseId === null ? [] : [r.source.licenseId]))),
+      childCounts: await this.repo.countChildren(rows.map((r) => r.id)),
     };
   }
 }

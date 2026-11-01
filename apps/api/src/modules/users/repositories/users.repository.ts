@@ -1,15 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { MockDatabase, type UserRow } from '../../../database/mock-database';
+import type { UserRow } from '../../../database/mock-database';
 
-@Injectable()
-export class UsersRepository {
-  constructor(private readonly db: MockDatabase) {}
+export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');
 
-  findByIds(ids: number[]): UserRow[] {
-    return this.db.users.filter((u) => ids.includes(u.id));
-  }
-
-  findByMockToken(token: string): UserRow | undefined {
-    return this.db.users.find((u) => u.mockToken === token);
-  }
+/** Data access for users. Only queries, no decisions. Implementations: Mock…, Prisma… */
+export interface UsersRepository {
+  findByIds(ids: number[]): Promise<UserRow[]>;
+  /**
+   * Login lookup of the mock auth guard: `Authorization: Bearer <username>`.
+   * (Mock: matches the seed's mockToken, which equals the username.)
+   */
+  findByUsername(username: string): Promise<UserRow | undefined>;
 }

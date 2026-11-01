@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { ProblemRow } from '../../../database/mock-database';
 import { UsersService } from '../../users/services/users.service';
 import { sourceForCopy } from '../domain/copy-rules';
-import { ProblemsRepository } from '../repositories/problems.repository';
+import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository';
 import { ProblemRelationsService } from './problem-relations.service';
 
 export interface CopyTarget {
@@ -18,17 +18,17 @@ export interface CopyTarget {
 @Injectable()
 export class ProblemCopiesService {
   constructor(
-    private readonly repo: ProblemsRepository,
+    @Inject(PROBLEMS_REPOSITORY) private readonly repo: ProblemsRepository,
     private readonly relations: ProblemRelationsService,
     private readonly users: UsersService,
   ) {}
 
-  copy(callerId: number, original: ProblemRow, target: CopyTarget = {}): ProblemRow {
+  async copy(callerId: number, original: ProblemRow, target: CopyTarget = {}): Promise<ProblemRow> {
     const callerOwns = original.authorId === callerId;
-    const authorName = this.users.refsByIds([original.authorId]).get(original.authorId)?.displayName ?? '?';
-    const { tagIds, chapterIds } = this.relations.forCopy(original.tagIds, original.chapterIds, callerOwns);
+    const authorName = (await this.users.refsByIds([original.authorId])).get(original.authorId)?.displayName ?? '?';
+    const { tagIds, chapterIds } = await this.relations.forCopy(original.tagIds, original.chapterIds, callerOwns);
 
-    const copy = this.repo.insert({
+    const copy = await this.repo.insert({
       name: original.name,
       assignment: original.assignment,
       result: original.result,
@@ -50,8 +50,8 @@ export class ProblemCopiesService {
 
     // Copying a set copies all its children. Copying a child gives a standalone problem.
     if (target.parentId === undefined) {
-      for (const child of this.repo.findChildren(original.id)) {
-        this.copy(callerId, child, { parentId: copy.id, position: child.position ?? undefined });
+      for (const child of await this.repo.findChildren(original.id)) {
+        await this.copy(callerId, child, { parentId: copy.id, position: child.position ?? undefined });
       }
     }
     return copy;

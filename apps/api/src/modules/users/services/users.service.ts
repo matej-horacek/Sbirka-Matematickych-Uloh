@@ -1,21 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { UserRef } from '@matematika/contracts';
 import type { UserRow } from '../../../database/mock-database';
+import { dataSource } from '../../../config/data-source';
 import { encodeId } from '../../../common/utils/ids';
-import { UsersRepository } from '../repositories/users.repository';
+import { USERS_REPOSITORY, type UsersRepository } from '../repositories/users.repository';
 
 /** Facade of the users module. */
 @Injectable()
 export class UsersService {
-  constructor(private readonly repo: UsersRepository) {}
+  constructor(@Inject(USERS_REPOSITORY) private readonly repo: UsersRepository) {}
 
   /** Batch lookup for enriching responses (one query for all authors on a page). */
-  refsByIds(ids: number[]): Map<number, UserRef> {
+  async refsByIds(ids: number[]): Promise<Map<number, UserRef>> {
     const unique = [...new Set(ids)];
-    return new Map(this.repo.findByIds(unique).map((u) => [u.id, { id: encodeId(u.id), displayName: u.displayName }]));
+    return new Map((await this.repo.findByIds(unique)).map((u) => [u.id, { id: encodeId(u.id), displayName: u.displayName }]));
   }
 
-  findByMockToken(token: string): UserRow | undefined {
-    return this.repo.findByMockToken(token);
+  /**
+   * Mock login: `Bearer <username>`. In mock mode an unknown name falls back to `jan` (as always);
+   * in prisma mode it is simply not found (→ 401).
+   */
+  async findByLogin(token: string): Promise<UserRow | undefined> {
+    const user = await this.repo.findByUsername(token);
+    if (user || dataSource() !== 'mock') return user;
+    return this.repo.findByUsername('jan');
   }
 }

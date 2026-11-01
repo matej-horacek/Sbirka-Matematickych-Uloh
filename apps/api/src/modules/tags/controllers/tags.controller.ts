@@ -11,10 +11,10 @@ export class TagsController {
 
   /** listTags – any logged-in teacher; global + own personal tags. */
   @Get()
-  list(
+  async list(
     @CurrentUser() user: CurrentUserData,
     @Query(new ZodValidationPipe(listTagsQuery)) query: ListTagsQuery,
-  ): TagPage {
+  ): Promise<TagPage> {
     return this.tags.list(user.id, query.q, query.page, query.limit);
   }
 }

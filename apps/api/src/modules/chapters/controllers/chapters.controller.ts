@@ -9,7 +9,7 @@ export class ChaptersController {
 
   /** listChapters – any logged-in teacher; global + own personal chapters. */
   @Get()
-  list(@CurrentUser() user: CurrentUserData): ChapterList {
+  async list(@CurrentUser() user: CurrentUserData): Promise<ChapterList> {
     return this.chapters.list(user.id);
   }
 }

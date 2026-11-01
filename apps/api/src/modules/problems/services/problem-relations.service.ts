@@ -12,24 +12,24 @@ export class ProblemRelationsService {
     private readonly chapters: ChaptersService,
   ) {}
 
-  tagIds(userId: number, ids: string[] | undefined, field = 'tagIds'): number[] | undefined {
+  async tagIds(userId: number, ids: string[] | undefined, field = 'tagIds'): Promise<number[] | undefined> {
     if (ids === undefined) return undefined;
     const decoded = this.decodeAll(ids, field);
-    if (this.tags.findNotUsable(userId, decoded).length) throw ApiError.badRequest(`${field}: unknown tag`);
+    if ((await this.tags.findNotUsable(userId, decoded)).length) throw ApiError.badRequest(`${field}: unknown tag`);
     return decoded;
   }
 
-  chapterIds(userId: number, ids: string[] | undefined, field = 'chapterIds'): number[] | undefined {
+  async chapterIds(userId: number, ids: string[] | undefined, field = 'chapterIds'): Promise<number[] | undefined> {
     if (ids === undefined) return undefined;
     const decoded = this.decodeAll(ids, field);
-    if (this.chapters.findNotUsable(userId, decoded).length) throw ApiError.badRequest(`${field}: unknown chapter`);
+    if ((await this.chapters.findNotUsable(userId, decoded)).length) throw ApiError.badRequest(`${field}: unknown chapter`);
     return decoded;
   }
 
   /** Copies keep only global tags and chapters, unless the caller owns the original. */
-  forCopy(tagIds: number[], chapterIds: number[], callerOwnsOriginal: boolean) {
+  async forCopy(tagIds: number[], chapterIds: number[], callerOwnsOriginal: boolean) {
     if (callerOwnsOriginal) return { tagIds: [...tagIds], chapterIds: [...chapterIds] };
-    return { tagIds: this.tags.onlyGlobal(tagIds), chapterIds: this.chapters.onlyGlobal(chapterIds) };
+    return { tagIds: await this.tags.onlyGlobal(tagIds), chapterIds: await this.chapters.onlyGlobal(chapterIds) };
   }
 
   private decodeAll(ids: string[], field: string): number[] {

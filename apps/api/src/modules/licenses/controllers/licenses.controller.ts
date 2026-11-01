@@ -8,7 +8,7 @@ export class LicensesController {
 
   /** listLicenses – any logged-in teacher. */
   @Get()
-  list(): LicenseList {
+  async list(): Promise<LicenseList> {
     return this.licenses.listPublishable();
   }
 }

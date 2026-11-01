@@ -15,8 +15,8 @@ export class PublicationService {
     private readonly licenses: LicensesService,
   ) {}
 
-  publish(user: CurrentUserData, id: number, body: PublishRequest): ProblemDetail {
-    const { problem, children } = this.problems.findOwnWithChildren(user, id);
+  async publish(user: CurrentUserData, id: number, body: PublishRequest): Promise<ProblemDetail> {
+    const { problem, children } = await this.problems.findOwnWithChildren(user, id);
 
     if (problem.parentId !== null) {
       throw ApiError.conflict(ErrorCode.SET_CHILD_NOT_PUBLISHABLE, 'A set child is published together with its set.');
@@ -30,7 +30,7 @@ export class PublicationService {
 
     // The licence: every problem in the set needs one that allows publication.
     const all = [problem, ...children];
-    const licensed = this.licenses.rowsByIds(all.flatMap((p) => (p.source.licenseId === null ? [] : [p.source.licenseId])));
+    const licensed = await this.licenses.rowsByIds(all.flatMap((p) => (p.source.licenseId === null ? [] : [p.source.licenseId])));
     for (const p of all) {
       if (p.source.licenseId !== null && !licensed.get(p.source.licenseId)?.allowsPublication) {
         throw ApiError.conflict(ErrorCode.LICENSE_REQUIRED, `"${p.name}" has a licence that does not allow publication.`);
@@ -40,7 +40,7 @@ export class PublicationService {
     let newLicenseId: number | null = null;
     if (all.some((p) => p.source.licenseId === null)) {
       const id = body.licenseId ? decodeId(body.licenseId) : null;
-      const license = id === null ? undefined : this.licenses.findById(id);
+      const license = id === null ? undefined : await this.licenses.findById(id);
       if (!license) throw ApiError.conflict(ErrorCode.LICENSE_REQUIRED, 'Choose a licence (licenseId) to publish.');
       if (!license.allowsPublication) {
         throw ApiError.conflict(ErrorCode.LICENSE_REQUIRED, 'This licence does not allow publication.');
@@ -48,7 +48,7 @@ export class PublicationService {
       newLicenseId = license.id;
     }
 
-    this.problems.applyPublication(all.map((p) => p.id), status, newLicenseId);
+    await this.problems.applyPublication(all.map((p) => p.id), status, newLicenseId);
     return this.problems.detailFor(user, id);
   }
 }

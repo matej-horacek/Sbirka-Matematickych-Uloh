@@ -1,22 +1,12 @@
-import { Injectable } from '@nestjs/common';
-import { MockDatabase, type ChapterRow } from '../../../database/mock-database';
+import type { ChapterRow } from '../../../database/mock-database';
 
-@Injectable()
-export class ChaptersRepository {
-  constructor(private readonly db: MockDatabase) {}
+export const CHAPTERS_REPOSITORY = Symbol('CHAPTERS_REPOSITORY');
 
+/** Data access for chapters. Only queries, no decisions. Implementations: Mock…, Prisma… */
+export interface ChaptersRepository {
   /** Global chapters plus the user's own personal ones, sorted by name. */
-  findVisible(userId: number): ChapterRow[] {
-    return this.db.chapters
-      .filter((c) => c.isGlobal || c.ownerId === userId)
-      .sort((a, b) => a.name.localeCompare(b.name, 'cs'));
-  }
-
-  findByIds(ids: number[]): ChapterRow[] {
-    return this.db.chapters.filter((c) => ids.includes(c.id));
-  }
-
-  findAll(): ChapterRow[] {
-    return this.db.chapters;
-  }
+  findVisible(userId: number): Promise<ChapterRow[]>;
+  findByIds(ids: number[]): Promise<ChapterRow[]>;
+  /** Every chapter (the service walks the parent links to find descendants). */
+  findAll(): Promise<ChapterRow[]>;
 }
