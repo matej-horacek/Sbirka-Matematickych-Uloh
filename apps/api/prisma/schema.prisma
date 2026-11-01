@@ -4,6 +4,14 @@ generator client {
   moduleFormat = "cjs"
 }
 
+// DBML for dbdiagram.io, generated into docs/db/schema.dbml (D-01: never edited by hand).
+generator dbml {
+  provider   = "prisma-dbml-generator"
+  output     = "../../../docs/db"
+  outputName = "schema.dbml"
+  includeRelationFields = false
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
