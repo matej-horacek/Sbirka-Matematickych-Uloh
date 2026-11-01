@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -51,7 +52,7 @@ model chapter {
   is_global         Boolean
   author_id         Int?
   created_at        DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
   deleted_at        DateTime?           @db.Timestamptz(6)
   user              user?               @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   chapter           chapter?            @relation("chapterTochapter", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -149,7 +150,7 @@ model problem {
   language_id                                  Int?
   source_id                                    Int                 @unique
   created_at                                   DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at                                   DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at                                   DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
   deleted_at                                   DateTime?           @db.Timestamptz(6)
   lock_version                                 Int                 @default(1)
   version                                      Int                 @default(1)
@@ -374,7 +375,7 @@ model worksheet {
   license_id                 Int?
   citation_display           worksheet_citation_display @default(INLINE)
   created_at                 DateTime                   @default(now()) @db.Timestamptz(6)
-  updated_at                 DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                   @default(now()) @updatedAt @db.Timestamptz(6)
   deleted_at                 DateTime?                  @db.Timestamptz(6)
   version                    Int                        @default(1)
   original_worksheet_id      Int?

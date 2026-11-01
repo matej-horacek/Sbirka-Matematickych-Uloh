@@ -15,6 +15,8 @@ module.exports = {
     // (typecheck:test in verify covers it).
     '^.+\\.ts$': [transformer, { tsconfig: '<rootDir>/test/tsconfig.json' }],
   },
+  // The generated Prisma client imports its own files as './x.js' (they are .ts on disk).
+  moduleNameMapper: { '^(\.{1,2}/.*)\.js$': '$1' },
   testEnvironment: 'node',
   // Memory guards: a runaway node process once exhausted all RAM.
   maxWorkers: 2,

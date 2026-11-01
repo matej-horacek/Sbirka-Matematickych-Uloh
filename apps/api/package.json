@@ -6,6 +6,7 @@
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "node dist/main",
+    "db:generate": "prisma generate",
     "typecheck": "tsc --noEmit -p .",
     "typecheck:test": "tsc --noEmit -p test/tsconfig.json",
     "test": "node ../../scripts/jest-capped.mjs",
