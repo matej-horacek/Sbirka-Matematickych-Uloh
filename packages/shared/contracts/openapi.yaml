@@ -16,6 +16,7 @@ info:
       Revised 2026-10-31 (before any implementation): copying your own problem keeps source OWN;
       copy holders see `updateAvailable` (no stored notifications); `required` fixed on ProblemCreate
       and ProblemListItem; 400 declared on take-over-update and publish; examples corrected; no YAML anchors.
+      Revised 2026-11-01: `name` max 255 characters (matches the database column).
     - 1.0.1 (2026-10-25): documentation only. operationId on every endpoint, grouping
       sections (Problems, Problem actions, Pickers), realistic request and response examples.
     - 1.0.0 (2026-10-25): frozen contract for the problem part. Problems CRUD with whole-set
@@ -2289,7 +2290,7 @@ components:
     ProblemBase:
       type: object
       properties:
-        name: {type: string, minLength: 1}
+        name: {type: string, minLength: 1, maxLength: 255}
         assignment: {type: string, minLength: 1}
         result: {type: string, nullable: true}
         language: {type: string, nullable: true, example: cs}
@@ -2300,7 +2301,7 @@ components:
       - type: object
         required: [name, assignment]
         properties:
-          name: {type: string, minLength: 1}
+          name: {type: string, minLength: 1, maxLength: 255}
           assignment: {type: string, minLength: 1}
           tagIds:
             type: array
@@ -2329,7 +2330,7 @@ components:
       - type: object
         required: [id, name, assignment, author, tags, chapters, childCount]
         properties:
-          name: {type: string, minLength: 1}
+          name: {type: string, minLength: 1, maxLength: 255}
           assignment: {type: string, minLength: 1}
           id: {$ref: '#/components/schemas/Sqid'}
           author: {$ref: '#/components/schemas/UserRef'}

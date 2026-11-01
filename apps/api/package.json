@@ -19,6 +19,7 @@
     "@nestjs/common": "^11.2.8",
     "@nestjs/core": "^11.2.8",
     "@nestjs/platform-express": "^11.2.8",
+    "@prisma/client": "^6.19.3",
     "@scalar/nestjs-api-reference": "^1.2.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.0",
@@ -38,6 +39,7 @@
     "ajv-formats": "^3.0.1",
     "fast-check": "^4.10.2",
     "jest": "^30.5.2",
+    "prisma": "^6.19.3",
     "supertest": "^7.3.1",
     "ts-jest": "^29.4.15",
     "typescript": "catalog:"

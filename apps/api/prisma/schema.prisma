@@ -1,0 +1,575 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model asset {
+  id             Int             @id @default(autoincrement())
+  storage_key    String          @unique
+  type           asset_type
+  mime_type      String          @db.VarChar(100)
+  size_bytes     Int
+  sha256         String          @db.Char(64)
+  status         asset_status    @default(PENDING)
+  uploaded_by    Int
+  source_id      Int?            @unique
+  created_at     DateTime        @default(now()) @db.Timestamptz(6)
+  content_source content_source? @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user           user            @relation(fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attachment     attachment[]
+
+  @@index([sha256])
+  @@index([status, created_at])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model attachment {
+  problem_id Int
+  asset_id   Int
+  position   String               @db.VarChar(64)
+  placement  attachment_placement @default(BELOW)
+  size       attachment_size      @default(M)
+  asset      asset                @relation(fields: [asset_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  problem    problem              @relation(fields: [problem_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([problem_id, asset_id])
+  @@unique([problem_id, position], map: "attachment_problem_id_position_idx")
+  @@index([asset_id])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model chapter {
+  id                Int                 @id @default(autoincrement())
+  name              String              @db.VarChar(255)
+  parent_id         Int?
+  is_global         Boolean
+  author_id         Int?
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at        DateTime?           @db.Timestamptz(6)
+  user              user?               @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  chapter           chapter?            @relation("chapterTochapter", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_chapter     chapter[]           @relation("chapterTochapter")
+  problem_chapter   problem_chapter[]
+  worksheet_chapter worksheet_chapter[]
+
+  @@index([parent_id])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model content_source {
+  id                   Int               @id @default(autoincrement())
+  origin_type          content_origin
+  source_citation_text String?
+  license_id           Int?
+  license_note         String?
+  citation_audience    citation_audience @default(PUBLIC)
+  show_in_web          Boolean           @default(true)
+  show_in_pdf          Boolean           @default(true)
+  asset                asset?
+  license              license?          @relation(fields: [license_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  problem              problem?
+}
+
+model language {
+  id        Int         @id @default(autoincrement())
+  name      String      @db.VarChar(100)
+  code      String      @unique @db.VarChar(10)
+  problem   problem[]
+  user      user[]
+  worksheet worksheet[]
+}
+
+model license {
+  id                   Int              @id @default(autoincrement())
+  name                 String           @db.VarChar(255)
+  description          String?
+  url                  String?
+  requires_attribution Boolean
+  allows_modification  Boolean
+  requires_share_alike Boolean
+  allows_publication   Boolean
+  content_source       content_source[]
+  worksheet            worksheet[]
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model moderation_log {
+  id           Int               @id @default(autoincrement())
+  actor_id     Int
+  actor_role   user_role
+  action       moderation_action
+  target_type  audit_target_type
+  target_id    Int
+  reason       String?
+  snapshot     Json?
+  created_at   DateTime          @default(now()) @db.Timestamptz(6)
+  user         user              @relation(fields: [actor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  notification notification[]
+  report       report[]
+
+  @@index([actor_id, created_at])
+  @@index([created_at])
+  @@index([target_type, target_id])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model notification {
+  id                Int               @id @default(autoincrement())
+  recipient_id      Int
+  type              notification_type
+  target_type       audit_target_type
+  target_id         Int
+  moderation_log_id Int?
+  read_at           DateTime?         @db.Timestamptz(6)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  moderation_log    moderation_log?   @relation(fields: [moderation_log_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user              user              @relation(fields: [recipient_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([recipient_id, read_at])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model problem {
+  id                                           Int                 @id @default(autoincrement())
+  name                                         String              @db.VarChar(255)
+  assignment                                   String
+  solution                                     String?
+  result                                       String?
+  content_schema_version                       Int                 @default(1)
+  difficulty                                   Int?
+  author_id                                    Int
+  publish_status                               publish_status      @default(PRIVATE)
+  language_id                                  Int?
+  source_id                                    Int                 @unique
+  created_at                                   DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at                                   DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at                                   DateTime?           @db.Timestamptz(6)
+  lock_version                                 Int                 @default(1)
+  version                                      Int                 @default(1)
+  minor_version                                Int                 @default(0)
+  original_problem_id                          Int?
+  original_problem_version                     Int?
+  dismissed_update_version                     Int?
+  attachment                                   attachment[]
+  user                                         user                @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  language                                     language?           @relation(fields: [language_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  problem                                      problem?            @relation("problemToproblem", fields: [original_problem_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_problem                                problem[]           @relation("problemToproblem")
+  content_source                               content_source      @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  problem_chapter                              problem_chapter[]
+  problem_part_problem_part_child_idToproblem  problem_part?       @relation("problem_part_child_idToproblem")
+  problem_part_problem_part_parent_idToproblem problem_part[]      @relation("problem_part_parent_idToproblem")
+  problem_revision                             problem_revision[]
+  problem_share                                problem_share[]
+  problem_tag                                  problem_tag[]
+  share_link                                   share_link[]
+  worksheet_problem                            worksheet_problem[]
+
+  @@index([author_id])
+  @@index([original_problem_id])
+  @@index([publish_status, created_at])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model problem_chapter {
+  problem_id Int
+  chapter_id Int
+  chapter    chapter @relation(fields: [chapter_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  problem    problem @relation(fields: [problem_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([problem_id, chapter_id])
+  @@index([chapter_id])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model problem_part {
+  parent_id                               Int
+  child_id                                Int     @unique(map: "problem_part_child_id_idx")
+  position                                String  @db.VarChar(64)
+  problem_problem_part_child_idToproblem  problem @relation("problem_part_child_idToproblem", fields: [child_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  problem_problem_part_parent_idToproblem problem @relation("problem_part_parent_idToproblem", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([parent_id, child_id])
+  @@unique([parent_id, position], map: "problem_part_parent_id_position_idx")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model problem_revision {
+  id                     Int             @id @default(autoincrement())
+  problem_id             Int
+  content                Json
+  content_schema_version Int
+  status                 revision_status @default(REVIEWING)
+  reason                 String?
+  reviewed_by            Int?
+  created_at             DateTime        @default(now()) @db.Timestamptz(6)
+  reviewed_at            DateTime?       @db.Timestamptz(6)
+  auto_approved          Boolean         @default(false)
+  minor                  Boolean         @default(false)
+  problem                problem         @relation(fields: [problem_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                   user?           @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([problem_id])
+  @@index([status, created_at])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model problem_share {
+  problem_id   Int
+  recipient_id Int
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  problem      problem  @relation(fields: [problem_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user         user     @relation(fields: [recipient_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([problem_id, recipient_id])
+  @@index([recipient_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model problem_tag {
+  problem_id Int
+  tag_id     Int
+  problem    problem @relation(fields: [problem_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tag        tag     @relation(fields: [tag_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([problem_id, tag_id])
+  @@index([tag_id])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model refresh_token {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  token_hash String
+  expires_at DateTime  @db.Timestamptz(6)
+  revoked_at DateTime? @db.Timestamptz(6)
+  user       user      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model report {
+  id                            Int                @id @default(autoincrement())
+  target_id                     Int
+  reporter_id                   Int?
+  category                      report_category
+  text                          String?
+  status                        report_status      @default(OPEN)
+  resolved_by                   Int?
+  created_at                    DateTime           @default(now()) @db.Timestamptz(6)
+  resolved_at                   DateTime?          @db.Timestamptz(6)
+  target_type                   report_target_type
+  moderation_log_id             Int?
+  moderation_log                moderation_log?    @relation(fields: [moderation_log_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_report_reporter_idTouser user?              @relation("report_reporter_idTouser", fields: [reporter_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_report_resolved_byTouser user?              @relation("report_resolved_byTouser", fields: [resolved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status, created_at])
+  @@index([target_type, target_id])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model share_link {
+  id                Int        @id @default(autoincrement())
+  code              String     @unique @db.VarChar(20)
+  worksheet_id      Int?
+  problem_id        Int?
+  created_by        Int
+  include_solutions Boolean    @default(false)
+  expires_at        DateTime?  @db.Timestamptz(6)
+  revoked_at        DateTime?  @db.Timestamptz(6)
+  created_at        DateTime   @default(now()) @db.Timestamptz(6)
+  user              user       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  problem           problem?   @relation(fields: [problem_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  worksheet         worksheet? @relation(fields: [worksheet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_by])
+}
+
+model system_event {
+  id          Int               @id @default(autoincrement())
+  rule        String            @db.VarChar(50)
+  target_type audit_target_type
+  target_id   Int
+  snapshot    Json?
+  created_at  DateTime          @default(now()) @db.Timestamptz(6)
+
+  @@index([created_at])
+  @@index([target_type, target_id])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model tag {
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(255)
+  is_global     Boolean
+  author_id     Int?
+  problem_tag   problem_tag[]
+  user          user?           @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  worksheet_tag worksheet_tag[]
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model user {
+  id                                                          Int                    @id @default(autoincrement())
+  username                                                    String                 @unique @db.VarChar(100)
+  display_name                                                String?                @db.VarChar(100)
+  role                                                        user_role              @default(REGISTERED_TEACHER)
+  status                                                      user_status            @default(ACTIVE)
+  language_id                                                 Int
+  created_at                                                  DateTime               @default(now()) @db.Timestamptz(6)
+  anonymized_at                                               DateTime?              @db.Timestamptz(6)
+  email                                                       String                 @unique @db.VarChar(255)
+  password_hash                                               String
+  asset                                                       asset[]
+  chapter                                                     chapter[]
+  moderation_log                                              moderation_log[]
+  notification                                                notification[]
+  problem                                                     problem[]
+  problem_revision                                            problem_revision[]
+  problem_share                                               problem_share[]
+  refresh_token                                               refresh_token[]
+  report_report_reporter_idTouser                             report[]               @relation("report_reporter_idTouser")
+  report_report_resolved_byTouser                             report[]               @relation("report_resolved_byTouser")
+  share_link                                                  share_link[]
+  tag                                                         tag[]
+  language                                                    language               @relation(fields: [language_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  verification_request_verification_request_resolved_byTouser verification_request[] @relation("verification_request_resolved_byTouser")
+  verification_request_verification_request_user_idTouser     verification_request[] @relation("verification_request_user_idTouser")
+  worksheet                                                   worksheet[]
+  worksheet_share                                             worksheet_share[]
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model verification_request {
+  id                                          Int            @id @default(autoincrement())
+  user_id                                     Int
+  status                                      request_status @default(PENDING)
+  note                                        String?
+  resolved_by                                 Int?
+  created_at                                  DateTime       @default(now()) @db.Timestamptz(6)
+  resolved_at                                 DateTime?      @db.Timestamptz(6)
+  user_verification_request_resolved_byTouser user?          @relation("verification_request_resolved_byTouser", fields: [resolved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_verification_request_user_idTouser     user           @relation("verification_request_user_idTouser", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status, created_at])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model worksheet {
+  id                         Int                        @id @default(autoincrement())
+  name                       String                     @db.VarChar(255)
+  difficulty                 Int?
+  author_id                  Int
+  publish_status             publish_status             @default(PRIVATE)
+  language_id                Int?
+  license_id                 Int?
+  citation_display           worksheet_citation_display @default(INLINE)
+  created_at                 DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                   @default(now()) @db.Timestamptz(6)
+  deleted_at                 DateTime?                  @db.Timestamptz(6)
+  version                    Int                        @default(1)
+  original_worksheet_id      Int?
+  original_worksheet_version Int?
+  dismissed_update_version   Int?
+  share_link                 share_link[]
+  user                       user                       @relation(fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  language                   language?                  @relation(fields: [language_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  license                    license?                   @relation(fields: [license_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  worksheet                  worksheet?                 @relation("worksheetToworksheet", fields: [original_worksheet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_worksheet            worksheet[]                @relation("worksheetToworksheet")
+  worksheet_chapter          worksheet_chapter[]
+  worksheet_problem          worksheet_problem[]
+  worksheet_share            worksheet_share[]
+  worksheet_tag              worksheet_tag[]
+
+  @@index([author_id])
+  @@index([original_worksheet_id])
+  @@index([publish_status, created_at])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model worksheet_chapter {
+  worksheet_id Int
+  chapter_id   Int
+  chapter      chapter   @relation(fields: [chapter_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  worksheet    worksheet @relation(fields: [worksheet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([worksheet_id, chapter_id])
+  @@index([chapter_id])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model worksheet_problem {
+  worksheet_id Int
+  problem_id   Int
+  position     String    @db.VarChar(64)
+  problem      problem   @relation(fields: [problem_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  worksheet    worksheet @relation(fields: [worksheet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([worksheet_id, problem_id])
+  @@unique([worksheet_id, position], map: "worksheet_problem_worksheet_id_position_idx")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model worksheet_share {
+  worksheet_id Int
+  recipient_id Int
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  user         user      @relation(fields: [recipient_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  worksheet    worksheet @relation(fields: [worksheet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([worksheet_id, recipient_id])
+  @@index([recipient_id])
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model worksheet_tag {
+  worksheet_id Int
+  tag_id       Int
+  tag          tag       @relation(fields: [tag_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  worksheet    worksheet @relation(fields: [worksheet_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([worksheet_id, tag_id])
+  @@index([tag_id])
+}
+
+enum asset_status {
+  PENDING
+  READY
+}
+
+enum asset_type {
+  IMAGE
+}
+
+enum attachment_placement {
+  BELOW
+  RIGHT
+}
+
+enum attachment_size {
+  S
+  M
+  L
+}
+
+enum audit_target_type {
+  PROBLEM
+  WORKSHEET
+  USER
+  CHAPTER
+  TAG
+  REPORT
+  LICENSE
+  LANGUAGE
+}
+
+enum citation_audience {
+  PUBLIC
+  TEACHER_ONLY
+}
+
+enum content_origin {
+  OWN
+  LICENSED_USE
+  FREE_USE
+}
+
+enum moderation_action {
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  BLOCKED
+  UNBLOCKED
+  TEACHER_VERIFIED
+  TRUST_GRANTED
+  TRUST_REVOKED
+  ROLE_CHANGED
+  ACCOUNT_BLOCKED
+  ACCOUNT_UNBLOCKED
+  ACCOUNT_DELETED
+  REPORT_DISMISSED
+  CHAPTER_EDITED
+  TAG_MERGED
+  TAG_RENAMED
+  CODELIST_EDITED
+}
+
+enum notification_type {
+  CONTENT_APPROVED
+  CONTENT_REJECTED
+  CONTENT_WITHDRAWN
+  CONTENT_BLOCKED
+  CONTENT_UNBLOCKED
+  SET_CHILD_REMOVED
+  WORKSHEET_ITEM_REMOVED
+  ACCOUNT_VERIFIED
+  ROLE_CHANGED
+}
+
+enum publish_status {
+  PRIVATE
+  REVIEWING
+  PUBLISHED
+  WITHDRAWN
+  BLOCKED
+}
+
+enum report_category {
+  COPYRIGHT
+  INAPPROPRIATE
+  ILLEGAL
+  OTHER
+}
+
+enum report_status {
+  OPEN
+  DISMISSED
+  RESOLVED
+}
+
+enum report_target_type {
+  PROBLEM
+  WORKSHEET
+  USER
+}
+
+enum request_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum revision_status {
+  REVIEWING
+  APPROVED
+  REJECTED
+}
+
+enum user_role {
+  SUPERADMIN
+  ADMIN
+  TRUSTED_TEACHER
+  VERIFIED_TEACHER
+  REGISTERED_TEACHER
+}
+
+enum user_status {
+  ACTIVE
+  BLOCKED
+}
+
+enum worksheet_citation_display {
+  INLINE
+  HIDDEN
+  SUMMARY_AT_END
+}

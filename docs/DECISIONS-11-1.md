@@ -33,3 +33,26 @@ The decisions Daniel made on the overnight run's decision files (`docs/overnight
 - `ProblemCreate`: put `required: [name, assignment]` in the same object as the properties it names (R-015, S-13).
 - `createProblem` 201 example: one problem without children (S-3).
 - `takeOverUpdate` and `publishProblem`: declare the 400 response (S-4, S-5).
+
+---
+
+# Decisions — 2026-11-01
+
+| ID | Topic | Decision | Applied in |
+|---|---|---|---|
+| Q-004 | Set structure changes | Adding, reordering or removing a child raises the set's `version` (not only `lockVersion`), so copy holders see `updateAvailable`. This matches the diagram's comment on `problem.version`. | mock `problem-sets.service.ts` (todo) |
+| D-01 | Sources of truth | One source per layer, all in the repo. **API:** `openapi.yaml`. **Database:** `schema.prisma`; the DBML for dbdiagram is generated from it and never edited by hand. **Decisions:** this file. Overnight docs are snapshots (`docs/archive/`). | from the first Prisma migration on |
+| D-02 | Timestamps | All `timestamptz`. `created_at`/`updated_at` default `now()`; `updated_at` is set on update by Prisma `@updatedAt`. | schema |
+| D-03 | Tags and chapters | No `slug`; identified by ID (consistent with 2026-10-19). Name uniqueness isn't enforced for now. | schema |
+| D-04 | Order of a problem's tags and chapters | Sorted by name; no position column. | Prisma repository + spec wording (todo) |
+| D-05 | `displayName` | `user.display_name`, nullable; the API returns `COALESCE(display_name, username)`. | schema + mapper |
+| D-06 | Problem name length | Max 255 characters, in both the spec (`maxLength`) and the DB (`varchar(255)`). | spec 2.0.0 (revised 2026-11-01) |
+| D-07 | Auto-approved revisions (refines O-5) | `auto_approved` revisions are APPROVED with no reviewer; a manually approved revision must have one; pending revisions have neither. Two CHECKs in the migration. | first migration (raw SQL) |
+
+## Still open
+
+- **Q-008:** someone else's private problem in `addSetChild`: "not found" (hide existence, like `getProblem`) or 409 `CANNOT_ADD_TO_SET`.
+- **The six `DOMAIN-REVIEW` rules** from `IMPLEMENT_2.0.0_REPORT.md`.
+- **`problem_revision.base_version`:** which version a pending edit started from (needed for approval conflicts).
+- **`system_event`:** confirm what it's for (auto-trust), so auto-approvals aren't logged twice.
+- **`worksheet.license_id`:** the worksheet links its licence directly, while problems go through `content_source`.
