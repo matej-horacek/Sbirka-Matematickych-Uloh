@@ -1,65 +1,32 @@
-
 <script setup lang="ts">
-import type { WorksheetProblem } from '../../types'
+import type { Block } from '../../types'
 import ProblemContentPreview from './ProblemContentPreview.vue'
 
 defineProps<{
-  item: WorksheetProblem
-  index: number
-  total: number
-}>()
-
-const emit = defineEmits<{
-  edit: []
-  move: [direction: -1 | 1]
+  title: string
+  blocks: Block[]
+  selected?: boolean
 }>()
 </script>
 
 <template>
-  <article class="problem-card">
+  <article
+    class="problem-card"
+    :class="{ 'problem-card--selected': selected }"
+  >
     <header class="problem-card__header">
       <span class="problem-card__title">
-        Příklad {{ index + 1 }}
+        {{ title }}
       </span>
 
       <div class="problem-card__tools">
-        <button
-          type="button"
-          class="icon-btn"
-          aria-label="Posunout příklad nahoru"
-          title="Posunout nahoru"
-          :disabled="index === 0"
-          @click="emit('move', -1)"
-        >
-          ↑
-        </button>
-
-        <button
-          type="button"
-          class="icon-btn"
-          aria-label="Posunout příklad dolů"
-          title="Posunout dolů"
-          :disabled="index === total - 1"
-          @click="emit('move', 1)"
-        >
-          ↓
-        </button>
-
-        <button
-          type="button"
-          class="icon-btn"
-          aria-label="Upravit příklad"
-          title="Upravit příklad"
-          @click="emit('edit')"
-        >
-          ✎
-        </button>
+        <slot name="actions" />
       </div>
     </header>
 
     <ProblemContentPreview
-      v-if="item.assignment.length"
-      :blocks="item.assignment"
+      v-if="blocks.length"
+      :blocks="blocks"
     />
 
     <p v-else class="problem-card__empty">
@@ -86,6 +53,11 @@ const emit = defineEmits<{
   box-shadow: var(--shadow-card);
 }
 
+.problem-card--selected {
+  border-color: var(--color-focus);
+  background: var(--color-tint);
+}
+
 .problem-card__header {
   display: flex;
   align-items: center;
@@ -106,29 +78,6 @@ const emit = defineEmits<{
   flex-shrink: 0;
   align-items: center;
   gap: 0.15rem;
-}
-
-.icon-btn {
-  display: grid;
-  place-items: center;
-  min-width: 2rem;
-  min-height: 2rem;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-ink);
-  font: inherit;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-
-.icon-btn:hover:not(:disabled) {
-  background: var(--color-tint);
-}
-
-.icon-btn:disabled {
-  color: var(--color-muted-soft);
-  cursor: not-allowed;
 }
 
 .problem-card :deep(img) {

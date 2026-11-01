@@ -1,129 +1,163 @@
-<script setup lang="ts">
-import { computed, ref, toRaw } from 'vue'
 
-import ProblemList from '../components/list/ProblemList.vue'
+<script setup lang="ts">
+import { computed, onMounted, ref, toRaw } from 'vue'
+
+import ProblemCard from '../components/list/ProblemCard.vue'
 import ProblemEditDialog from '../components/edit/ProblemEditDialog.vue'
 import ProblemEditForm from '../components/edit/ProblemEditForm.vue'
 
 import { useEditorStore } from '../stores/editorStore'
-import { useWorksheetProblemsStore } from '../stores/worksheetProblems'
-import { useWorksheetMarkdown } from '../composables/useWorksheetMarkdown'
+import { useUserProblemsStore } from '../stores/userProblems'
 
-import type { WorksheetId } from '../types.ts'
+import { blocksToMarkdown } from '../lib/blocksToMarkdown'
+import { createEmptyProblemDraft } from '../lib/createEmptyProblemDraft'
 
-const props = defineProps<{
-  worksheetId: WorksheetId
-}>()
-
+import type { Sqid } from '../types'
 
 const editorStore = useEditorStore()
-const worksheetStore = useWorksheetProblemsStore()
+const userProblems = useUserProblemsStore()
 
 const isProblemEditorOpen = ref(false)
-const editingLocalId = ref<string | null>(null)
 const triedToSave = ref(false)
+const saveError = ref<string | null>(null)
+const search = ref('')
 
-const problems = computed(() =>
-  worksheetStore.problemsForWorksheet(props.worksheetId),
+onMounted(() => {
+  void userProblems.fetchAll()
+})
+
+// Filter problems by name and assignment content.
+const problems = computed(() => {
+  const query = search.value.trim().toLowerCase()
+
+  if (!query) return userProblems.problems
+
+  return userProblems.problems.filter((problem) => {
+    const name = problem.name?.toLowerCase() ?? ''
+    const assignment = blocksToMarkdown(problem.assignment).toLowerCase()
+
+    return name.includes(query) || assignment.includes(query)
+  })
+})
+
+// Existing problems have a Sqid.
+const isEditing = computed(
+  () => editorStore.problem?.id != null,
 )
 
 const dialogTitle = computed(() =>
-  editingLocalId.value
-    ? 'Upravit příklad'
-    : 'Nový příklad',
+  isEditing.value ? 'Upravit příklad' : 'Nový příklad',
 )
 
-// TESTOVANI
-const { exportWorksheet } = useWorksheetMarkdown()
-
-function saveWorksheet() {
-  exportWorksheet(problems.value, props.worksheetId)
-}
-
+// Initialize a completely new editor draft.
 function createProblem() {
-  editingLocalId.value = null
   triedToSave.value = false
+  saveError.value = null
 
-  editorStore.newProblem()
+  // Important: initialize ALL required fields.
+  editorStore.loadProblem(createEmptyProblemDraft())
 
   isProblemEditorOpen.value = true
 }
 
-function editProblem(localId: string) {
-  const item = worksheetStore.problemByLocalId(
-    props.worksheetId,
-    localId,
-  )
+// Load an existing problem.
+function editProblem(id: Sqid) {
+  const item = userProblems.problemById(id)
 
   if (!item) return
 
-  editorStore.loadProblem({
-    assignment: structuredClone(toRaw(item).assignment),
-  })
+  editorStore.loadProblem(
+    structuredClone(toRaw(item)),
+  )
 
-  editingLocalId.value = localId
   triedToSave.value = false
+  saveError.value = null
+
   isProblemEditorOpen.value = true
 }
 
-function saveProblem() {
+// Save a new or existing problem.
+async function saveProblem() {
   triedToSave.value = true
+  saveError.value = null
 
   const draft = editorStore.problem
 
-  if (!draft || editorStore.errors.length > 0) return
+  if (!draft) return
+
+  // Validate the name before sending anything to the backend.
+  const name = draft.name?.trim()
+
+  if (!name) {
+    saveError.value = 'Zadejte název příkladu.'
+    return
+  }
+
+  // Check the remaining editor validation.
+  if (editorStore.errors.length > 0) return
 
   const problemToSave = structuredClone(toRaw(draft))
 
-  if (editingLocalId.value) {
-    worksheetStore.saveProblem(
-      props.worksheetId,
-      editingLocalId.value,
-      problemToSave,
-    )
-  } else {
-    worksheetStore.addProblem(
-      props.worksheetId,
-      problemToSave,
-    )
+  // Normalize the name and collections.
+  problemToSave.name = name
+  problemToSave.tagIds ??= []
+  problemToSave.chapterIds ??= []
+
+  try {
+    // A new problem has no ID yet.
+    // It must use POST /problems.
+    if (problemToSave.id == null) {
+      await userProblems.add(problemToSave)
+    } else {
+      // Existing problems use PATCH /problems/:id.
+      await userProblems.save(problemToSave)
+    }
+
+    closeEditor()
+  } catch (error) {
+    saveError.value =
+      error instanceof Error
+        ? error.message
+        : 'Příklad se nepodařilo uložit.'
+  }
+}
+
+// Close the editor and reset its state.
+function closeEditor() {
+  isProblemEditorOpen.value = false
+  triedToSave.value = false
+  saveError.value = null
+
+  editorStore.$patch({
+    problem: null,
+    isSaved: true,
+  })
+}
+
+// Delete an existing problem.
+async function deleteProblem(id: Sqid) {
+  if (!window.confirm('Opravdu chcete příklad smazat?')) {
+    return
   }
 
-  closeAfterSave()
-}
-
-function closeAfterSave() {
-  isProblemEditorOpen.value = false
-  editingLocalId.value = null
-  triedToSave.value = false
-
-  editorStore.$patch({
-    problem: null,
-    isSaved: true,
-  })
-}
-
-function cancelProblemEdit() {
-  isProblemEditorOpen.value = false
-  editingLocalId.value = null
-  triedToSave.value = false
-
-  editorStore.$patch({
-    problem: null,
-    isSaved: true,
-  })
+  try {
+    await userProblems.remove(id)
+  } catch (error) {
+    window.alert(
+      error instanceof Error
+        ? error.message
+        : 'Příklad se nepodařilo smazat.',
+    )
+  }
 }
 </script>
 
 <template>
-  <main class="editor-page">
+  <main class="page">
     <header class="page-header">
       <div>
-        <p class="eyebrow">
-          Editor
-        </p>
-
-        <h1>Pracovní list</h1>
-
+        <p class="eyebrow">Editor</p>
+        <h1>Moje příklady</h1>
       </div>
 
       <button
@@ -135,48 +169,120 @@ function cancelProblemEdit() {
       </button>
     </header>
 
-    <section class="worksheet-content">
+    <section>
       <div class="section-heading">
         <h2>Příklady</h2>
 
-        <span class="problem-count">
+        <span class="count-chip">
           {{ problems.length }}
         </span>
+
+        <input
+          v-model="search"
+          type="search"
+          class="text-input search"
+          placeholder="Hledat v příkladech…"
+          aria-label="Hledat v příkladech"
+        />
       </div>
 
-      <ProblemList
-        :worksheet-id="props.worksheetId"
-        @edit="editProblem"
-      />
-    </section>
+      <div class="card-list">
+        <p
+          v-if="userProblems.status === 'loading'"
+          class="empty-hint"
+        >
+          Načítám příklady…
+        </p>
 
-    <!-- TESTOVANI: !-->
-    <footer class="page-footer">
-      <button
-        type="button"
-        class="primary-button"
-        :disabled="problems.length === 0"
-        @click="saveWorksheet"
-      >
-        Uložit pracovní list (Markdown)
-      </button>
-    </footer>
+        <p
+          v-else-if="userProblems.status === 'error'"
+          class="empty-hint"
+          role="alert"
+        >
+          {{ userProblems.error }}
+        </p>
+
+        <p
+          v-else-if="userProblems.items.length === 0"
+          class="empty-hint"
+        >
+          Zatím tu nemáte žádný příklad. Přidejte první.
+        </p>
+
+        <p
+          v-else-if="problems.length === 0"
+          class="empty-hint"
+        >
+          Nic nenalezeno.
+        </p>
+
+        <ProblemCard
+          v-for="problem in problems"
+          :key="problem.id ?? problem.name"
+          :title="problem.name || 'Bez názvu'"
+          :blocks="problem.assignment"
+        >
+          <template #actions>
+            <button
+              v-if="problem.id != null"
+              type="button"
+              class="icon-btn"
+              aria-label="Upravit příklad"
+              title="Upravit příklad"
+              @click="editProblem(problem.id)"
+            >
+              ✎
+            </button>
+
+            <button
+              v-if="problem.id != null"
+              type="button"
+              class="icon-btn icon-btn--danger"
+              aria-label="Smazat příklad"
+              title="Smazat příklad"
+              @click="deleteProblem(problem.id)"
+            >
+              🗑
+            </button>
+          </template>
+        </ProblemCard>
+      </div>
+    </section>
 
     <ProblemEditDialog
       v-model:open="isProblemEditorOpen"
       :title="dialogTitle"
-      @cancel="cancelProblemEdit"
+      @cancel="closeEditor"
     >
+      <!-- Problem name -->
+      <div
+        v-if="editorStore.problem"
+        class="form-field"
+      >
+        <label for="problem-name">
+          Název příkladu
+        </label>
+
+        <input
+          id="problem-name"
+          v-model="editorStore.problem.name"
+          type="text"
+          class="text-input"
+          placeholder="Například: Kvadratické rovnice"
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Assignment and solution editor -->
       <ProblemEditForm />
 
+      <!-- Validation errors -->
       <div
         v-if="triedToSave && editorStore.errors.length > 0"
         class="validation-errors"
         role="alert"
       >
-        <p>
-          Před uložením opravte následující chyby:
-        </p>
+        <p>Před uložením opravte následující chyby:</p>
 
         <ul>
           <li
@@ -188,11 +294,20 @@ function cancelProblemEdit() {
         </ul>
       </div>
 
+      <!-- API errors -->
+      <div
+        v-if="saveError"
+        class="validation-errors"
+        role="alert"
+      >
+        <p>{{ saveError }}</p>
+      </div>
+
       <footer class="dialog-actions">
         <button
           type="button"
           class="secondary-button"
-          @click="cancelProblemEdit"
+          @click="closeEditor"
         >
           Zrušit
         </button>
@@ -210,46 +325,10 @@ function cancelProblemEdit() {
 </template>
 
 <style scoped>
-.editor-page {
-  width: min(1200px, 100%);
-  margin: 0 auto;
-  padding: 32px 24px;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 40px;
-}
-
-.eyebrow {
-  margin: 0 0 8px;
-  color: var(--color-accent-ink);
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 2rem;
-}
-
-.page-description {
-  margin: 8px 0 0;
-  color: var(--color-muted);
-}
-
-.worksheet-content {
-  min-width: 0;
-}
-
 .section-heading {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -259,61 +338,20 @@ function cancelProblemEdit() {
   font-size: 1.35rem;
 }
 
-.problem-count {
-  display: inline-grid;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  place-items: center;
-  background: var(--color-primary-soft);
-  color: var(--color-on-primary);
-  border-radius: 999px;
-  font-size: 0.875rem;
-  font-weight: 700;
+.search {
+  margin-left: auto;
+  min-width: 220px;
 }
 
-.primary-button,
-.secondary-button {
-  min-height: 40px;
-  padding: 10px 18px;
-  border-radius: var(--radius-md);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.primary-button {
-  color: var(--color-on-primary);
-  background: var(--color-primary);
-  border: 1px solid var(--color-primary);
-}
-
-.primary-button:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
-}
-
-.primary-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.secondary-button {
-  color: var(--color-ink);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-}
-
-.secondary-button:hover {
-  background: var(--color-tint);
-}
-
-.page-footer {
+.form-field {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 32px;
-  padding-top: 20px;
-  border-top: 1px solid var(--color-border);
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.form-field label {
+  font-weight: 600;
 }
 
 .validation-errors {
@@ -333,29 +371,5 @@ function cancelProblemEdit() {
 .validation-errors ul {
   margin-bottom: 0;
   padding-left: 20px;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border);
-}
-
-@media (max-width: 640px) {
-  .editor-page {
-    padding: 20px 16px;
-  }
-
-  .page-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .dialog-actions {
-    flex-wrap: wrap;
-  }
 }
 </style>

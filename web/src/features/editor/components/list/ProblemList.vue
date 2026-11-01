@@ -1,50 +1,71 @@
+
 <script setup lang="ts">
 import { computed } from 'vue'
-import {
-  useWorksheetProblemsStore,
-  
-} from '../../stores/worksheetProblems'
-import {type WorksheetId } from '../../types'
+import { useUserProblemsStore } from '../../stores/userProblems'
+import type { Sqid } from '../../types'
 import ProblemCard from './ProblemCard.vue'
 
 const props = defineProps<{
-  worksheetId: WorksheetId
+  selectedId?: Sqid | null
 }>()
 
 const emit = defineEmits<{
-  edit: [localId: string]
+  edit: [id: Sqid]
 }>()
 
-const worksheetStore = useWorksheetProblemsStore()
+const problemStore = useUserProblemsStore()
 
-const problems = computed(() =>
-  worksheetStore.problemsForWorksheet(props.worksheetId),
-)
+const problems = computed(() => problemStore.problems)
 
-function moveProblem(localId: string, direction: -1 | 1) {
-  worksheetStore.moveProblem(
-    props.worksheetId,
-    localId,
-    direction,
-  )
+function editProblem(id: Sqid | null) {
+  if (id !== null) {
+    emit('edit', id)
+  }
 }
 </script>
 
 <template>
-  <section class="problem-list" aria-label="Otázky pracovního listu">
-    <p v-if="problems.length === 0" class="problem-list__empty">
-      Tento pracovní list zatím neobsahuje žádné otázky.
+  <section class="problem-list" aria-label="Seznam příkladů">
+
+    <p
+      v-if="problemStore.status === 'loading'"
+      class="problem-list__empty"
+    >
+      Načítání příkladů...
+    </p>
+
+    <p
+      v-else-if="problemStore.status === 'error'"
+      class="problem-list__empty"
+    >
+      {{ problemStore.error ?? 'Příklady se nepodařilo načíst.' }}
+    </p>
+
+    <p
+      v-else-if="problems.length === 0"
+      class="problem-list__empty"
+    >
+      Zatím nemáte žádné příklady.
     </p>
 
     <ProblemCard
-  v-for="(item, index) in problems"
-  :key="item.localId"
-  :item="item"
-  :index="index"
-  :total="problems.length"
-  @edit="emit('edit', item.localId)"
-  @move="moveProblem(item.localId, $event)"
-/>
+      v-for="problem in problems"
+      :key="problem.id ?? problem.name"
+      :title="problem.name || 'Bez názvu'"
+      :blocks="problem.assignment"
+      :selected="problem.id === selectedId"
+    >
+      <template #actions>
+        <button
+          v-if="problem.id !== null"
+          type="button"
+          @click="editProblem(problem.id)"
+        >
+          Upravit
+        </button>
+      </template>
+    </ProblemCard>
+
   </section>
 </template>
 
@@ -63,5 +84,9 @@ function moveProblem(localId: string, direction: -1 | 1) {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+}
+
+.problem-list__empty {
+  color: var(--color-muted);
 }
 </style>

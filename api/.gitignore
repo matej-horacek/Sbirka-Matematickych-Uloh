@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+.env
+*.tsbuildinfo
+# generated from openapi.yaml by `npm run generate`
+src/contracts/generated/
