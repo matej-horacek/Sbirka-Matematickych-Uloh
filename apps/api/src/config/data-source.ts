@@ -17,6 +17,6 @@ export function dataSource(): DataSource {
 }
 
 /** Binds a repository interface token to the Mock or Prisma class, depending on DATA_SOURCE. */
-export function repositoryProvider<T>(token: symbol, mock: Type<T>, prisma: Type<T>): Provider {
+export function repositoryProvider(token: symbol, mock: Type<unknown>, prisma: Type<unknown>): Provider {
   return { provide: token, useClass: dataSource() === 'prisma' ? prisma : mock };
 }
