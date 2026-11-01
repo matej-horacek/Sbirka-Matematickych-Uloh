@@ -1,5 +1,6 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
+import type { user } from '../../../generated/prisma/client';
 import type { Role, TrustLevel, UserRow } from '../../../database/mock-database';
 import type { UsersRepository } from './users.repository';
 
@@ -12,6 +13,14 @@ const ROLE_MAP = {
   REGISTERED_TEACHER: { role: 'TEACHER', trust: 'REGISTERED' },
 } as const satisfies Record<string, { role: Role; trust: TrustLevel }>;
 
+/**
+ * DB user → UserRow (also used by the test StoreProbe, and by findByIds).
+ * displayName = COALESCE(display_name, username) (D-05); mockToken = username.
+ */
+export function toUserRow(u: user): UserRow {
+  return { id: u.id, displayName: u.display_name ?? u.username, ...ROLE_MAP[u.role], mockToken: u.username };
+}
+
 @Injectable()
 export class PrismaUsersRepository implements UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -19,7 +28,7 @@ export class PrismaUsersRepository implements UsersRepository {
   /**
    * TODO Daniel. Must do (DECISIONS D-05, spec UserRef):
    * - one query for all ids (`where: { id: { in: ids } }`), order does not matter (the caller builds a Map);
-   * - map every row with the same mapping as `findByUsername` (displayName fallback, role/trust);
+   * - map every row with `toUserRow` (displayName fallback, role/trust);
    * - ids that do not exist are simply missing from the result.
    */
   async findByIds(_ids: number[]): Promise<UserRow[]> {
@@ -33,13 +42,7 @@ export class PrismaUsersRepository implements UsersRepository {
    * - unknown username → undefined (the guard answers 401).
    */
   async findByUsername(username: string): Promise<UserRow | undefined> {
-    const user = await this.prisma.user.findUnique({ where: { username } });
-    if (!user) return undefined;
-    return {
-      id: user.id,
-      displayName: user.display_name ?? user.username,
-      ...ROLE_MAP[user.role],
-      mockToken: user.username,
-    };
+    const found = await this.prisma.user.findUnique({ where: { username } });
+    return found ? toUserRow(found) : undefined;
   }
 }

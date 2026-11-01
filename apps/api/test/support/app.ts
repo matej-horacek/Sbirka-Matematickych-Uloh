@@ -2,15 +2,18 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module';
 import { ProblemDetailsFilter } from '../../src/common/filters/problem-details.filter';
+import { dataSource } from '../../src/config/data-source';
 import { MockDatabase } from '../../src/database/mock-database';
+import { PrismaService } from '../../src/database/prisma.service';
 import { createApi, type Api } from './api';
+import { PrismaStoreProbe } from './prisma-store';
 import { MockStoreProbe, type StoreProbe } from './store';
 
 export interface TestContext {
   app: INestApplication;
   /** HTTP client with the /api/v1 prefix and automatic contract validation. */
   api: Api;
-  /** Reads the data store directly (MockDatabase now, Prisma in Phase B). */
+  /** Reads the data store directly (MockDatabase, or PrismaService when DATA_SOURCE=prisma). */
   store: StoreProbe;
 }
 
@@ -26,7 +29,8 @@ export async function createTestApp(): Promise<TestContext> {
   app.setGlobalPrefix('api/v1'); // keep in sync with src/main.ts
   app.useGlobalFilters(new ProblemDetailsFilter()); // keep in sync with src/main.ts
   await app.init();
-  return { app, api: createApi(app), store: new MockStoreProbe(app.get(MockDatabase)) };
+  const store = dataSource() === 'prisma' ? new PrismaStoreProbe(app.get(PrismaService)) : new MockStoreProbe(app.get(MockDatabase));
+  return { app, api: createApi(app), store };
 }
 
 /**
