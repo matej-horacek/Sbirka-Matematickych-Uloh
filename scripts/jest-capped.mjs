@@ -16,7 +16,9 @@ const args = process.argv.slice(2);
 const unskip = args.includes('--unskip');
 const env = { ...process.env };
 if (unskip) env.UNSKIP = '1';
-env.NODE_OPTIONS = `${env.NODE_OPTIONS ?? ''} --max-old-space-size=${HEAP_MB}`.trim();
+// --experimental-vm-modules: Nest 12 packages are ESM-only and Prisma 7 loads its runtime with import(); Jest's CommonJS
+// sandbox needs this flag for both. TEMPORARY: remove together with Jest when the tests move to Vitest.
+env.NODE_OPTIONS = `${env.NODE_OPTIONS ?? ''} --max-old-space-size=${HEAP_MB} --experimental-vm-modules`.trim();
 
 const r = spawnSync(process.execPath, [jestBin, '--maxWorkers=2', ...args.filter((a) => a !== '--unskip')], {
   cwd: apiDir,
