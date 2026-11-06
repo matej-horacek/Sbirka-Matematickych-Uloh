@@ -5,7 +5,16 @@ import tseslint from 'typescript-eslint';
 import globals from 'globals';
 
 export default tseslint.config(
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/coverage/**', 'packages/shared/contracts/src/generated/**'] },
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/coverage/**',
+      'packages/shared/contracts/src/generated/**',
+      // apps/web has its own ESLint config (Vue + oxlint); linted by `pnpm --filter web lint`.
+      'apps/web/**',
+    ],
+  },
   {
     files: ['apps/api/src/**/*.ts', 'apps/api/test/**/*.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
