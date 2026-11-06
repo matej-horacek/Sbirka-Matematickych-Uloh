@@ -1,5 +1,5 @@
-import { useTestApp } from './support/app';
-import { seed } from './support/seed';
+import { useTestApp } from './support/app.js';
+import { seed } from './support/seed.js';
 
 // T4.1: the baseline scenarios, ported. The runbook's "49 scenario checks" do not exist (Q-001);
 // the only existing scenario artifact is apps/api/requests.http (11 requests, replayed at baseline

@@ -1,7 +1,7 @@
-import { useTestApp } from '../support/app';
-import { expectError, ids } from '../support/expect';
-import { buildSet, createProblem, getProblem } from '../support/factory';
-import { malformedIds, seed, unknownId } from '../support/seed';
+import { useTestApp } from '../support/app.js';
+import { expectError, ids } from '../support/expect.js';
+import { buildSet, createProblem, getProblem } from '../support/factory.js';
+import { malformedIds, seed, unknownId } from '../support/seed.js';
 
 // removeSetChild — DELETE /problems/{id}/children/{childId}
 // Spec 2.0.0: the set's author. The child is NOT deleted: it becomes a standalone PRIVATE problem.

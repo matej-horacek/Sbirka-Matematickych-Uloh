@@ -1,7 +1,7 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
-import type { ProblemRow } from '../../../database/mock-database';
-import type { NewProblem, ProblemFilter, ProblemsRepository } from './problems.repository';
+import { PrismaService } from '../../../database/prisma.service.js';
+import type { ProblemRow } from '../../../database/mock-database.js';
+import type { NewProblem, ProblemFilter, ProblemsRepository } from './problems.repository.js';
 
 /*
  * Mapping every method below has to do between the DB and ProblemRow (see mock-database.ts):

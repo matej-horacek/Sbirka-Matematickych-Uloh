@@ -1,6 +1,6 @@
 import type { License, LicenseRef } from '@matematika/contracts';
-import type { LicenseRow } from '../../../database/mock-database';
-import { encodeId } from '../../../common/utils/ids';
+import type { LicenseRow } from '../../../database/mock-database.js';
+import { encodeId } from '../../../common/utils/ids.js';
 
 export function toLicenseRef(row: LicenseRow): LicenseRef {
   return { id: encodeId(row.id), name: row.name, url: row.url };

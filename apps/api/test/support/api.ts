@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request, { type Test } from 'supertest';
-import { authHeaders, type Login } from './auth';
-import { contract, type Method } from './contract';
+import { authHeaders, type Login } from './auth.js';
+import { contract, type Method } from './contract.js';
 
 export const API_PREFIX = '/api/v1';
 

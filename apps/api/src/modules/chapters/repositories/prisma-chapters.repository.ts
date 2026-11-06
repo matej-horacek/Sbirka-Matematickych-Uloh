@@ -1,7 +1,7 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
-import type { ChapterRow } from '../../../database/mock-database';
-import type { ChaptersRepository } from './chapters.repository';
+import { PrismaService } from '../../../database/prisma.service.js';
+import type { ChapterRow } from '../../../database/mock-database.js';
+import type { ChaptersRepository } from './chapters.repository.js';
 
 @Injectable()
 export class PrismaChaptersRepository implements ChaptersRepository {

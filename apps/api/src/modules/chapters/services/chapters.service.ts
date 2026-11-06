@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { ChapterList, ChapterRef } from '@matematika/contracts';
-import { CHAPTERS_REPOSITORY, type ChaptersRepository } from '../repositories/chapters.repository';
-import { toChapterNode, toChapterRef } from '../mappers/chapter.mapper';
+import { CHAPTERS_REPOSITORY, type ChaptersRepository } from '../repositories/chapters.repository.js';
+import { toChapterNode, toChapterRef } from '../mappers/chapter.mapper.js';
 
 /** Facade of the chapters module. */
 @Injectable()

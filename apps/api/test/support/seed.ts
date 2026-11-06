@@ -1,4 +1,4 @@
-import { encodeId } from '../../src/common/utils/ids';
+import { encodeId } from '../../src/common/utils/ids.js';
 
 // Named ids for the mock seed (src/database/mock-seed.ts), as the API shows them (Sqids).
 // Encoded at runtime, so they stay right if SQIDS_ALPHABET is set.

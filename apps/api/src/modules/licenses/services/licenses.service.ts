@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { LicenseList, LicenseRef } from '@matematika/contracts';
-import type { LicenseRow } from '../../../database/mock-database';
-import { LICENSES_REPOSITORY, type LicensesRepository } from '../repositories/licenses.repository';
-import { toLicense, toLicenseRef } from '../mappers/license.mapper';
+import type { LicenseRow } from '../../../database/mock-database.js';
+import { LICENSES_REPOSITORY, type LicensesRepository } from '../repositories/licenses.repository.js';
+import { toLicense, toLicenseRef } from '../mappers/license.mapper.js';
 
 /** Facade of the licenses module. */
 @Injectable()

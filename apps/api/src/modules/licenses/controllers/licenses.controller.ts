@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import type { LicenseList } from '@matematika/contracts';
-import { LicensesService } from '../services/licenses.service';
+import { LicensesService } from '../services/licenses.service.js';
 
 @Controller('licenses')
 export class LicensesController {

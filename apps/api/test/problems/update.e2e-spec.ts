@@ -1,7 +1,7 @@
-import { useTestApp } from '../support/app';
-import { expectError, pickContent } from '../support/expect';
-import { buildSet, createProblem, createPublished, getProblem } from '../support/factory';
-import { malformedIds, seed, unknownId } from '../support/seed';
+import { useTestApp } from '../support/app.js';
+import { expectError, pickContent } from '../support/expect.js';
+import { buildSet, createProblem, createPublished, getProblem } from '../support/factory.js';
+import { malformedIds, seed, unknownId } from '../support/seed.js';
 
 // updateProblem — PATCH /problems/{id}
 // Spec: author only, any problem including a set child, with the problem's own lockVersion.

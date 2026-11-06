@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { UserRef } from '@matematika/contracts';
-import type { UserRow } from '../../../database/mock-database';
-import { dataSource } from '../../../config/data-source';
-import { encodeId } from '../../../common/utils/ids';
-import { USERS_REPOSITORY, type UsersRepository } from '../repositories/users.repository';
+import type { UserRow } from '../../../database/mock-database.js';
+import { dataSource } from '../../../config/data-source.js';
+import { encodeId } from '../../../common/utils/ids.js';
+import { USERS_REPOSITORY, type UsersRepository } from '../repositories/users.repository.js';
 
 /** Facade of the users module. */
 @Injectable()

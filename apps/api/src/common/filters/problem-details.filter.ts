@@ -2,7 +2,7 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logge
 import { randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
 import { ErrorCode, type ErrorDetails } from '@matematika/contracts';
-import { ApiError } from '../errors/api-error';
+import { ApiError } from '../errors/api-error.js';
 
 const TITLES: Record<number, string> = {
   400: 'Bad Request',

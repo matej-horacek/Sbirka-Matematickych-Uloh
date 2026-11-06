@@ -1,6 +1,6 @@
 import { Injectable, PipeTransform } from '@nestjs/common';
-import { decodeId } from '../utils/ids';
-import { ApiError } from '../errors/api-error';
+import { decodeId } from '../utils/ids.js';
+import { ApiError } from '../errors/api-error.js';
 
 /** Path `{id}` (Sqid) → integer id. A malformed id is just "not found". */
 @Injectable()

@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import type { Role, TrustLevel } from '../../database/mock-database';
+import type { Role, TrustLevel } from '../../database/mock-database.js';
 
 /** The logged-in user, set by the auth guard. */
 export interface CurrentUserData {

@@ -1,8 +1,8 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import type { Request } from 'express';
-import { UsersService } from '../../modules/users/services/users.service';
-import { ApiError } from '../errors/api-error';
-import type { CurrentUserData } from '../decorators/current-user.decorator';
+import { UsersService } from '../../modules/users/services/users.service.js';
+import { ApiError } from '../errors/api-error.js';
+import type { CurrentUserData } from '../decorators/current-user.decorator.js';
 
 /**
  * TODO Phase B: replace with the real JWT guard (auth module).

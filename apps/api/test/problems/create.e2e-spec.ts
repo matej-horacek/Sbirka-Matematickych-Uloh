@@ -1,7 +1,7 @@
-import { useTestApp } from '../support/app';
-import { users } from '../support/auth';
-import { expectError } from '../support/expect';
-import { overflowIds, seed, unknownId } from '../support/seed';
+import { useTestApp } from '../support/app.js';
+import { users } from '../support/auth.js';
+import { expectError } from '../support/expect.js';
+import { overflowIds, seed, unknownId } from '../support/seed.js';
 
 // createProblem — POST /problems
 // Spec: any logged-in teacher (registered too). Creates ONE problem: PRIVATE, owned by the caller,

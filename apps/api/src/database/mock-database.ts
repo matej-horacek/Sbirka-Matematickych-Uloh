@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { seed } from './mock-seed';
+import { seed } from './mock-seed.js';
 
 // In-memory stand-in for PrismaService (Phase B replaces it with PrismaService
 // and real migrations). Rows are shaped like Prisma models: camelCase fields,

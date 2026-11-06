@@ -1,8 +1,8 @@
 import fc from 'fast-check';
-import { useTestApp } from '../support/app';
-import { ids } from '../support/expect';
-import { createProblem } from '../support/factory';
-import { seed } from '../support/seed';
+import { useTestApp } from '../support/app.js';
+import { ids } from '../support/expect.js';
+import { createProblem } from '../support/factory.js';
+import { seed } from '../support/seed.js';
 
 // T8: pagination and filter edge cases on listProblems (and listTags), beyond list.e2e-spec.ts.
 // Shared pagination (§6 Decided): page >= 1, 1 <= limit <= 100, meta { page, limit, total }.

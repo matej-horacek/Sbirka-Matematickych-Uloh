@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { TagsController } from './controllers/tags.controller';
-import { repositoryProvider } from '../../config/data-source';
-import { MockTagsRepository } from './repositories/mock-tags.repository';
-import { PrismaTagsRepository } from './repositories/prisma-tags.repository';
-import { TAGS_REPOSITORY } from './repositories/tags.repository';
-import { TagsService } from './services/tags.service';
+import { TagsController } from './controllers/tags.controller.js';
+import { repositoryProvider } from '../../config/data-source.js';
+import { MockTagsRepository } from './repositories/mock-tags.repository.js';
+import { PrismaTagsRepository } from './repositories/prisma-tags.repository.js';
+import { TAGS_REPOSITORY } from './repositories/tags.repository.js';
+import { TagsService } from './services/tags.service.js';
 
 @Module({
   controllers: [TagsController],

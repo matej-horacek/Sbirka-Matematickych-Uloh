@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { MockDatabase, type ProblemRow } from '../../../database/mock-database';
+import { MockDatabase, type ProblemRow } from '../../../database/mock-database.js';
 import {
   comparePositions,
   type NewProblem,
   type ProblemFilter,
   type ProblemsRepository,
-} from './problems.repository';
+} from './problems.repository.js';
 
 @Injectable()
 export class MockProblemsRepository implements ProblemsRepository {

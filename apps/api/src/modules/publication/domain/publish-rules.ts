@@ -1,4 +1,4 @@
-import type { PublishStatus, Role, TrustLevel } from '../../../database/mock-database';
+import type { PublishStatus, Role, TrustLevel } from '../../../database/mock-database.js';
 
 /** Trusted teachers and admins publish directly; verified teachers go to review. */
 export function statusAfterPublish(trust: TrustLevel, role: Role): PublishStatus | null {

@@ -1,4 +1,4 @@
-import type { ContentSourceRow } from '../../../database/mock-database';
+import type { ContentSourceRow } from '../../../database/mock-database.js';
 
 /**
  * Source of a copy, per the spec:

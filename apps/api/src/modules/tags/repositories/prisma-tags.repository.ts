@@ -1,7 +1,7 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
-import type { TagRow } from '../../../database/mock-database';
-import type { TagsRepository } from './tags.repository';
+import { PrismaService } from '../../../database/prisma.service.js';
+import type { TagRow } from '../../../database/mock-database.js';
+import type { TagsRepository } from './tags.repository.js';
 
 @Injectable()
 export class PrismaTagsRepository implements TagsRepository {

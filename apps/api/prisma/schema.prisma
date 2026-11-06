@@ -1,7 +1,7 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
-  moduleFormat = "cjs"
+  moduleFormat = "esm"
 }
 
 // DBML for dbdiagram.io, generated into docs/db/schema.dbml (D-01: never edited by hand).

@@ -1,9 +1,9 @@
 import { Body, Controller, HttpCode, Param, Post } from '@nestjs/common';
 import { zPublishProblemBody, type ProblemDetail, type PublishRequest } from '@matematika/contracts';
-import { CurrentUser, type CurrentUserData } from '../../../common/decorators/current-user.decorator';
-import { ParseIdPipe } from '../../../common/pipes/parse-id.pipe';
-import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { PublicationService } from '../services/publication.service';
+import { CurrentUser, type CurrentUserData } from '../../../common/decorators/current-user.decorator.js';
+import { ParseIdPipe } from '../../../common/pipes/parse-id.pipe.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { PublicationService } from '../services/publication.service.js';
 
 @Controller('problems')
 export class PublicationController {

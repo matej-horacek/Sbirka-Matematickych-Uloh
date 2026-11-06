@@ -1,9 +1,9 @@
-import type { Prisma } from '../../src/generated/prisma/client';
-import type { PrismaService } from '../../src/database/prisma.service';
-import type { ChapterRow, LicenseRow, ProblemRow, TagRow, UserRow } from '../../src/database/mock-database';
-import { toUserRow } from '../../src/modules/users/repositories/prisma-users.repository';
-import { decodeId } from '../../src/common/utils/ids';
-import type { Collection, CountOptions, Id, Rows, StoreProbe, Where } from './store';
+import type { Prisma } from '../../src/generated/prisma/client.js';
+import type { PrismaService } from '../../src/database/prisma.service.js';
+import type { ChapterRow, LicenseRow, ProblemRow, TagRow, UserRow } from '../../src/database/mock-database.js';
+import { toUserRow } from '../../src/modules/users/repositories/prisma-users.repository.js';
+import { decodeId } from '../../src/common/utils/ids.js';
+import type { Collection, CountOptions, Id, Rows, StoreProbe, Where } from './store.js';
 
 /**
  * StoreProbe for DATA_SOURCE=prisma: reads the test database directly through PrismaService

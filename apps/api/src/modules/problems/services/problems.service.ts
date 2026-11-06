@@ -9,23 +9,23 @@ import type {
   ProblemPatch,
 } from '@matematika/contracts';
 import { ErrorCode } from '@matematika/contracts';
-import type { ProblemRow, PublishStatus } from '../../../database/mock-database';
-import type { CurrentUserData } from '../../../common/decorators/current-user.decorator';
-import { ApiError } from '../../../common/errors/api-error';
-import { decodeId } from '../../../common/utils/ids';
-import { ChaptersService } from '../../chapters/services/chapters.service';
-import { LicensesService } from '../../licenses/services/licenses.service';
-import { TagsService } from '../../tags/services/tags.service';
-import { UsersService } from '../../users/services/users.service';
-import { contentFields } from '../domain/content-fields';
-import { parentMayHaveResult } from '../domain/set-rules';
-import { canView } from '../domain/visibility';
-import type { ListProblemsQuery } from '../dto/list-problems.query';
-import { toDetail, toListItem, type ProblemLookups } from '../mappers/problem.mapper';
-import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository';
-import { ProblemCopiesService } from './problem-copies.service';
-import { ProblemRelationsService } from './problem-relations.service';
-import { ProblemSetsService } from './problem-sets.service';
+import type { ProblemRow, PublishStatus } from '../../../database/mock-database.js';
+import type { CurrentUserData } from '../../../common/decorators/current-user.decorator.js';
+import { ApiError } from '../../../common/errors/api-error.js';
+import { decodeId } from '../../../common/utils/ids.js';
+import { ChaptersService } from '../../chapters/services/chapters.service.js';
+import { LicensesService } from '../../licenses/services/licenses.service.js';
+import { TagsService } from '../../tags/services/tags.service.js';
+import { UsersService } from '../../users/services/users.service.js';
+import { contentFields } from '../domain/content-fields.js';
+import { parentMayHaveResult } from '../domain/set-rules.js';
+import { canView } from '../domain/visibility.js';
+import type { ListProblemsQuery } from '../dto/list-problems.query.js';
+import { toDetail, toListItem, type ProblemLookups } from '../mappers/problem.mapper.js';
+import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository.js';
+import { ProblemCopiesService } from './problem-copies.service.js';
+import { ProblemRelationsService } from './problem-relations.service.js';
+import { ProblemSetsService } from './problem-sets.service.js';
 
 /** If-Match carries the set's lockVersion as an ETag: "4". Missing or malformed → 400. */
 function parseIfMatch(header: string | undefined): number {

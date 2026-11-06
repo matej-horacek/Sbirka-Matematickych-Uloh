@@ -1,4 +1,4 @@
-import type { LicenseRow } from '../../../database/mock-database';
+import type { LicenseRow } from '../../../database/mock-database.js';
 
 export const LICENSES_REPOSITORY = Symbol('LICENSES_REPOSITORY');
 

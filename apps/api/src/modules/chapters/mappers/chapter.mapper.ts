@@ -1,6 +1,6 @@
 import type { ChapterNode, ChapterRef } from '@matematika/contracts';
-import type { ChapterRow } from '../../../database/mock-database';
-import { encodeId, encodeNullableId } from '../../../common/utils/ids';
+import type { ChapterRow } from '../../../database/mock-database.js';
+import { encodeId, encodeNullableId } from '../../../common/utils/ids.js';
 
 export function toChapterRef(row: ChapterRow): ChapterRef {
   return { id: encodeId(row.id), name: row.name, scope: row.isGlobal ? 'global' : 'personal' };

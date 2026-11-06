@@ -1,8 +1,8 @@
-import { useTestApp } from '../support/app';
-import { expectError } from '../support/expect';
-import { createProblem } from '../support/factory';
-import { auth } from '../support/auth';
-import { malformedIds, overflowIds, seed, unknownId } from '../support/seed';
+import { useTestApp } from '../support/app.js';
+import { expectError } from '../support/expect.js';
+import { createProblem } from '../support/factory.js';
+import { auth } from '../support/auth.js';
+import { malformedIds, overflowIds, seed, unknownId } from '../support/seed.js';
 
 // publishProblem — POST /problems/{id}/publish
 // Spec: the author, if verified or trusted. trusted/admin → PUBLISHED; verified → REVIEWING;

@@ -1,8 +1,8 @@
-import { useTestApp } from '../support/app';
-import { expectError, ids, pickContent } from '../support/expect';
-import { buildSet, createProblem, getProblem } from '../support/factory';
-import { malformedIds, seed, unknownId } from '../support/seed';
-import type { Api } from '../support/api';
+import { useTestApp } from '../support/app.js';
+import { expectError, ids, pickContent } from '../support/expect.js';
+import { buildSet, createProblem, getProblem } from '../support/factory.js';
+import { malformedIds, seed, unknownId } from '../support/seed.js';
+import type { Api } from '../support/api.js';
 
 // Copy updates (spec 2.0.0), NOT IN MOCK: every test is skipped.
 //   updateAvailable field + filter on listProblems (R-007), takeOverUpdate (R-005), dismissUpdate (R-006).

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { ChaptersService } from '../../chapters/services/chapters.service';
-import { TagsService } from '../../tags/services/tags.service';
-import { decodeId } from '../../../common/utils/ids';
-import { ApiError } from '../../../common/errors/api-error';
+import { ChaptersService } from '../../chapters/services/chapters.service.js';
+import { TagsService } from '../../tags/services/tags.service.js';
+import { decodeId } from '../../../common/utils/ids.js';
+import { ApiError } from '../../../common/errors/api-error.js';
 
 /** Turns tagIds / chapterIds from a request into checked integer ids. */
 @Injectable()

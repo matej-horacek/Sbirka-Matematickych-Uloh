@@ -7,7 +7,7 @@
  * Login in prisma mode: `Authorization: Bearer jan` (username).
  */
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client';
+import { PrismaClient } from '../src/generated/prisma/client.js';
 
 // Not a real hash: nobody can log in with a password until the auth module exists.
 const PLACEHOLDER_PASSWORD_HASH = 'PLACEHOLDER-NOT-A-REAL-HASH';

@@ -1,7 +1,7 @@
-import { useTestApp } from '../support/app';
-import { expectError, ids } from '../support/expect';
-import { createProblem } from '../support/factory';
-import { malformedIds, seed, unknownId } from '../support/seed';
+import { useTestApp } from '../support/app.js';
+import { expectError, ids } from '../support/expect.js';
+import { createProblem } from '../support/factory.js';
+import { malformedIds, seed, unknownId } from '../support/seed.js';
 
 // deleteProblem — DELETE /problems/{id}
 // Spec: author only; soft delete (hidden); on a set deletes the set with its children;

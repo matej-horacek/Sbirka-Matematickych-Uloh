@@ -5,8 +5,8 @@ import type {
   ProblemRow,
   TagRow,
   UserRow,
-} from '../../src/database/mock-database';
-import { decodeId } from '../../src/common/utils/ids';
+} from '../../src/database/mock-database.js';
+import { decodeId } from '../../src/common/utils/ids.js';
 
 /**
  * StoreProbe: what the tests may ask the data store directly.

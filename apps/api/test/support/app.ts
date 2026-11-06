@@ -1,13 +1,13 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { AppModule } from '../../src/app.module';
-import { ProblemDetailsFilter } from '../../src/common/filters/problem-details.filter';
-import { dataSource } from '../../src/config/data-source';
-import { MockDatabase } from '../../src/database/mock-database';
-import { PrismaService } from '../../src/database/prisma.service';
-import { createApi, type Api } from './api';
-import { PrismaStoreProbe } from './prisma-store';
-import { MockStoreProbe, type StoreProbe } from './store';
+import { AppModule } from '../../src/app.module.js';
+import { ProblemDetailsFilter } from '../../src/common/filters/problem-details.filter.js';
+import { dataSource } from '../../src/config/data-source.js';
+import { MockDatabase } from '../../src/database/mock-database.js';
+import { PrismaService } from '../../src/database/prisma.service.js';
+import { createApi, type Api } from './api.js';
+import { PrismaStoreProbe } from './prisma-store.js';
+import { MockStoreProbe, type StoreProbe } from './store.js';
 
 export interface TestContext {
   app: INestApplication;

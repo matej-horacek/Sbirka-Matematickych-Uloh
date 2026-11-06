@@ -2,7 +2,7 @@
 // Runs Jest for apps/api with hard memory limits, so a runaway test dies instead of
 // exhausting system RAM (this froze the PC twice). Every jest script goes through here.
 //   --max-old-space-size  caps the heap of the Jest parent AND of each worker (NODE_OPTIONS is inherited)
-//   maxWorkers / workerIdleMemoryLimit live in apps/api/jest.config.js
+//   maxWorkers / workerIdleMemoryLimit live in apps/api/jest.config.cjs
 // Usage: node scripts/jest-capped.mjs [jest args]   [--unskip]  (--unskip runs it.skip tests too)
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';

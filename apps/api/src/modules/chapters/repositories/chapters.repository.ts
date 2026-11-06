@@ -1,4 +1,4 @@
-import type { ChapterRow } from '../../../database/mock-database';
+import type { ChapterRow } from '../../../database/mock-database.js';
 
 export const CHAPTERS_REPOSITORY = Symbol('CHAPTERS_REPOSITORY');
 

@@ -1,6 +1,6 @@
-import { useTestApp } from './support/app';
-import { expectError } from './support/expect';
-import { seed } from './support/seed';
+import { useTestApp } from './support/app.js';
+import { expectError } from './support/expect.js';
+import { seed } from './support/seed.js';
 
 // listTags GET /tags, listChapters GET /chapters, listLicenses GET /licenses (read-only pickers).
 // Spec: any logged-in teacher. Tags: global + own personal, `q` = case-insensitive contains, paginated.

@@ -1,6 +1,6 @@
 import { Injectable, PipeTransform } from '@nestjs/common';
 import type { ZodType } from 'zod';
-import { ApiError } from '../errors/api-error';
+import { ApiError } from '../errors/api-error.js';
 
 /**
  * Validates a body or query with a Zod schema (usually one generated in

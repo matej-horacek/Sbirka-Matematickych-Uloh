@@ -1,4 +1,4 @@
-import type { TagRow } from '../../../database/mock-database';
+import type { TagRow } from '../../../database/mock-database.js';
 
 export const TAGS_REPOSITORY = Symbol('TAGS_REPOSITORY');
 

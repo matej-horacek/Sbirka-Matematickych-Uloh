@@ -1,8 +1,8 @@
-import { createTestApp, useTestApp } from '../support/app';
-import { users } from '../support/auth';
-import { expectError, ids, pickContent } from '../support/expect';
-import { createProblem, getProblem } from '../support/factory';
-import { malformedIds, seed, unknownId } from '../support/seed';
+import { createTestApp, useTestApp } from '../support/app.js';
+import { users } from '../support/auth.js';
+import { expectError, ids, pickContent } from '../support/expect.js';
+import { createProblem, getProblem } from '../support/factory.js';
+import { malformedIds, seed, unknownId } from '../support/seed.js';
 
 // copyProblem — POST /problems/{id}/copy
 // Spec: anyone who can see the problem. New PRIVATE problem owned by the caller, linked to the

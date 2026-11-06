@@ -1,4 +1,4 @@
-import type { ProblemRow } from '../../../database/mock-database';
+import type { ProblemRow } from '../../../database/mock-database.js';
 
 export const PROBLEMS_REPOSITORY = Symbol('PROBLEMS_REPOSITORY');
 

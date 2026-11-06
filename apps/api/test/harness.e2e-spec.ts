@@ -1,5 +1,5 @@
-import { createTestApp, useTestApp } from './support/app';
-import { seed } from './support/seed';
+import { createTestApp, useTestApp } from './support/app.js';
+import { seed } from './support/seed.js';
 
 // Proves the harness itself: fresh store per app, contract validation runs, store probe reads the DI instance.
 describe('Test harness', () => {

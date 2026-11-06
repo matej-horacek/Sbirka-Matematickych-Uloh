@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { MockDatabase, type ChapterRow } from '../../../database/mock-database';
-import type { ChaptersRepository } from './chapters.repository';
+import { MockDatabase, type ChapterRow } from '../../../database/mock-database.js';
+import type { ChaptersRepository } from './chapters.repository.js';
 
 @Injectable()
 export class MockChaptersRepository implements ChaptersRepository {

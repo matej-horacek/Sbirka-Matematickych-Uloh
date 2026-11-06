@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ErrorCode, type ProblemDetail, type PublishRequest } from '@matematika/contracts';
-import type { CurrentUserData } from '../../../common/decorators/current-user.decorator';
-import { ApiError } from '../../../common/errors/api-error';
-import { decodeId } from '../../../common/utils/ids';
-import { LicensesService } from '../../licenses/services/licenses.service';
-import { ProblemsService } from '../../problems/services/problems.service';
-import { statusAfterPublish } from '../domain/publish-rules';
+import type { CurrentUserData } from '../../../common/decorators/current-user.decorator.js';
+import { ApiError } from '../../../common/errors/api-error.js';
+import { decodeId } from '../../../common/utils/ids.js';
+import { LicensesService } from '../../licenses/services/licenses.service.js';
+import { ProblemsService } from '../../problems/services/problems.service.js';
+import { statusAfterPublish } from '../domain/publish-rules.js';
 
 /** Publishing rules. Changes to problems go through the problems facade only. */
 @Injectable()

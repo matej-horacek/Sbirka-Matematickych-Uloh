@@ -1,8 +1,8 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
-import type { user } from '../../../generated/prisma/client';
-import type { Role, TrustLevel, UserRow } from '../../../database/mock-database';
-import type { UsersRepository } from './users.repository';
+import { PrismaService } from '../../../database/prisma.service.js';
+import type { user } from '../../../generated/prisma/client.js';
+import type { Role, TrustLevel, UserRow } from '../../../database/mock-database.js';
+import type { UsersRepository } from './users.repository.js';
 
 /** user_role (DB) → the Role + TrustLevel pair the API works with. */
 const ROLE_MAP = {

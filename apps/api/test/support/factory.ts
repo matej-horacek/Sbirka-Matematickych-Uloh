@@ -1,5 +1,5 @@
-import type { Api } from './api';
-import type { Login } from './auth';
+import type { Api } from './api.js';
+import type { Login } from './auth.js';
 
 // Arrange helpers that go through the public API only (never the store), so they work
 // unchanged against Prisma in Phase B. Each returns the response body.

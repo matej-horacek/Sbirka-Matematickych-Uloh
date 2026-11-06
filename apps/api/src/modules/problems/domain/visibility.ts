@@ -1,4 +1,4 @@
-import type { ProblemRow } from '../../../database/mock-database';
+import type { ProblemRow } from '../../../database/mock-database.js';
 
 /** The author sees everything of theirs; others see only published problems. */
 export function canView(problem: ProblemRow, userId: number): boolean {

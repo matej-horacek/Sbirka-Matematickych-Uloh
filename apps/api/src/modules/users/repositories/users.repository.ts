@@ -1,4 +1,4 @@
-import type { UserRow } from '../../../database/mock-database';
+import type { UserRow } from '../../../database/mock-database.js';
 
 export const USERS_REPOSITORY = Symbol('USERS_REPOSITORY');
 

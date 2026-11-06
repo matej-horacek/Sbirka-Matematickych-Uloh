@@ -1,8 +1,8 @@
-import { useTestApp } from '../support/app';
-import { users } from '../support/auth';
-import { expectError, ids } from '../support/expect';
-import { buildSet, createProblem, createPublished, getProblem } from '../support/factory';
-import { malformedIds, seed, unknownId } from '../support/seed';
+import { useTestApp } from '../support/app.js';
+import { users } from '../support/auth.js';
+import { expectError, ids } from '../support/expect.js';
+import { buildSet, createProblem, createPublished, getProblem } from '../support/factory.js';
+import { malformedIds, seed, unknownId } from '../support/seed.js';
 
 // addSetChild — POST /problems/{id}/children           
 // Spec 2.0.0: the set's author. `id` = a set, or a standalone problem that becomes a set with its first child.

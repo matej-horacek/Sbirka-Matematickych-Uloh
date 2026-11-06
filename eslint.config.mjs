@@ -26,7 +26,7 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }] },
   },
   {
-    files: ['scripts/**/*.{js,mjs,cjs}', 'apps/api/jest.config.js'],
+    files: ['scripts/**/*.{js,mjs,cjs}', 'apps/api/jest.config.cjs', 'apps/api/test/support/*.cjs'],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
   },

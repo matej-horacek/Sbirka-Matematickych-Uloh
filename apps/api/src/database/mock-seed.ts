@@ -5,7 +5,7 @@ import type {
   ProblemRow,
   TagRow,
   UserRow,
-} from './mock-database';
+} from './mock-database.js';
 
 // Same content as the examples in openapi.yaml, so the real backend and the
 // Prism mock return the same kind of data (ids differ: here they are real Sqids).

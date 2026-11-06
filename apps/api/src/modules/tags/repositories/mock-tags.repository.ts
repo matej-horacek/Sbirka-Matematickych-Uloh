@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { MockDatabase, type TagRow } from '../../../database/mock-database';
-import type { TagsRepository } from './tags.repository';
+import { MockDatabase, type TagRow } from '../../../database/mock-database.js';
+import type { TagsRepository } from './tags.repository.js';
 
 @Injectable()
 export class MockTagsRepository implements TagsRepository {

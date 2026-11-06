@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { MockDatabase, type LicenseRow } from '../../../database/mock-database';
-import type { LicensesRepository } from './licenses.repository';
+import { MockDatabase, type LicenseRow } from '../../../database/mock-database.js';
+import type { LicensesRepository } from './licenses.repository.js';
 
 @Injectable()
 export class MockLicensesRepository implements LicensesRepository {

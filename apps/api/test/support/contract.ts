@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import Ajv2019, { type ValidateFunction } from 'ajv/dist/2019';
+import { Ajv2019, type ValidateFunction } from 'ajv/dist/2019.js';
 import addFormats from 'ajv-formats';
 import { parse } from 'yaml';
 
@@ -23,7 +23,7 @@ type Json = Record<string, any>;
 const METHODS = ['get', 'post', 'patch', 'put', 'delete'] as const;
 export type Method = (typeof METHODS)[number];
 
-export const SPEC_PATH = join(__dirname, '../../../../packages/shared/contracts/openapi.yaml');
+export const SPEC_PATH = join(import.meta.dirname, '../../../../packages/shared/contracts/openapi.yaml');
 
 export interface ResponseLike {
   status: number;
@@ -95,7 +95,7 @@ export class Contract {
     // Spec 2.0.0 has many YAML aliases; the default alias limit rejects it (R-001).
     this.spec = parse(readFileSync(specPath, 'utf8'), { maxAliasCount: -1 });
     this.ajv = new Ajv2019({ strict: false, allErrors: true });
-    addFormats(this.ajv);
+    addFormats.default(this.ajv); // ajv-formats is CommonJS: under ESM typing the callable is its `default` export
     this.ajv.addSchema(strictSpec(this.spec), 'spec');
 
     for (const [template, item] of Object.entries(this.spec.paths as Json)) {

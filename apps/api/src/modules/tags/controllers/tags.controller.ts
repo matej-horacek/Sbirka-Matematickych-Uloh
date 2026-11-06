@@ -1,9 +1,9 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import type { TagPage } from '@matematika/contracts';
-import { CurrentUser, type CurrentUserData } from '../../../common/decorators/current-user.decorator';
-import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { listTagsQuery, type ListTagsQuery } from '../dto/list-tags.query';
-import { TagsService } from '../services/tags.service';
+import { CurrentUser, type CurrentUserData } from '../../../common/decorators/current-user.decorator.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { listTagsQuery, type ListTagsQuery } from '../dto/list-tags.query.js';
+import { TagsService } from '../services/tags.service.js';
 
 @Controller('tags')
 export class TagsController {

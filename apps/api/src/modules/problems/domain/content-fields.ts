@@ -1,5 +1,5 @@
 import type { ProblemBase } from '@matematika/contracts';
-import type { ProblemRow } from '../../../database/mock-database';
+import type { ProblemRow } from '../../../database/mock-database.js';
 
 type ContentFields = Partial<Pick<ProblemRow, 'name' | 'assignment' | 'result' | 'languageCode' | 'difficulty'>>;
 

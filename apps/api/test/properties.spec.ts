@@ -1,7 +1,7 @@
 import fc from 'fast-check';
-import { decodeId, encodeId } from '../src/common/utils/ids';
-import { positionAt } from '../src/common/utils/position';
-import { comparePositions } from '../src/modules/problems/repositories/problems.repository';
+import { decodeId, encodeId } from '../src/common/utils/ids.js';
+import { positionAt } from '../src/common/utils/position.js';
+import { comparePositions } from '../src/modules/problems/repositories/problems.repository.js';
 
 // T8: property-based tests (fast-check) for the two pure helpers every id and every set order goes through.
 // They test public behaviour only, so they stay valid when Phase B replaces the implementations

@@ -1,7 +1,7 @@
-import { useTestApp } from '../support/app';
-import { users } from '../support/auth';
-import { expectError, ids } from '../support/expect';
-import { overflowIds, seed, unknownId } from '../support/seed';
+import { useTestApp } from '../support/app.js';
+import { users } from '../support/auth.js';
+import { expectError, ids } from '../support/expect.js';
+import { overflowIds, seed, unknownId } from '../support/seed.js';
 
 // listProblems — GET /problems
 // Spec: any logged-in teacher; scope=mine = own problems, scope=public = published ones;

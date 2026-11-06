@@ -1,7 +1,7 @@
-import { useTestApp } from '../support/app';
-import { users } from '../support/auth';
-import { AUTHOR_ONLY_DETAIL_FIELDS, expectError, ids } from '../support/expect';
-import { malformedIds, overflowIds, seed, unknownId } from '../support/seed';
+import { useTestApp } from '../support/app.js';
+import { users } from '../support/auth.js';
+import { AUTHOR_ONLY_DETAIL_FIELDS, expectError, ids } from '../support/expect.js';
+import { malformedIds, overflowIds, seed, unknownId } from '../support/seed.js';
 
 // getProblem — GET /problems/{id}
 // Spec: the author, or any logged-in teacher when published; otherwise 404 (existence not revealed).

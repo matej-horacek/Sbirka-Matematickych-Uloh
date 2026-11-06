@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { ProblemRow } from '../../../database/mock-database';
-import { UsersService } from '../../users/services/users.service';
-import { sourceForCopy } from '../domain/copy-rules';
-import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository';
-import { ProblemRelationsService } from './problem-relations.service';
+import type { ProblemRow } from '../../../database/mock-database.js';
+import { UsersService } from '../../users/services/users.service.js';
+import { sourceForCopy } from '../domain/copy-rules.js';
+import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository.js';
+import { ProblemRelationsService } from './problem-relations.service.js';
 
 export interface CopyTarget {
   /** Copy as a child of this set; omit for a standalone copy. */

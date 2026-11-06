@@ -8,8 +8,8 @@ import type {
   TagRef,
   UserRef,
 } from '@matematika/contracts';
-import type { ContentSourceRow, ProblemRow } from '../../../database/mock-database';
-import { encodeId, encodeNullableId } from '../../../common/utils/ids';
+import type { ContentSourceRow, ProblemRow } from '../../../database/mock-database.js';
+import { encodeId, encodeNullableId } from '../../../common/utils/ids.js';
 
 /** Related data fetched in batches by the service, so the mapper never queries. */
 export interface ProblemLookups {

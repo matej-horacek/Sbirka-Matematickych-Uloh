@@ -13,11 +13,11 @@ import {
   type ProblemPage,
   type ProblemPatch,
 } from '@matematika/contracts';
-import { CurrentUser, type CurrentUserData } from '../../../common/decorators/current-user.decorator';
-import { ParseIdPipe } from '../../../common/pipes/parse-id.pipe';
-import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { listProblemsQuery, type ListProblemsQuery } from '../dto/list-problems.query';
-import { ProblemsService } from '../services/problems.service';
+import { CurrentUser, type CurrentUserData } from '../../../common/decorators/current-user.decorator.js';
+import { ParseIdPipe } from '../../../common/pipes/parse-id.pipe.js';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe.js';
+import { listProblemsQuery, type ListProblemsQuery } from '../dto/list-problems.query.js';
+import { ProblemsService } from '../services/problems.service.js';
 
 // Routes, validation, one service call each. No rules here: they live in services and domain/.
 @Controller('problems')

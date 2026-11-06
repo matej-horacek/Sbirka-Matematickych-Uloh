@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ChaptersController } from './controllers/chapters.controller';
-import { CHAPTERS_REPOSITORY } from './repositories/chapters.repository';
-import { repositoryProvider } from '../../config/data-source';
-import { MockChaptersRepository } from './repositories/mock-chapters.repository';
-import { PrismaChaptersRepository } from './repositories/prisma-chapters.repository';
-import { ChaptersService } from './services/chapters.service';
+import { ChaptersController } from './controllers/chapters.controller.js';
+import { CHAPTERS_REPOSITORY } from './repositories/chapters.repository.js';
+import { repositoryProvider } from '../../config/data-source.js';
+import { MockChaptersRepository } from './repositories/mock-chapters.repository.js';
+import { PrismaChaptersRepository } from './repositories/prisma-chapters.repository.js';
+import { ChaptersService } from './services/chapters.service.js';
 
 @Module({
   controllers: [ChaptersController],

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { TagPage, TagRef } from '@matematika/contracts';
-import { TAGS_REPOSITORY, type TagsRepository } from '../repositories/tags.repository';
-import { toTagRef } from '../mappers/tag.mapper';
+import { TAGS_REPOSITORY, type TagsRepository } from '../repositories/tags.repository.js';
+import { toTagRef } from '../mappers/tag.mapper.js';
 
 /** Facade of the tags module. */
 @Injectable()

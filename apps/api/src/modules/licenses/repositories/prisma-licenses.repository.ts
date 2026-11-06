@@ -1,7 +1,7 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { PrismaService } from '../../../database/prisma.service';
-import type { LicenseRow } from '../../../database/mock-database';
-import type { LicensesRepository } from './licenses.repository';
+import { PrismaService } from '../../../database/prisma.service.js';
+import type { LicenseRow } from '../../../database/mock-database.js';
+import type { LicensesRepository } from './licenses.repository.js';
 
 @Injectable()
 export class PrismaLicensesRepository implements LicensesRepository {

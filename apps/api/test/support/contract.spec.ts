@@ -1,4 +1,4 @@
-import { Contract } from './contract';
+import { Contract } from './contract.js';
 
 // Unit tests for the contract helper itself: it must reject what the spec doesn't allow.
 describe('Contract helper', () => {

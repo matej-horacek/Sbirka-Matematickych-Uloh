@@ -1,14 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ErrorCode, type AddChildRequest, type ReorderChildRequest } from '@matematika/contracts';
-import type { ProblemRow } from '../../../database/mock-database';
-import type { CurrentUserData } from '../../../common/decorators/current-user.decorator';
-import { ApiError } from '../../../common/errors/api-error';
-import { decodeId } from '../../../common/utils/ids';
-import { positionAt } from '../../../common/utils/position';
-import { LicensesService } from '../../licenses/services/licenses.service';
-import { canView } from '../domain/visibility';
-import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository';
-import { ProblemCopiesService } from './problem-copies.service';
+import type { ProblemRow } from '../../../database/mock-database.js';
+import type { CurrentUserData } from '../../../common/decorators/current-user.decorator.js';
+import { ApiError } from '../../../common/errors/api-error.js';
+import { decodeId } from '../../../common/utils/ids.js';
+import { positionAt } from '../../../common/utils/position.js';
+import { LicensesService } from '../../licenses/services/licenses.service.js';
+import { canView } from '../domain/visibility.js';
+import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository.js';
+import { ProblemCopiesService } from './problem-copies.service.js';
 
 /** Set operations: dissolve, and adding, reordering and removing single children. */
 @Injectable()
