@@ -38,7 +38,7 @@ function finish(code) {
 const steps = [
   ['remove old test database', 'docker', ['compose', '-f', 'docker-compose.test.yml', 'down'], root, false],
   ['start test database (port 5433)', 'docker', ['compose', '-f', 'docker-compose.test.yml', 'up', '-d', '--wait'], root, false],
-  ['create schema (prisma db push)', 'pnpm', ['exec', 'prisma', 'db', 'push', '--skip-generate'], apiDir, true],
+  ['create schema (prisma db push)', 'pnpm', ['exec', 'prisma', 'db', 'push'], apiDir, true],
   ['seed (prisma db seed)', 'pnpm', ['exec', 'prisma', 'db', 'seed'], apiDir, true],
   [
     'e2e: create, get, list, pickers (DATA_SOURCE=prisma)',

@@ -6,12 +6,15 @@
  * Runs only on an empty database, so running it twice does not duplicate anything.
  * Login in prisma mode: `Authorization: Bearer jan` (username).
  */
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
 
 // Not a real hash: nobody can log in with a password until the auth module exists.
 const PLACEHOLDER_PASSWORD_HASH = 'PLACEHOLDER-NOT-A-REAL-HASH';
 
-const prisma = new PrismaClient();
+// Same fallback as prisma.config.ts (docker-compose.dev.yml).
+const connectionString = process.env.DATABASE_URL ?? 'postgresql://app:app@localhost:5432/sbirka';
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 async function main() {
   if ((await prisma.user.count()) > 0) {

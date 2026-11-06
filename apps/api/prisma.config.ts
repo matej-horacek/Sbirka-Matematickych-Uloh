@@ -10,7 +10,6 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "tsx prisma/seed.ts",
   },
-  engine: "classic",
   datasource: {
     // Falls back to docker-compose.dev.yml so `prisma generate` works on a fresh clone without .env.
     url: process.env.DATABASE_URL ?? "postgresql://app:app@localhost:5432/sbirka",
