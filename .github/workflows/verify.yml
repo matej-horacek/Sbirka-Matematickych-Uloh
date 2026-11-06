@@ -25,4 +25,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Builds the contracts from the spec the mock was written for (src/generated is not committed).
       - run: pnpm baseline:build --contracts-only
+      # .npmrc injects workspace packages (copies them at install time). The first install ran before the
+      # contracts had a dist/, so install again to hand the built contracts to apps/api.
+      - run: pnpm install --frozen-lockfile
       - run: pnpm verify

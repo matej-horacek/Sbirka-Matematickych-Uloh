@@ -3,7 +3,7 @@
 //   1. spec lint       (Redocly)
 //   2. spec examples   (AJV)
 //   3. spec version    (info.version = newest changelog entry, O-8)
-//   4. contracts built (generates + bundles from openapi.yaml when missing)
+//   4. contracts built (generates + bundles from openapi.yaml when missing, then re-installs so apps/api gets the build)
 //      prisma client   (generates apps/api/src/generated/prisma when missing; the app imports it in every mode)
 //   5. spec drift      (generated code the API compiles against = what the spec generates)
 //   6. typecheck       (contracts + API source + tests)
@@ -24,7 +24,9 @@ const steps = [
   { name: 'spec version', cmd: 'pnpm spec:version' },
   {
     name: 'contracts built',
-    cmd: 'pnpm --filter @matematika/contracts build',
+    // .npmrc has inject-workspace-packages=true: pnpm COPIES contracts into apps/api at install time.
+    // On a fresh checkout that copy was made before dist/ existed, so re-install after the build to refresh it.
+    cmd: 'pnpm --filter @matematika/contracts build && pnpm install --frozen-lockfile',
     when: () =>
       !existsSync(join(root, 'packages/shared/contracts/dist/index.cjs')) ||
       !existsSync(join(root, 'packages/shared/contracts/src/generated/types.gen.ts')),
