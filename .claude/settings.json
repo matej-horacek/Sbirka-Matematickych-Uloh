@@ -12,5 +12,6 @@
       "Edit(./packages/shared/contracts/**/*.yml)",
       "Edit(./apps/web/**)"
     ]
-  }
+  },
+  "attribution": {"commit": "", "pr": ""}
 }
