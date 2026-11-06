@@ -18,7 +18,7 @@ export default tseslint.config(
   {
     files: ['apps/api/src/**/*.ts', 'apps/api/test/**/*.ts'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
-    languageOptions: { globals: { ...globals.node, ...globals.jest } },
+    languageOptions: { globals: { ...globals.node, ...globals.vitest } },
   },
   {
     // The TODO-Daniel stubs keep their (unused) parameters so the signatures read like the interface.
@@ -26,7 +26,7 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }] },
   },
   {
-    files: ['scripts/**/*.{js,mjs,cjs}', 'apps/api/jest.config.cjs', 'apps/api/test/support/*.cjs'],
+    files: ['scripts/**/*.{js,mjs,cjs}'],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },
   },

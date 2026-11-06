@@ -8,7 +8,7 @@
 //   5. spec drift      (generated code the API compiles against = what the spec generates)
 //   6. typecheck       (contracts + API source + tests)
 //   7. lint            (ESLint)
-//   8. tests           (Jest: unit + e2e; --quick runs unit tests only)
+//   8. tests           (Vitest: unit + e2e; --quick runs unit tests only)
 //
 // Usage: pnpm verify | pnpm verify:quick | node scripts/verify.mjs [--quick]
 import { spawnSync } from 'node:child_process';

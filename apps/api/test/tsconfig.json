@@ -5,7 +5,7 @@
     "rootDir": "..",
     "noEmit": true,
     "isolatedModules": true,
-    "types": ["jest", "node"]
+    "types": ["vitest/globals", "node"]
   },
   "include": ["../src", "./**/*.ts"]
 }

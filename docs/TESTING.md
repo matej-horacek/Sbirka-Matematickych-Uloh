@@ -33,7 +33,7 @@ verify PASSED in 12.0s
 | (contracts) | `pnpm baseline:build --contracts-only` | Runs only when `packages/shared/contracts/dist` is missing: builds the contracts from the **1.0.1** spec (commit `fcd8b9c`), because the mock doesn't compile against 2.0.0 yet. |
 | 4. typecheck | `pnpm -r typecheck` and `pnpm --filter @matematika/api typecheck:test` | Contracts, API source, and the tests. |
 | 5. lint | `pnpm lint` | ESLint, typescript-eslint `recommended`, over `apps/api/src`, `apps/api/test`, `scripts`. |
-| 6. tests | `pnpm --filter @matematika/api test` | Jest. `test:unit` = `*.spec.ts` only, `test:e2e` = `*.e2e-spec.ts` only, `test:cov` = with coverage (`apps/api/coverage/`). |
+| 6. tests | `pnpm --filter @matematika/api test` | Vitest. `test:unit` = `*.spec.ts` only, `test:e2e` = `*.e2e-spec.ts` only, `test:cov` = with coverage (`apps/api/coverage/`). |
 
 Run one test file or one test by name:
 
@@ -80,8 +80,8 @@ Then `node scripts/smoke/run-requests-http.mjs http://localhost:3000/api/v1` rep
 Skipped tests:
 - `it.skip('… [R-0xx]')`: the mock has a bug (see `docs/archive/overnight/REVIEW.md`).
 - `it.skip('… [R-0xx not in mock]')`: the operation is new in spec 2.0.0 and the mock doesn't have it yet. These tests are written from the spec and form the checklist for implementing 2.0.0: remove `.skip` as each part lands.
-- `pnpm --filter @matematika/api test:unskipped` runs the skipped tests as normal tests (a Jest transformer,
-  `support/unskip-transformer.cjs`, rewrites `it.skip` to `it`). A failure there is expected and proves the finding; a skipped test that
+- `pnpm --filter @matematika/api test:unskipped` runs the skipped tests as normal tests (a Vite plugin in `vitest.config.ts`,
+  rewrites `it.skip` to `it`). A failure there is expected and proves the finding; a skipped test that
   **passes** there means the mock caught up, so drop its `.skip`. Today 4 pass by accident (Nest's 404 for a missing route); they are marked in their files.
 - `support/factory.ts`: arrange helpers that go through the API only (`createProblem`, `createPublished`, `buildSet`), so they work against Prisma too.
   `buildSet` uses `POST /problems/{id}/children`, so only skipped tests use it until R-002 lands.

@@ -6,7 +6,7 @@
 //   4. runs the create, get, list and picker e2e tests with DATA_SOURCE=prisma, one file at a time (shared database)
 // Until the Prisma…Repository classes are implemented, these tests fail with 501 (TODO Daniel).
 //
-// Usage: pnpm test:prisma [--down] [extra jest args]
+// Usage: pnpm test:prisma [--down] [extra vitest args]
 //   --down  stop and remove the test database afterwards
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -15,7 +15,7 @@ const root = resolve(import.meta.dirname, '..');
 const apiDir = resolve(root, 'apps/api');
 const args = process.argv.slice(2);
 const down = args.includes('--down');
-const jestArgs = args.filter((a) => a !== '--down');
+const testArgs = args.filter((a) => a !== '--down');
 
 const env = {
   ...process.env,
@@ -44,11 +44,14 @@ const steps = [
     'e2e: create, get, list, pickers (DATA_SOURCE=prisma)',
     process.execPath,
     [
-      resolve(root, 'scripts/jest-capped.mjs'),
+      resolve(root, 'scripts/test-capped.mjs'),
       '--maxWorkers=1', // one test file at a time: they share one database
-      '--testPathPatterns',
-      '[\\\\/](create|get|list|pickers)\\.e2e-spec\\.ts$',
-      ...jestArgs,
+      // Vitest file filters are substrings of the path (not regexes): exactly these four files.
+      'problems/create.e2e-spec',
+      'problems/get.e2e-spec',
+      'problems/list.e2e-spec',
+      'pickers.e2e-spec',
+      ...testArgs,
     ],
     root,
     false,
