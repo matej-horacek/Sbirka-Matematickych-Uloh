@@ -59,7 +59,7 @@ The API **crashes at startup** with spec 2.0.0 (finding R-001): `main.ts` parses
 ```powershell
 pnpm baseline:build
 cd apps/api
-node -r ../../scripts/smoke/yaml-alias-shim.cjs dist/main     # PORT=3000 by default
+node dist/main     # PORT=3000 by default
 ```
 
 Then `node scripts/smoke/run-requests-http.mjs http://localhost:3000/api/v1` replays `apps/api/requests.http` (11 requests). Use `$env:VERBOSE=1` to print bodies.
