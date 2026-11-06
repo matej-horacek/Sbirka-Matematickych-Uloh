@@ -127,11 +127,11 @@ export class ProblemsService {
     const chapterIds = await this.relations.chapterIds(user.id, body.chapterIds);
 
     if (row.publishStatus === 'PUBLISHED' && user.trust !== 'TRUSTED' && user.role !== 'ADMIN') {
-      // TODO Phase B: store the change as a problem_revision waiting for review.
+      // TODO: store the change as a problem_revision waiting for review.
       return { accepted: true, problem: await this.detail(row, user) };
     }
 
-    // TODO Phase B: a trusted user's minor edit bumps minor_version instead of version.
+    // TODO: a trusted user's minor edit bumps minor_version instead of version.
     const updated = await this.repo.update(row.id, {
       ...contentFields(body),
       ...(tagIds && { tagIds }),
