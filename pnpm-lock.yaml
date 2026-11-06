@@ -66,9 +66,6 @@ importers:
       '@scalar/nestjs-api-reference':
         specifier: ^1.2.35
         version: 1.2.35
-      pg:
-        specifier: ^8.23.1
-        version: 8.23.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -103,9 +100,6 @@ importers:
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
-      '@types/pg':
-        specifier: ^8.23.1
-        version: 8.23.1
       '@types/supertest':
         specifier: ^7.2.1
         version: 7.2.1
