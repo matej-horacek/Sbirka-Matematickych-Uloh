@@ -16,6 +16,24 @@ const PLACEHOLDER_PASSWORD_HASH = 'PLACEHOLDER-NOT-A-REAL-HASH';
 const connectionString = process.env.DATABASE_URL ?? 'postgresql://app:app@localhost:5432/sbirka';
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
+/** A problem to seed. Tag, chapter and licence ids are the ids created by this seed. */
+interface SeedProblem {
+  name: string;
+  assignment: string;
+  result?: string;
+  difficulty: number;
+  authorId: number;
+  publishStatus?: 'PRIVATE' | 'PUBLISHED';
+  lockVersion?: number;
+  /** Defaults to OWN without licence. */
+  source?: { originType?: 'OWN' | 'LICENSED_USE' | 'FREE_USE'; citationText?: string; licenseId?: number };
+  /** Index (in creation order) of the set this problem is a child of, plus its position key. */
+  parentIndex?: number;
+  position?: string;
+  tagIds: number[];
+  chapterIds: number[];
+}
+
 async function main() {
   if ((await prisma.user.count()) > 0) {
     console.log('db:seed skipped: the database is not empty.');
@@ -75,6 +93,16 @@ async function main() {
         requires_share_alike: true,
         allows_publication: true,
       },
+      // Protected third-party content: not offered in the picker, but a copied-in problem may carry it.
+      {
+        name: 'Všechna práva vyhrazena',
+        description: 'Cizí chráněný obsah, jen pro soukromé užití.',
+        url: null,
+        requires_attribution: true,
+        allows_modification: false,
+        requires_share_alike: false,
+        allows_publication: false,
+      },
     ],
   });
 
@@ -83,6 +111,7 @@ async function main() {
       { name: 'lineární rovnice', is_global: true },
       { name: 'kvadratické rovnice', is_global: true },
       { name: 'geometrie', is_global: true },
+      { name: 'opakování 2.A', is_global: false, author_id: jan.id },
     ],
   });
 
@@ -94,7 +123,120 @@ async function main() {
     data: { name: 'Rovnice – opakování 2.A', is_global: false, author_id: jan.id, parent_id: equations.id },
   });
 
-  console.log('db:seed done: 1 language, 3 users (jan, eva, petr), 3 licences, 3 tags, 4 chapters.');
+  // The 7 problems of the mock seed (same ids 1..7 on an empty database).
+  // Ids of tags, chapters and licences below are the autoincrement ids created above.
+  const problemIds: number[] = [];
+  async function createProblem(p: SeedProblem): Promise<void> {
+    const source = p.source ?? {};
+    const created = await prisma.problem.create({
+      data: {
+        name: p.name,
+        assignment: p.assignment,
+        result: p.result ?? null,
+        difficulty: p.difficulty,
+        publish_status: p.publishStatus ?? 'PRIVATE',
+        lock_version: p.lockVersion ?? 1,
+        user: { connect: { id: p.authorId } },
+        language: { connect: { id: cs.id } },
+        content_source: {
+          create: {
+            origin_type: source.originType ?? 'OWN',
+            source_citation_text: source.citationText ?? null,
+            license_id: source.licenseId ?? null,
+          },
+        },
+      },
+    });
+    await prisma.problem_tag.createMany({ data: p.tagIds.map((tag_id) => ({ problem_id: created.id, tag_id })) });
+    await prisma.problem_chapter.createMany({
+      data: p.chapterIds.map((chapter_id) => ({ problem_id: created.id, chapter_id })),
+    });
+    if (p.parentIndex !== undefined) {
+      await prisma.problem_part.create({
+        data: { parent_id: problemIds[p.parentIndex], child_id: created.id, position: p.position ?? 'a0' },
+      });
+    }
+    problemIds.push(created.id);
+  }
+
+  // A private set of Jan's with two children (problems 1, 2, 3).
+  await createProblem({
+    name: 'Řešte rovnice',
+    assignment: 'Vyřešte rovnice v oboru reálných čísel:',
+    difficulty: 3,
+    authorId: 1,
+    lockVersion: 3,
+    tagIds: [1, 2, 4],
+    chapterIds: [1],
+  });
+  await createProblem({
+    name: 'Rovnice a)',
+    assignment: '\\( 2x + 3 = 11 \\)',
+    result: '\\( x = 4 \\)',
+    difficulty: 2,
+    authorId: 1,
+    parentIndex: 0,
+    position: 'a0',
+    tagIds: [1],
+    chapterIds: [2],
+  });
+  await createProblem({
+    name: 'Rovnice b)',
+    assignment: '\\( x^2 = 9 \\)',
+    result: '\\( x = \\pm 3 \\)',
+    difficulty: 3,
+    authorId: 1,
+    parentIndex: 0,
+    position: 'a1',
+    tagIds: [2],
+    chapterIds: [1],
+  });
+  // Published problems that others can see and copy (4, 5).
+  await createProblem({
+    name: 'Obsah kruhu',
+    assignment: 'Vypočítejte obsah kruhu o poloměru \\( r = 5\\,\\text{cm} \\).',
+    result: '\\( S = 25\\pi\\,\\text{cm}^2 \\)',
+    difficulty: 2,
+    authorId: 1,
+    publishStatus: 'PUBLISHED',
+    source: { licenseId: 2 },
+    tagIds: [3],
+    chapterIds: [3],
+  });
+  await createProblem({
+    name: 'Pythagorova věta',
+    assignment: 'Odvěsny pravoúhlého trojúhelníku mají délky \\( 3 \\) a \\( 4 \\). Určete přeponu.',
+    result: '\\( c = 5 \\)',
+    difficulty: 1,
+    authorId: 2,
+    publishStatus: 'PUBLISHED',
+    source: { licenseId: 1 },
+    tagIds: [3],
+    chapterIds: [3],
+  });
+  // Eva's private problem (6): Jan must get 404.
+  await createProblem({
+    name: 'Soustava rovnic',
+    assignment: '\\( x + y = 5,\\; x - y = 1 \\)',
+    result: '\\( x = 3,\\; y = 2 \\)',
+    difficulty: 3,
+    authorId: 2,
+    tagIds: [1],
+    chapterIds: [1],
+  });
+  // A copied-in problem under a protected licence (7): publishing it must fail.
+  await createProblem({
+    name: 'Úloha z učebnice',
+    assignment: 'Vyřešte \\( 5x = 20 \\).',
+    result: '\\( x = 4 \\)',
+    difficulty: 1,
+    authorId: 1,
+    source: { originType: 'LICENSED_USE', citationText: 'Učebnice Matematika 1, s. 42', licenseId: 4 },
+    tagIds: [1],
+    chapterIds: [2],
+  });
+
+  console.log('db:seed done: 1 language, 3 users (jan, eva, petr), 4 licences, 4 tags, 4 chapters, 7 problems.');
 }
 
 main()

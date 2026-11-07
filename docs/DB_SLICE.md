@@ -32,10 +32,10 @@ Log in with `Authorization: Bearer jan` (also `eva`, `petr`; any other name is `
 ## Prisma mode
 
 ```
-docker compose -f docker-compose.dev.yml up -d          # Postgres on 5432, database "sbirka"
-# apps/api/.env:  DATABASE_URL="postgresql://app:app@localhost:5432/sbirka"   DATA_SOURCE=prisma
+docker compose -f docker-compose.dev.yml up -d          # run from the repo root; Postgres on host port 5434 (5432 is often taken by a local install), database "sbirka"
+# apps/api/.env:  DATABASE_URL="postgresql://app:app@localhost:5434/sbirka"   DATA_SOURCE=prisma
 pnpm --filter @matematika/api db:generate               # Prisma client + docs/db/schema.dbml (needed once after clone/schema change)
-pnpm --filter @matematika/api exec prisma db push       # no migration files yet
+pnpm --filter @matematika/api exec prisma migrate deploy  # applies prisma/migrations (init)
 pnpm --filter @matematika/api db:seed                   # only seeds an empty database
 pnpm --filter @matematika/api dev
 ```
@@ -70,8 +70,9 @@ Things to know:
   seven problems (sets, published ones, an `LICENSED_USE` one), Jan's personal tag *opakování 2.A*, and a fourth licence
   *Všechna práva vyhrazena*. The Prisma seed has none of them, so those tests cannot go green on this seed alone.
   Either extend `prisma/seed.ts` to match the mock, or make the tests create what they need through the API.
-- **No migration files yet.** `db push` is used because the first migration is planned with raw SQL (the D-07 CHECKs).
-  Switch the script to `prisma migrate deploy` when it exists.
+- **The first migration exists** (`prisma/migrations/20261101204328_init`, includes the CHECK constraints). The dev database uses
+  `prisma migrate deploy`, but `scripts/test-prisma.mjs` still runs `prisma db push`, so the test database does not get the CHECKs.
+  Switch the script to `migrate deploy` to test against the same schema.
 - **No reset between tests.** A fresh app per test file does not reset the database. Rows from one test stay for the next.
 - `prisma db push --force-reset` is blocked by Prisma's safety guard (it wants explicit consent), so the script recreates the container instead.
 
