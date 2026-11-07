@@ -5,7 +5,7 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: sbirka
-    ports: ["5432:5432"]
+    ports: ["5434:5432"]
     volumes: [dbdata:/var/lib/postgresql/data]
 volumes:
   dbdata:
