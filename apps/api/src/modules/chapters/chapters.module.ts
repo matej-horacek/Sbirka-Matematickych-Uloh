@@ -8,7 +8,10 @@ import { ChaptersService } from './services/chapters.service.js';
 
 @Module({
   controllers: [ChaptersController],
-  providers: [repositoryProvider(CHAPTERS_REPOSITORY, MockChaptersRepository, PrismaChaptersRepository), ChaptersService],
+  providers: [
+    repositoryProvider(CHAPTERS_REPOSITORY, MockChaptersRepository, PrismaChaptersRepository),
+    ChaptersService,
+  ],
   exports: [ChaptersService],
 })
 export class ChaptersModule {}

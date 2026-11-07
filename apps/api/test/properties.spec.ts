@@ -35,7 +35,10 @@ describe('properties', () => {
     });
 
     it('a raw integer in the URL never reaches the row with that integer id', () => {
-      fc.assert(fc.property(fc.integer({ min: 0, max: 10_000_000 }), (n) => decodeId(String(n)) !== n), { numRuns: 2000 });
+      fc.assert(
+        fc.property(fc.integer({ min: 0, max: 10_000_000 }), (n) => decodeId(String(n)) !== n),
+        { numRuns: 2000 },
+      );
     });
   });
 
@@ -44,7 +47,14 @@ describe('properties', () => {
     const index = fc.integer({ min: 0, max: 36 ** 4 - 1 });
 
     it('position order = index order, with plain string comparison (what Postgres text ordering with C collation does)', () => {
-      fc.assert(fc.property(index, index, (a, b) => Math.sign(a - b) === Math.sign(positionAt(a) < positionAt(b) ? -1 : positionAt(a) > positionAt(b) ? 1 : 0)));
+      fc.assert(
+        fc.property(
+          index,
+          index,
+          (a, b) =>
+            Math.sign(a - b) === Math.sign(positionAt(a) < positionAt(b) ? -1 : positionAt(a) > positionAt(b) ? 1 : 0),
+        ),
+      );
     });
 
     const byteOrder = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0);
@@ -63,7 +73,14 @@ describe('properties', () => {
       // and it ignores the ASCII case order that fractional-indexing keys rely on: "aB" vs "ab".
       expect(comparePositions(positionAt(581904), positionAt(583200))).toBeLessThan(0);
       expect(comparePositions('aB', 'ab')).toBeLessThan(0);
-      fc.assert(fc.property(index, index, (a, b) => Math.sign(a - b) === Math.sign(comparePositions(positionAt(a), positionAt(b)))), { numRuns: 5000 });
+      fc.assert(
+        fc.property(
+          index,
+          index,
+          (a, b) => Math.sign(a - b) === Math.sign(comparePositions(positionAt(a), positionAt(b))),
+        ),
+        { numRuns: 5000 },
+      );
     });
   });
 });

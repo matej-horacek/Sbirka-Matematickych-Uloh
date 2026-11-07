@@ -9,7 +9,10 @@ import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 
 const apiDir = resolve(import.meta.dirname, '../apps/api');
-const vitestBin = resolve(dirname(createRequire(resolve(apiDir, 'package.json')).resolve('vitest/package.json')), 'vitest.mjs');
+const vitestBin = resolve(
+  dirname(createRequire(resolve(apiDir, 'package.json')).resolve('vitest/package.json')),
+  'vitest.mjs',
+);
 const HEAP_MB = process.env.TEST_HEAP_MB ?? '1536';
 
 const args = process.argv.slice(2);

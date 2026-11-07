@@ -27,7 +27,12 @@ describe('getProblem GET /problems/{id}', () => {
       });
       expect(ids(res.body.children)).toEqual([P.childA, P.childB]);
       // The store agrees on owner, versions and the order of the children.
-      await store.expectRecord('problems', P.set, { authorId: users.jan.id, version: 1, lockVersion: 3, publishStatus: 'PRIVATE' });
+      await store.expectRecord('problems', P.set, {
+        authorId: users.jan.id,
+        version: 1,
+        lockVersion: 3,
+        publishStatus: 'PRIVATE',
+      });
       expect((await store.children(P.set)).map((c) => c.id)).toEqual([store.toDbId(P.childA), store.toDbId(P.childB)]);
     });
 
@@ -106,7 +111,13 @@ describe('getProblem GET /problems/{id}', () => {
     });
 
     it.each(malformedIds)('404 NOT_FOUND (never 500) for the malformed id "%s"', async (bad) => {
-      expectError(await ctx().api.as('jan').get(`/problems/${encodeURIComponent(bad)}`), 404, 'NOT_FOUND');
+      expectError(
+        await ctx()
+          .api.as('jan')
+          .get(`/problems/${encodeURIComponent(bad)}`),
+        404,
+        'NOT_FOUND',
+      );
     });
 
     it.skip('an id that decodes beyond the safe integer range → 404, never 500 [R-021]', async () => {

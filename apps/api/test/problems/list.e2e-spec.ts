@@ -19,7 +19,8 @@ describe('listProblems GET /problems', () => {
       expect(ids(res.body.items).sort()).toEqual([P.set, P.circle, P.textbook].sort());
       expect(res.body.meta).toEqual({ page: 1, limit: 20, total: 3 });
       // Store agrees: every listed row is Jan's and top-level.
-      for (const item of res.body.items) await store.expectRecord('problems', item.id, { authorId: users.jan.id, parentId: null });
+      for (const item of res.body.items)
+        await store.expectRecord('problems', item.id, { authorId: users.jan.id, parentId: null });
       expect(await store.countRecords('problems', { authorId: users.jan.id, parentId: null })).toBe(3);
     });
 
@@ -63,29 +64,44 @@ describe('listProblems GET /problems', () => {
     });
 
     it('tagId: several values match problems having ANY of them', async () => {
-      const res = await ctx().api.as('jan').get(`/problems?scope=mine&tagId=${seed.tags.quadratic}&tagId=${seed.tags.geometry}`).expect(200);
+      const res = await ctx()
+        .api.as('jan')
+        .get(`/problems?scope=mine&tagId=${seed.tags.quadratic}&tagId=${seed.tags.geometry}`)
+        .expect(200);
       expect(ids(res.body.items).sort()).toEqual([P.set, P.circle].sort());
     });
 
     it('chapterId: a parent chapter includes problems in its child chapters', async () => {
       // "Rovnice" (1) has children "Lineární rovnice" (2) and Jan's personal chapter (4).
       // Jan: set is in chapter 1, textbook problem in chapter 2.
-      const res = await ctx().api.as('jan').get(`/problems?scope=mine&chapterId=${seed.chapters.equations}`).expect(200);
+      const res = await ctx()
+        .api.as('jan')
+        .get(`/problems?scope=mine&chapterId=${seed.chapters.equations}`)
+        .expect(200);
       expect(ids(res.body.items).sort()).toEqual([P.set, P.textbook].sort());
     });
 
     it('chapterId: a child chapter does not include its parent', async () => {
-      const res = await ctx().api.as('jan').get(`/problems?scope=mine&chapterId=${seed.chapters.linearEquations}`).expect(200);
+      const res = await ctx()
+        .api.as('jan')
+        .get(`/problems?scope=mine&chapterId=${seed.chapters.linearEquations}`)
+        .expect(200);
       expect(ids(res.body.items)).toEqual([P.textbook]);
     });
 
     it('chapterId: several values match ANY of them', async () => {
-      const res = await ctx().api.as('jan').get(`/problems?scope=mine&chapterId=${seed.chapters.linearEquations}&chapterId=${seed.chapters.planimetry}`).expect(200);
+      const res = await ctx()
+        .api.as('jan')
+        .get(`/problems?scope=mine&chapterId=${seed.chapters.linearEquations}&chapterId=${seed.chapters.planimetry}`)
+        .expect(200);
       expect(ids(res.body.items).sort()).toEqual([P.circle, P.textbook].sort());
     });
 
     it('combines tag, chapter and scope filters (AND between different filters)', async () => {
-      const res = await ctx().api.as('jan').get(`/problems?scope=mine&tagId=${seed.tags.linear}&chapterId=${seed.chapters.linearEquations}`).expect(200);
+      const res = await ctx()
+        .api.as('jan')
+        .get(`/problems?scope=mine&tagId=${seed.tags.linear}&chapterId=${seed.chapters.linearEquations}`)
+        .expect(200);
       expect(ids(res.body.items)).toEqual([P.textbook]);
     });
 
@@ -98,7 +114,9 @@ describe('listProblems GET /problems', () => {
     it('a well-formed but unknown tagId or chapterId matches nothing', async () => {
       const { api } = ctx();
       expect((await api.as('jan').get(`/problems?scope=mine&tagId=${unknownId}`).expect(200)).body.items).toEqual([]);
-      expect((await api.as('jan').get(`/problems?scope=mine&chapterId=${unknownId}`).expect(200)).body.items).toEqual([]);
+      expect((await api.as('jan').get(`/problems?scope=mine&chapterId=${unknownId}`).expect(200)).body.items).toEqual(
+        [],
+      );
     });
 
     it.skip('a malformed tagId/chapterId never widens the result (400, or no matches) [R-013]', async () => {
@@ -186,7 +204,10 @@ describe('listProblems GET /problems', () => {
     });
 
     it.skip('applies the same visibility and scope rules (no foreign private problem, no set children) [R-007 not in mock]', async () => {
-      const res = await ctx().api.as('jan').get(`/problems?scope=mine&ids=${P.circle}&ids=${P.evaPrivate}&ids=${P.childA}`).expect(200);
+      const res = await ctx()
+        .api.as('jan')
+        .get(`/problems?scope=mine&ids=${P.circle}&ids=${P.evaPrivate}&ids=${P.childA}`)
+        .expect(200);
       expect(ids(res.body.items)).toEqual([P.circle]);
     });
 
@@ -198,7 +219,11 @@ describe('listProblems GET /problems', () => {
 
   describe('updateAvailable filter [R-007 not in mock]', () => {
     it.skip('updateAvailable with scope=public → 400 VALIDATION_FAILED [R-007 not in mock]', async () => {
-      expectError(await ctx().api.as('jan').get('/problems?scope=public&updateAvailable=true'), 400, 'VALIDATION_FAILED');
+      expectError(
+        await ctx().api.as('jan').get('/problems?scope=public&updateAvailable=true'),
+        400,
+        'VALIDATION_FAILED',
+      );
     });
     // The positive cases (a copy whose original got a newer version) need several requests;
     // they live in copies/update-available.e2e-spec.ts.

@@ -68,4 +68,6 @@ for (const step of steps) {
   }
   summary.push(`  ok    ${step.name} (${secs}s)`);
 }
-console.log(`\nverify${quick ? ':quick' : ''} PASSED in ${((Date.now() - started) / 1000).toFixed(1)}s\n${summary.join('\n')}`);
+console.log(
+  `\nverify${quick ? ':quick' : ''} PASSED in ${((Date.now() - started) / 1000).toFixed(1)}s\n${summary.join('\n')}`,
+);

@@ -19,21 +19,30 @@ describe('reorderSetChild PATCH /problems/{id}/children/{childId}', () => {
 
   describe('positions', () => {
     it('afterId null → first', async () => {
-      const { set, children: [c1, c2, c3] } = await three();
+      const {
+        set,
+        children: [c1, c2, c3],
+      } = await three();
       const res = await move('eva', set.id, c3, { lockVersion: set.lockVersion, afterId: null }).expect(200);
       expect(ids(res.body.children)).toEqual([c3, c1, c2]);
     });
 
     it('afterId = a child → right after it (response and store order)', async () => {
       const { store } = ctx();
-      const { set, children: [c1, c2, c3] } = await three();
+      const {
+        set,
+        children: [c1, c2, c3],
+      } = await three();
       const res = await move('eva', set.id, c1, { lockVersion: set.lockVersion, afterId: c2 }).expect(200);
       expect(ids(res.body.children)).toEqual([c2, c1, c3]);
       expect((await store.children(set.id)).map((c) => c.id)).toEqual([c2, c1, c3].map((id) => store.toDbId(id)));
     });
 
     it('afterId = the last child → moves to the end', async () => {
-      const { set, children: [c1, c2, c3] } = await three();
+      const {
+        set,
+        children: [c1, c2, c3],
+      } = await three();
       const res = await move('eva', set.id, c1, { lockVersion: set.lockVersion, afterId: c3 }).expect(200);
       expect(ids(res.body.children)).toEqual([c2, c3, c1]);
     });
@@ -45,7 +54,10 @@ describe('reorderSetChild PATCH /problems/{id}/children/{childId}', () => {
     });
 
     it('several moves in a row, each with the lockVersion from the previous response', async () => {
-      const { set, children: [c1, c2, c3] } = await three();
+      const {
+        set,
+        children: [c1, c2, c3],
+      } = await three();
       let r = await move('eva', set.id, c3, { lockVersion: set.lockVersion, afterId: null }).expect(200);
       r = await move('eva', set.id, c1, { lockVersion: r.body.lockVersion, afterId: c3 }).expect(200);
       r = await move('eva', set.id, c2, { lockVersion: r.body.lockVersion, afterId: null }).expect(200);
@@ -62,7 +74,12 @@ describe('reorderSetChild PATCH /problems/{id}/children/{childId}', () => {
       await move('eva', set.id, children[2], { lockVersion: set.lockVersion, afterId: null }).expect(200);
       expect(await store.countRecords('problems', undefined, { includeDeleted: true })).toBe(before);
       for (const r of rows) {
-        await store.expectRecord('problems', r.id, { parentId: r.parentId, name: r.name, assignment: r.assignment, lockVersion: r.lockVersion });
+        await store.expectRecord('problems', r.id, {
+          parentId: r.parentId,
+          name: r.name,
+          assignment: r.assignment,
+          lockVersion: r.lockVersion,
+        });
       }
     });
 
@@ -86,7 +103,11 @@ describe('reorderSetChild PATCH /problems/{id}/children/{childId}', () => {
     ])('%s', async (_, body) => {
       const { store } = ctx();
       const { set, children } = await three();
-      expectError(await move('eva', set.id, children[1], { lockVersion: set.lockVersion, ...body(children) }), 400, 'VALIDATION_FAILED');
+      expectError(
+        await move('eva', set.id, children[1], { lockVersion: set.lockVersion, ...body(children) }),
+        400,
+        'VALIDATION_FAILED',
+      );
       expect((await store.children(set.id)).map((c) => c.id)).toEqual(children.map((id) => store.toDbId(id)));
       await store.expectRecord('problems', set.id, { lockVersion: set.lockVersion });
     });
@@ -96,7 +117,11 @@ describe('reorderSetChild PATCH /problems/{id}/children/{childId}', () => {
     it('409 LOCK_MISMATCH for a stale set lockVersion; order unchanged', async () => {
       const { store } = ctx();
       const { set, children } = await three();
-      expectError(await move('eva', set.id, children[2], { lockVersion: set.lockVersion - 1, afterId: null }), 409, 'LOCK_MISMATCH');
+      expectError(
+        await move('eva', set.id, children[2], { lockVersion: set.lockVersion - 1, afterId: null }),
+        409,
+        'LOCK_MISMATCH',
+      );
       expect((await store.children(set.id)).map((c) => c.id)).toEqual(children.map((id) => store.toDbId(id)));
     });
 
@@ -111,21 +136,37 @@ describe('reorderSetChild PATCH /problems/{id}/children/{childId}', () => {
       const { api } = ctx();
       const { set } = await three();
       const other = await createProblem(api, 'eva');
-      expectError(await move('eva', set.id, other.id, { lockVersion: set.lockVersion, afterId: null }), 404, 'NOT_FOUND');
+      expectError(
+        await move('eva', set.id, other.id, { lockVersion: set.lockVersion, afterId: null }),
+        404,
+        'NOT_FOUND',
+      );
     });
 
     it('404 for a child of ANOTHER set of the same author', async () => {
       const a = await three();
       const b = await buildSet(ctx().api, 'eva', 1);
-      expectError(await move('eva', a.set.id, b.children[0], { lockVersion: a.set.lockVersion, afterId: null }), 404, 'NOT_FOUND');
+      expectError(
+        await move('eva', a.set.id, b.children[0], { lockVersion: a.set.lockVersion, afterId: null }),
+        404,
+        'NOT_FOUND',
+      );
     });
 
     it('404 for an unknown or malformed set / child id', async () => {
       const { set, children } = await three();
       expectError(await move('eva', unknownId, children[0], { lockVersion: 1, afterId: null }), 404, 'NOT_FOUND');
-      expectError(await move('eva', set.id, unknownId, { lockVersion: set.lockVersion, afterId: null }), 404, 'NOT_FOUND');
+      expectError(
+        await move('eva', set.id, unknownId, { lockVersion: set.lockVersion, afterId: null }),
+        404,
+        'NOT_FOUND',
+      );
       for (const bad of malformedIds) {
-        expectError(await move('eva', set.id, encodeURIComponent(bad), { lockVersion: set.lockVersion, afterId: null }), 404, 'NOT_FOUND');
+        expectError(
+          await move('eva', set.id, encodeURIComponent(bad), { lockVersion: set.lockVersion, afterId: null }),
+          404,
+          'NOT_FOUND',
+        );
       }
     });
   });
@@ -135,20 +176,37 @@ describe('reorderSetChild PATCH /problems/{id}/children/{childId}', () => {
     // the missing route looks like the spec's 404). Keep it skipped until the route exists.
     it('401 without a token', async () => {
       const { set, children } = await three();
-      expectError(await ctx().api.patch(`/problems/${set.id}/children/${children[0]}`, { lockVersion: set.lockVersion, afterId: null }), 401, 'UNAUTHENTICATED');
+      expectError(
+        await ctx().api.patch(`/problems/${set.id}/children/${children[0]}`, {
+          lockVersion: set.lockVersion,
+          afterId: null,
+        }),
+        401,
+        'UNAUTHENTICATED',
+      );
     });
 
     it('404 on another teacher’s PRIVATE set; order unchanged', async () => {
       const { store } = ctx();
-      expectError(await move('eva', seed.problems.set, seed.problems.childB, { lockVersion: 3, afterId: null }), 404, 'NOT_FOUND');
+      expectError(
+        await move('eva', seed.problems.set, seed.problems.childB, { lockVersion: 3, afterId: null }),
+        404,
+        'NOT_FOUND',
+      );
       expect((await store.children(seed.problems.set)).map((c) => c.id)).toEqual([2, 3]);
     });
 
     it('403 on another teacher’s PUBLISHED set; order unchanged', async () => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'jan', 2);
-      const pub = (await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)).body;
-      expectError(await move('eva', set.id, children[1], { lockVersion: pub.lockVersion, afterId: null }), 403, 'FORBIDDEN');
+      const pub = (
+        await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)
+      ).body;
+      expectError(
+        await move('eva', set.id, children[1], { lockVersion: pub.lockVersion, afterId: null }),
+        403,
+        'FORBIDDEN',
+      );
       expect((await store.children(set.id)).map((c) => c.id)).toEqual(children.map((id) => store.toDbId(id)));
     });
   });

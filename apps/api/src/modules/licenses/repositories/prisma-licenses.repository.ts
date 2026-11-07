@@ -15,8 +15,8 @@ export class PrismaLicensesRepository implements LicensesRepository {
    */
   async findPublishable(): Promise<LicenseRow[]> {
     const rows = await this.prisma.license.findMany({
-        where: { allows_publication: true },
-        orderBy: { id: 'asc' }
+      where: { allows_publication: true },
+      orderBy: { id: 'asc' },
     });
 
     return rows.map(toLicenseRow);
@@ -29,24 +29,24 @@ export class PrismaLicensesRepository implements LicensesRepository {
    */
   async findByIds(ids: number[]): Promise<LicenseRow[]> {
     const rows = await this.prisma.license.findMany({
-        where: { id: { in: ids }}
+      where: { id: { in: ids } },
     });
 
     return rows.map(toLicenseRow);
   }
 }
 /*
-* - converts queried records into LicenceRow type
-* */
-export function toLicenseRow(l: license): LicenseRow{
-    return {
-        id: l.id,
-        name: l.name,
-        description: l.description,
-        url: l.url,
-        requiresAttribution: l.requires_attribution,
-        allowsModification: l.allows_modification,
-        requiresShareAlike: l.requires_share_alike,
-        allowsPublication: l.allows_publication,
-    };
+ * - converts queried records into LicenceRow type
+ * */
+export function toLicenseRow(l: license): LicenseRow {
+  return {
+    id: l.id,
+    name: l.name,
+    description: l.description,
+    url: l.url,
+    requiresAttribution: l.requires_attribution,
+    allowsModification: l.allows_modification,
+    requiresShareAlike: l.requires_share_alike,
+    allowsPublication: l.allows_publication,
+  };
 }

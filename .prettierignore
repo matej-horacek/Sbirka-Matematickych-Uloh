@@ -1,0 +1,23 @@
+# apps/web has its own Prettier config and is formatted by `pnpm --filter web format`.
+apps/web
+
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+*.tsbuildinfo
+
+# Generated code
+apps/api/src/generated
+packages/shared/contracts/src/generated
+packages/shared/contracts/openapi.yaml
+
+# Prisma migrations are SQL, not formatted by Prettier
+apps/api/prisma/migrations
+
+# Agent / IDE tooling, historical docs
+.agents
+.claude
+.windsurf
+.idea
+docs/archive

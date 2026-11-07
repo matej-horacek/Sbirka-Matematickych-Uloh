@@ -26,7 +26,13 @@ describe('copyProblem POST /problems/{id}/copy', () => {
 
       expect(res.body.id).not.toBe(P.circle);
       expect(res.body).toMatchObject({
-        ...pickContent({ name: original.name, assignment: original.assignment, result: original.result, language: original.languageCode, difficulty: original.difficulty }),
+        ...pickContent({
+          name: original.name,
+          assignment: original.assignment,
+          result: original.result,
+          language: original.languageCode,
+          difficulty: original.difficulty,
+        }),
         author: { id: seed.users.eva, displayName: users.eva.displayName },
         status: 'PRIVATE',
         version: 1,
@@ -65,7 +71,9 @@ describe('copyProblem POST /problems/{id}/copy', () => {
       const res = await api.as('jan').post(`/problems/${P.circle}/copy`).expect(201);
       expect(res.body.source.type).toBe('OWN');
       expect(res.body.source.citation ?? null).toBeNull();
-      await store.expectRecord('problems', res.body.id, { source: { originType: 'OWN', sourceCitationText: null, licenseId: original.source.licenseId } });
+      await store.expectRecord('problems', res.body.id, {
+        source: { originType: 'OWN', sourceCitationText: null, licenseId: original.source.licenseId },
+      });
     });
 
     it('the original is unchanged (row deep-equal before and after)', async () => {
@@ -78,7 +86,11 @@ describe('copyProblem POST /problems/{id}/copy', () => {
     it('a registered (unverified) teacher may copy too (petr)', async () => {
       const { api, store } = ctx();
       const res = await api.as('petr').post(`/problems/${P.pythagoras}/copy`).expect(201);
-      await store.expectRecord('problems', res.body.id, { authorId: users.petr.id, publishStatus: 'PRIVATE', originalProblemId: 5 });
+      await store.expectRecord('problems', res.body.id, {
+        authorId: users.petr.id,
+        publishStatus: 'PRIVATE',
+        originalProblemId: 5,
+      });
     });
 
     it('the copy is the caller’s: in their dashboard, editable by them, invisible to others', async () => {
@@ -105,8 +117,14 @@ describe('copyProblem POST /problems/{id}/copy', () => {
       // The textbook problem is Jan's own, but its source is LICENSED_USE, so O4 (OWN on own copy) does not apply.
       const { api, store } = ctx();
       const res = await api.as('jan').post(`/problems/${P.textbook}/copy`).expect(201);
-      expect(res.body.source).toMatchObject({ type: 'LICENSED_USE', citation: 'Učebnice Matematika 1, s. 42', license: { id: seed.licenses.allRightsReserved } });
-      await store.expectRecord('problems', res.body.id, { source: { originType: 'LICENSED_USE', sourceCitationText: 'Učebnice Matematika 1, s. 42', licenseId: 4 } });
+      expect(res.body.source).toMatchObject({
+        type: 'LICENSED_USE',
+        citation: 'Učebnice Matematika 1, s. 42',
+        license: { id: seed.licenses.allRightsReserved },
+      });
+      await store.expectRecord('problems', res.body.id, {
+        source: { originType: 'LICENSED_USE', sourceCitationText: 'Učebnice Matematika 1, s. 42', licenseId: 4 },
+      });
     });
   });
 
@@ -127,9 +145,16 @@ describe('copyProblem POST /problems/{id}/copy', () => {
 
     it('your own original: personal tags and chapters are kept too', async () => {
       const { api, store } = ctx();
-      const p = await createProblem(api, 'jan', { tagIds: [seed.tags.janPersonal, seed.tags.linear], chapterIds: [seed.chapters.janPersonal] });
+      const p = await createProblem(api, 'jan', {
+        tagIds: [seed.tags.janPersonal, seed.tags.linear],
+        chapterIds: [seed.chapters.janPersonal],
+      });
       const res = await api.as('jan').post(`/problems/${p.id}/copy`).expect(201);
-      await store.expectRecord('problems', res.body.id, { tagIds: [4, 1], chapterIds: [4], originalProblemId: store.toDbId(p.id) });
+      await store.expectRecord('problems', res.body.id, {
+        tagIds: [4, 1],
+        chapterIds: [4],
+        originalProblemId: store.toDbId(p.id),
+      });
     });
   });
 
@@ -157,7 +182,12 @@ describe('copyProblem POST /problems/{id}/copy', () => {
       expect(res.body.children.map((c: { name: string }) => c.name)).toEqual(['Rovnice a)', 'Rovnice b)']);
 
       // Store: new parent linked to the original set; each new child linked to its original child, under the new parent.
-      const newSet = await store.expectRecord('problems', res.body.id, { authorId: 1, originalProblemId: 1, originalProblemVersion: 1, parentId: null });
+      const newSet = await store.expectRecord('problems', res.body.id, {
+        authorId: 1,
+        originalProblemId: 1,
+        originalProblemVersion: 1,
+        parentId: null,
+      });
       const kids = await store.children(res.body.id);
       expect(kids.map((k) => k.originalProblemId)).toEqual([2, 3]);
       for (const k of kids) expect(k).toMatchObject({ parentId: newSet.id, authorId: 1, publishStatus: 'PRIVATE' });
@@ -187,8 +217,14 @@ describe('copyProblem POST /problems/{id}/copy', () => {
       const res = await api.as('eva').post(`/problems/${P.set}/copy`).expect(201);
       const kids = await store.children(res.body.id);
       expect(kids).toHaveLength(2);
-      for (const k of kids) expect(k).toMatchObject({ authorId: 2, publishStatus: 'PRIVATE', source: { originType: 'LICENSED_USE', licenseId: 2 } });
-      for (const c of res.body.children) expect(c.source).toMatchObject({ type: 'LICENSED_USE', citation: 'Převzato od: Jan Novák' });
+      for (const k of kids)
+        expect(k).toMatchObject({
+          authorId: 2,
+          publishStatus: 'PRIVATE',
+          source: { originType: 'LICENSED_USE', licenseId: 2 },
+        });
+      for (const c of res.body.children)
+        expect(c.source).toMatchObject({ type: 'LICENSED_USE', citation: 'Převzato od: Jan Novák' });
     });
   });
 
@@ -201,7 +237,11 @@ describe('copyProblem POST /problems/{id}/copy', () => {
     ])('%s', async (_, id) => {
       const { api, store } = ctx();
       const before = await store.countRecords('problems', undefined, { includeDeleted: true });
-      expectError(await api.as(id() === seed.problems.childA ? 'eva' : 'jan').post(`/problems/${id()}/copy`), 404, 'NOT_FOUND');
+      expectError(
+        await api.as(id() === seed.problems.childA ? 'eva' : 'jan').post(`/problems/${id()}/copy`),
+        404,
+        'NOT_FOUND',
+      );
       expect(await store.countRecords('problems', undefined, { includeDeleted: true })).toBe(before);
     });
 

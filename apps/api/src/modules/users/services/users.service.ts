@@ -13,7 +13,9 @@ export class UsersService {
   /** Batch lookup for enriching responses (one query for all authors on a page). */
   async refsByIds(ids: number[]): Promise<Map<number, UserRef>> {
     const unique = [...new Set(ids)];
-    return new Map((await this.repo.findByIds(unique)).map((u) => [u.id, { id: encodeId(u.id), displayName: u.displayName }]));
+    return new Map(
+      (await this.repo.findByIds(unique)).map((u) => [u.id, { id: encodeId(u.id), displayName: u.displayName }]),
+    );
   }
 
   /**

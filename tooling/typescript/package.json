@@ -1,5 +1,7 @@
 {
   "name": "@matematika/tsconfig",
   "private": true,
-  "files": ["*.json"]
+  "files": [
+    "*.json"
+  ]
 }

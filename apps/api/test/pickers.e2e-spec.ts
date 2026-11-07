@@ -32,13 +32,22 @@ describe('Pickers', () => {
       const { api } = ctx();
       const lower = await api.as('jan').get('/tags?q=rovn').expect(200);
       const upper = await api.as('jan').get('/tags?q=ROVN').expect(200);
-      expect(lower.body.items.map((t: { name: string }) => t.name).sort()).toEqual(['kvadratické rovnice', 'lineární rovnice']);
+      expect(lower.body.items.map((t: { name: string }) => t.name).sort()).toEqual([
+        'kvadratické rovnice',
+        'lineární rovnice',
+      ]);
       expect(upper.body.items).toEqual(lower.body.items);
-      expect((await api.as('jan').get('/tags?q=xyz').expect(200)).body).toEqual({ items: [], meta: { page: 1, limit: 20, total: 0 } });
+      expect((await api.as('jan').get('/tags?q=xyz').expect(200)).body).toEqual({
+        items: [],
+        meta: { page: 1, limit: 20, total: 0 },
+      });
     });
 
     it('q matches Czech characters case-insensitively', async () => {
-      const res = await ctx().api.as('jan').get(`/tags?q=${encodeURIComponent('LINEÁRNÍ')}`).expect(200);
+      const res = await ctx()
+        .api.as('jan')
+        .get(`/tags?q=${encodeURIComponent('LINEÁRNÍ')}`)
+        .expect(200);
       expect(res.body.items.map((t: { id: string }) => t.id)).toEqual([seed.tags.linear]);
     });
 
@@ -70,7 +79,12 @@ describe('Pickers', () => {
       expect(res.body).not.toHaveProperty('meta');
       const byId = Object.fromEntries(res.body.items.map((c: { id: string }) => [c.id, c]));
       expect(Object.keys(byId).sort()).toEqual(Object.values(seed.chapters).sort());
-      expect(byId[seed.chapters.equations]).toEqual({ id: seed.chapters.equations, name: 'Rovnice', scope: 'global', parentId: null });
+      expect(byId[seed.chapters.equations]).toEqual({
+        id: seed.chapters.equations,
+        name: 'Rovnice',
+        scope: 'global',
+        parentId: null,
+      });
       expect(byId[seed.chapters.linearEquations].parentId).toBe(seed.chapters.equations);
       // A personal chapter under a global parent.
       expect(byId[seed.chapters.janPersonal]).toMatchObject({ scope: 'personal', parentId: seed.chapters.equations });
@@ -107,7 +121,11 @@ describe('Pickers', () => {
       const { api, store } = ctx();
       const res = await api.as('petr').get('/licenses').expect(200);
       expect(res.body).not.toHaveProperty('meta');
-      expect(res.body.items.map((l: { id: string }) => l.id)).toEqual([seed.licenses.cc0, seed.licenses.ccBy, seed.licenses.ccBySa]);
+      expect(res.body.items.map((l: { id: string }) => l.id)).toEqual([
+        seed.licenses.cc0,
+        seed.licenses.ccBy,
+        seed.licenses.ccBySa,
+      ]);
       expect(res.body.items.map((l: { id: string }) => l.id)).not.toContain(seed.licenses.allRightsReserved);
       expect(await store.countRecords('licenses', { allowsPublication: true })).toBe(3);
     });
@@ -131,10 +149,13 @@ describe('Pickers', () => {
   });
 
   describe('authentication (all operations)', () => {
-    it.each(['Basic amFuOmphbg==', 'Bearer', 'jan'])('401 for a malformed Authorization header "%s"', async (header) => {
-      const res = await ctx().api.raw().get('/api/v1/tags').set('Authorization', header);
-      expectError(res, 401, 'UNAUTHENTICATED');
-    });
+    it.each(['Basic amFuOmphbg==', 'Bearer', 'jan'])(
+      '401 for a malformed Authorization header "%s"',
+      async (header) => {
+        const res = await ctx().api.raw().get('/api/v1/tags').set('Authorization', header);
+        expectError(res, 401, 'UNAUTHENTICATED');
+      },
+    );
 
     it.skip('401 for an unknown bearer token [R-014]', async () => {
       // Mock: any unknown token logs in as jan (mock-auth.guard.ts). Spec 401: "Not logged in, or the login expired."

@@ -21,7 +21,10 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId}', () => {
   describe('happy path (200, whole set + store)', () => {
     it('the child becomes a standalone PRIVATE problem: same record, not deleted', async () => {
       const { api, store } = ctx();
-      const { set, children: [c1, c2] } = await buildSet(api, 'eva', 2);
+      const {
+        set,
+        children: [c1, c2],
+      } = await buildSet(api, 'eva', 2);
       const before = await store.countRecords('problems', undefined, { includeDeleted: true });
 
       const res = await takeOut('eva', set.id, c1, etag(set.lockVersion)).expect(200);
@@ -46,26 +49,37 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId}', () => {
 
     it('the remaining children keep their order', async () => {
       const { api } = ctx();
-      const { set, children: [c1, c2, c3] } = await buildSet(api, 'eva', 3);
+      const {
+        set,
+        children: [c1, c2, c3],
+      } = await buildSet(api, 'eva', 3);
       const res = await takeOut('eva', set.id, c2, etag(set.lockVersion)).expect(200);
       expect(ids(res.body.children)).toEqual([c1, c3]);
     });
 
     it('last child out → the set is a plain problem again (childCount 0)', async () => {
       const { api, store } = ctx();
-      const { set, children: [c1] } = await buildSet(api, 'eva', 1);
+      const {
+        set,
+        children: [c1],
+      } = await buildSet(api, 'eva', 1);
       const res = await takeOut('eva', set.id, c1, etag(set.lockVersion)).expect(200);
       expect(res.body).toMatchObject({ childCount: 0, children: [] });
       expect(await store.children(set.id)).toEqual([]);
       await store.expectRecord('problems', set.id);
       // A plain problem may have a result again.
-      await api.as('eva').patch(`/problems/${set.id}`, { lockVersion: res.body.lockVersion, result: 'x = 1' }).expect(200);
+      await api
+        .as('eva')
+        .patch(`/problems/${set.id}`, { lockVersion: res.body.lockVersion, result: 'x = 1' })
+        .expect(200);
     });
 
     it('a child of a PUBLISHED set becomes PRIVATE when taken out', async () => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'jan', 2);
-      const pub = (await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)).body;
+      const pub = (
+        await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)
+      ).body;
       await takeOut('jan', set.id, children[0], etag(pub.lockVersion)).expect(200);
       await store.expectRecord('problems', children[0], { publishStatus: 'PRIVATE', parentId: null });
       await store.expectRecord('problems', set.id, { publishStatus: 'PUBLISHED' });
@@ -92,7 +106,10 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId}', () => {
 
     it('412 when the set changed in between (a stale ETag from an earlier response)', async () => {
       const { api } = ctx();
-      const { set, children: [c1, c2] } = await buildSet(api, 'eva', 2);
+      const {
+        set,
+        children: [c1, c2],
+      } = await buildSet(api, 'eva', 2);
       await takeOut('eva', set.id, c1, etag(set.lockVersion)).expect(200);
       expectError(await takeOut('eva', set.id, c2, etag(set.lockVersion)), 412, 'LOCK_MISMATCH');
     });
@@ -133,7 +150,8 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId}', () => {
       const { set, children } = await buildSet(api, 'eva', 1);
       expectError(await takeOut('eva', unknownId, children[0], etag(1)), 404, 'NOT_FOUND');
       expectError(await takeOut('eva', set.id, unknownId, etag(set.lockVersion)), 404, 'NOT_FOUND');
-      for (const bad of malformedIds) expectError(await takeOut('eva', set.id, encodeURIComponent(bad), etag(set.lockVersion)), 404, 'NOT_FOUND');
+      for (const bad of malformedIds)
+        expectError(await takeOut('eva', set.id, encodeURIComponent(bad), etag(set.lockVersion)), 404, 'NOT_FOUND');
     });
   });
 
@@ -141,7 +159,9 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId}', () => {
     // The 404 test for a foreign PRIVATE set already passes under test:unskipped, by accident (Nest's 404 for
     // the missing route looks like the spec's 404). Keep it skipped until the route exists.
     it('401 without a token', async () => {
-      const res = await ctx().api.delete(`/problems/${seed.problems.set}/children/${seed.problems.childA}`).set('If-Match', etag(3));
+      const res = await ctx()
+        .api.delete(`/problems/${seed.problems.set}/children/${seed.problems.childA}`)
+        .set('If-Match', etag(3));
       expectError(res, 401, 'UNAUTHENTICATED');
     });
 
@@ -154,7 +174,9 @@ describe('removeSetChild DELETE /problems/{id}/children/{childId}', () => {
     it('403 on another teacher’s PUBLISHED set; nothing changes', async () => {
       const { api, store } = ctx();
       const { set, children } = await buildSet(api, 'jan', 1);
-      const pub = (await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)).body;
+      const pub = (
+        await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)
+      ).body;
       expectError(await takeOut('eva', set.id, children[0], etag(pub.lockVersion)), 403, 'FORBIDDEN');
       await store.expectRecord('problems', children[0], { parentId: store.toDbId(set.id), publishStatus: 'PUBLISHED' });
     });

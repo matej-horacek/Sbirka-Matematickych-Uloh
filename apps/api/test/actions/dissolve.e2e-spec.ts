@@ -26,7 +26,12 @@ describe('dissolveSet POST /problems/{id}/dissolve', () => {
       expect(await store.countRecords('problems', undefined, { includeDeleted: true })).toBe(before);
       await store.expectDeleted('problems', P.set);
       for (const id of [P.childA, P.childB]) {
-        await store.expectRecord('problems', id, { parentId: null, position: null, publishStatus: 'PRIVATE', authorId: 1 });
+        await store.expectRecord('problems', id, {
+          parentId: null,
+          position: null,
+          publishStatus: 'PRIVATE',
+          authorId: 1,
+        });
       }
       // Visible as standalone problems in the dashboard, the set is gone.
       const mine = await api.as('jan').get('/problems?scope=mine&limit=100').expect(200);
@@ -50,7 +55,8 @@ describe('dissolveSet POST /problems/{id}/dissolve', () => {
       const { api, store } = ctx();
       await api.as('jan').post(`/problems/${P.set}/publish`, { licenseId: seed.licenses.ccBy }).expect(200);
       await api.as('jan').post(`/problems/${P.set}/dissolve`).expect(200);
-      for (const id of [P.childA, P.childB]) await store.expectRecord('problems', id, { publishStatus: 'PRIVATE', parentId: null });
+      for (const id of [P.childA, P.childB])
+        await store.expectRecord('problems', id, { publishStatus: 'PRIVATE', parentId: null });
       const pub = await api.as('eva').get('/problems?scope=public').expect(200);
       expect(ids(pub.body.items)).not.toEqual(expect.arrayContaining([P.childA]));
     });
@@ -103,7 +109,8 @@ describe('dissolveSet POST /problems/{id}/dissolve', () => {
     it('404 for an unknown or malformed id', async () => {
       const { api } = ctx();
       expectError(await api.as('jan').post(`/problems/${unknownId}/dissolve`), 404, 'NOT_FOUND');
-      for (const bad of malformedIds) expectError(await api.as('jan').post(`/problems/${encodeURIComponent(bad)}/dissolve`), 404, 'NOT_FOUND');
+      for (const bad of malformedIds)
+        expectError(await api.as('jan').post(`/problems/${encodeURIComponent(bad)}/dissolve`), 404, 'NOT_FOUND');
     });
   });
 });

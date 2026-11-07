@@ -10,7 +10,9 @@ import { parse } from 'yaml';
 const root = resolve(import.meta.dirname, '..');
 const spec = parse(readFileSync(join(root, 'packages/shared/contracts/openapi.yaml'), 'utf8'), { maxAliasCount: -1 });
 
-const entries = [...String(spec.info.description).matchAll(/^- (\d+\.\d+\.\d+) \(\d{4}-\d{2}-\d{2}\)/gm)].map((m) => m[1]);
+const entries = [...String(spec.info.description).matchAll(/^- (\d+\.\d+\.\d+) \(\d{4}-\d{2}-\d{2}\)/gm)].map(
+  (m) => m[1],
+);
 if (!entries.length) {
   console.error('spec version: no changelog entries found in info.description');
   process.exit(1);

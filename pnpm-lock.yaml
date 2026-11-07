@@ -7,6 +7,9 @@ settings:
 
 catalogs:
   default:
+    tsup:
+      specifier: ^8.5.1
+      version: 8.5.1
     typescript:
       specifier: ~6.0.3
       version: 6.0.3
@@ -33,9 +36,15 @@ importers:
       eslint:
         specifier: ^10.14.0
         version: 10.14.0(jiti@2.7.0)
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@10.14.0(jiti@2.7.0))
       globals:
         specifier: ^17.14.0
         version: 17.14.0
+      prettier:
+        specifier: 3.9.6
+        version: 3.9.6
       typescript-eslint:
         specifier: ^8.72.1
         version: 8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3)
@@ -47,7 +56,7 @@ importers:
     dependencies:
       '@matematika/contracts':
         specifier: workspace:*
-        version: file:packages/shared/contracts
+        version: link:../../packages/shared/contracts
       '@nestjs/common':
         specifier: ^12.4.0
         version: 12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -84,7 +93,7 @@ importers:
     devDependencies:
       '@matematika/tsconfig':
         specifier: workspace:*
-        version: file:tooling/typescript
+        version: link:../../tooling/typescript
       '@nestjs/cli':
         specifier: ^12.0.12
         version: 12.0.12(@swc/core@1.16.22)(@types/node@22.20.5)(fork-ts-checker-webpack-plugin@9.1.0(typescript@6.0.3)(webpack@5.106.2(@swc/core@1.16.22)(esbuild@0.28.2)))(prettier@3.9.6)(tsconfig-paths-webpack-plugin@4.2.0)(webpack-node-externals@3.0.0)(webpack@5.106.2(@swc/core@1.16.22)(esbuild@0.28.2))
@@ -1113,12 +1122,6 @@ packages:
   '@lukeed/ms@2.0.2':
     resolution: {integrity: sha512-9I2Zn6+NJLfaGoz9jN3lpwDgAYvfGeNYdbAIjJOqzs4Tpc+VU3Jqq4IofSUBKajiDS8k9fZIg18/z13mpk1bsA==}
     engines: {node: '>=8'}
-
-  '@matematika/contracts@file:packages/shared/contracts':
-    resolution: {directory: packages/shared/contracts, type: directory}
-
-  '@matematika/tsconfig@file:tooling/typescript':
-    resolution: {directory: tooling/typescript, type: directory}
 
   '@mdit/helper@1.2.0':
     resolution: {integrity: sha512-+Lh3nitlVclyxjD0LnOKPCyogVqL1W416FKOYjJSGDVlVKq9/jasQNOsUbjAvRwc+imgnFq1lsnat4q69UibIg==}
@@ -6367,12 +6370,6 @@ snapshots:
 
   '@lukeed/ms@2.0.2': {}
 
-  '@matematika/contracts@file:packages/shared/contracts':
-    dependencies:
-      zod: 4.6.7
-
-  '@matematika/tsconfig@file:tooling/typescript': {}
-
   '@mdit/helper@1.2.0(markdown-it@15.0.3)':
     optionalDependencies:
       markdown-it: 15.0.3
@@ -7423,7 +7420,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 4.1.12(@types/node@22.20.5)(@vitest/coverage-v8@4.1.12)(jsdom@30.1.3(@noble/hashes@1.8.0))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
+      vitest: 4.1.12(@types/node@24.19.2)(@vitest/coverage-v8@4.1.12)(jsdom@30.1.3(@noble/hashes@1.8.0))(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
 
   '@vitest/eslint-plugin@1.6.28(@typescript-eslint/eslint-plugin@8.72.1(@typescript-eslint/parser@8.72.1(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.14.0(jiti@2.7.0))(typescript@6.0.3)(vitest@4.1.12)':
     dependencies:
@@ -9152,7 +9149,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 22.20.5
+      '@types/node': 24.19.2
       merge-stream: 2.0.0
       supports-color: 8.1.1
     optional: true

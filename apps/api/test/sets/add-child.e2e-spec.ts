@@ -4,7 +4,7 @@ import { expectError, ids } from '../support/expect.js';
 import { buildSet, createProblem, createPublished, getProblem } from '../support/factory.js';
 import { malformedIds, seed, unknownId } from '../support/seed.js';
 
-// addSetChild — POST /problems/{id}/children           
+// addSetChild — POST /problems/{id}/children
 // Spec 2.0.0: the set's author. `id` = a set, or a standalone problem that becomes a set with its first child.
 //   problemId  = MOVE your own PRIVATE standalone problem (not a set) in: same record, no copy.
 //   copyFromId = COPY any problem you can see (not a set) in: a new record, usual copy rules.
@@ -20,7 +20,8 @@ import { malformedIds, seed, unknownId } from '../support/seed.js';
 describe('addSetChild POST /problems/{id}/children', () => {
   const ctx = useTestApp();
   const P = seed.problems;
-  const add = (who: 'jan' | 'eva' | 'petr', setId: string, body: object) => ctx().api.as(who).post(`/problems/${setId}/children`, body);
+  const add = (who: 'jan' | 'eva' | 'petr', setId: string, body: object) =>
+    ctx().api.as(who).post(`/problems/${setId}/children`, body);
 
   describe('move your own problem in (problemId)', () => {
     it('keeps the id, creates no record, sets parentId; returns the whole set', async () => {
@@ -34,7 +35,12 @@ describe('addSetChild POST /problems/{id}/children', () => {
       expect(res.body).toMatchObject({ id: set.id, childCount: 1, parentId: null });
       expect(ids(res.body.children)).toEqual([p.id]);
       expect(await store.countRecords('problems', undefined, { includeDeleted: true })).toBe(before);
-      await store.expectRecord('problems', p.id, { parentId: store.toDbId(set.id), authorId: users.eva.id, tagIds: [3], originalProblemId: null });
+      await store.expectRecord('problems', p.id, {
+        parentId: store.toDbId(set.id),
+        authorId: users.eva.id,
+        tagIds: [3],
+        originalProblemId: null,
+      });
       expect((await getProblem(api, 'eva', p.id)).parentId).toBe(set.id);
     });
 
@@ -63,7 +69,11 @@ describe('addSetChild POST /problems/{id}/children', () => {
       const set = await createPublished(api, 'jan', seed.licenses.ccBy);
       const p = await createProblem(api, 'jan'); // PRIVATE, no licence
       await add('jan', set.id, { lockVersion: set.lockVersion, problemId: p.id }).expect(200);
-      await store.expectRecord('problems', p.id, { publishStatus: 'PUBLISHED', parentId: store.toDbId(set.id), source: { licenseId: 2 } });
+      await store.expectRecord('problems', p.id, {
+        publishStatus: 'PUBLISHED',
+        parentId: store.toDbId(set.id),
+        source: { licenseId: 2 },
+      });
     });
   });
 
@@ -93,8 +103,16 @@ describe('addSetChild POST /problems/{id}/children', () => {
       const { api, store } = ctx();
       const set = await createProblem(api, 'eva');
       const res = await add('eva', set.id, { lockVersion: 1, copyFromId: P.circle }).expect(200);
-      expect(res.body.children[0].source).toMatchObject({ type: 'LICENSED_USE', citation: 'Převzato od: Jan Novák', license: { id: seed.licenses.ccBy } });
-      await store.expectRecord('problems', res.body.children[0].id, { tagIds: [3], chapterIds: [3], source: { originType: 'LICENSED_USE', licenseId: 2 } });
+      expect(res.body.children[0].source).toMatchObject({
+        type: 'LICENSED_USE',
+        citation: 'Převzato od: Jan Novák',
+        license: { id: seed.licenses.ccBy },
+      });
+      await store.expectRecord('problems', res.body.children[0].id, {
+        tagIds: [3],
+        chapterIds: [3],
+        source: { originType: 'LICENSED_USE', licenseId: 2 },
+      });
     });
 
     it('your own published problem can be copied in (it is not moved)', async () => {
@@ -132,7 +150,9 @@ describe('addSetChild POST /problems/{id}/children', () => {
     it('afterId null → first', async () => {
       const { set, children } = await threeChildren();
       const p = await createProblem(ctx().api, 'eva');
-      const res = await add('eva', set.id, { lockVersion: set.lockVersion, problemId: p.id, afterId: null }).expect(200);
+      const res = await add('eva', set.id, { lockVersion: set.lockVersion, problemId: p.id, afterId: null }).expect(
+        200,
+      );
       expect(ids(res.body.children)).toEqual([p.id, ...children]);
     });
 
@@ -140,7 +160,11 @@ describe('addSetChild POST /problems/{id}/children', () => {
       const { api, store } = ctx();
       const { set, children } = await threeChildren();
       const p = await createProblem(api, 'eva');
-      const res = await add('eva', set.id, { lockVersion: set.lockVersion, problemId: p.id, afterId: children[0] }).expect(200);
+      const res = await add('eva', set.id, {
+        lockVersion: set.lockVersion,
+        problemId: p.id,
+        afterId: children[0],
+      }).expect(200);
       const expected = [children[0], p.id, children[1], children[2]];
       expect(ids(res.body.children)).toEqual(expected);
       expect((await store.children(set.id)).map((c) => c.id)).toEqual(expected.map((id) => store.toDbId(id)));
@@ -148,7 +172,11 @@ describe('addSetChild POST /problems/{id}/children', () => {
 
     it('afterId = the last child → at the end', async () => {
       const { set, children } = await threeChildren();
-      const res = await add('eva', set.id, { lockVersion: set.lockVersion, copyFromId: P.circle, afterId: children[2] }).expect(200);
+      const res = await add('eva', set.id, {
+        lockVersion: set.lockVersion,
+        copyFromId: P.circle,
+        afterId: children[2],
+      }).expect(200);
       expect(ids(res.body.children).slice(0, 3)).toEqual(children);
       expect(res.body.children).toHaveLength(4);
     });
@@ -211,11 +239,23 @@ describe('addSetChild POST /problems/{id}/children', () => {
     // Each case arranges its own target (a fresh standalone problem of `who`) and the request body.
     type Case = (target: string) => Promise<object>;
     const cases: [string, 'jan' | 'eva', Case][] = [
-      ['move: the problem is already in a set', 'eva', async () => ({ problemId: (await buildSet(ctx().api, 'eva', 1)).children[0] })],
+      [
+        'move: the problem is already in a set',
+        'eva',
+        async () => ({ problemId: (await buildSet(ctx().api, 'eva', 1)).children[0] }),
+      ],
       ['move: the problem is a set', 'eva', async () => ({ problemId: (await buildSet(ctx().api, 'eva', 1)).set.id })],
       ['move: the problem is the target itself', 'eva', async (target) => ({ problemId: target })],
-      ['move: not your problem (another teacher’s published problem)', 'eva', async () => ({ problemId: seed.problems.circle })],
-      ['move: your own problem, but not PRIVATE', 'jan', async () => ({ problemId: (await createPublished(ctx().api, 'jan', seed.licenses.cc0)).id })],
+      [
+        'move: not your problem (another teacher’s published problem)',
+        'eva',
+        async () => ({ problemId: seed.problems.circle }),
+      ],
+      [
+        'move: your own problem, but not PRIVATE',
+        'jan',
+        async () => ({ problemId: (await createPublished(ctx().api, 'jan', seed.licenses.cc0)).id }),
+      ],
       ['copy: the problem is a set', 'eva', async () => ({ copyFromId: (await buildSet(ctx().api, 'eva', 1)).set.id })],
       ['copy: the problem is the target itself', 'eva', async (target) => ({ copyFromId: target })],
     ];
@@ -234,7 +274,11 @@ describe('addSetChild POST /problems/{id}/children', () => {
       const { api, store } = ctx();
       const set = await createPublished(api, 'jan', seed.licenses.ccBy);
       const count = await store.countRecords('problems');
-      expectError(await add('jan', set.id, { lockVersion: set.lockVersion, copyFromId: P.textbook }), 409, 'LICENSE_REQUIRED');
+      expectError(
+        await add('jan', set.id, { lockVersion: set.lockVersion, copyFromId: P.textbook }),
+        409,
+        'LICENSE_REQUIRED',
+      );
       expect(await store.countRecords('problems')).toBe(count);
       expect(await store.children(set.id)).toEqual([]);
     });
@@ -242,7 +286,11 @@ describe('addSetChild POST /problems/{id}/children', () => {
 
   describe('auth and ownership', () => {
     it('401 without a token', async () => {
-      expectError(await ctx().api.post(`/problems/${P.set}/children`, { lockVersion: 3, copyFromId: P.circle }), 401, 'UNAUTHENTICATED');
+      expectError(
+        await ctx().api.post(`/problems/${P.set}/children`, { lockVersion: 3, copyFromId: P.circle }),
+        401,
+        'UNAUTHENTICATED',
+      );
     });
 
     it('403 FORBIDDEN on another teacher’s PUBLISHED problem; nothing changes', async () => {
@@ -258,7 +306,12 @@ describe('addSetChild POST /problems/{id}/children', () => {
 
     it('404 NOT_FOUND for an unknown or malformed set id', async () => {
       expectError(await add('jan', unknownId, { lockVersion: 1, copyFromId: P.circle }), 404, 'NOT_FOUND');
-      for (const bad of malformedIds) expectError(await add('jan', encodeURIComponent(bad), { lockVersion: 1, copyFromId: P.circle }), 404, 'NOT_FOUND');
+      for (const bad of malformedIds)
+        expectError(
+          await add('jan', encodeURIComponent(bad), { lockVersion: 1, copyFromId: P.circle }),
+          404,
+          'NOT_FOUND',
+        );
     });
 
     it('petr (registered) may build his own private sets', async () => {

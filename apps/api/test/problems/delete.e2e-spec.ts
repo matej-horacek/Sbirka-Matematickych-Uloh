@@ -50,7 +50,8 @@ describe('deleteProblem DELETE /problems/{id}', () => {
       await store.expectDeleted('problems', P.childA);
       await store.expectDeleted('problems', P.childB);
       expect(await store.countRecords('problems')).toBe(aliveBefore - 3);
-      for (const id of [P.set, P.childA, P.childB]) expectError(await api.as('jan').get(`/problems/${id}`), 404, 'NOT_FOUND');
+      for (const id of [P.set, P.childA, P.childB])
+        expectError(await api.as('jan').get(`/problems/${id}`), 404, 'NOT_FOUND');
     });
   });
 
@@ -96,7 +97,13 @@ describe('deleteProblem DELETE /problems/{id}', () => {
       expectError(await ctx().api.as('jan').delete(`/problems/${unknownId}`), 404, 'NOT_FOUND');
     });
     it.each(malformedIds)('404 (never 500) for the malformed id "%s"', async (bad) => {
-      expectError(await ctx().api.as('jan').delete(`/problems/${encodeURIComponent(bad)}`), 404, 'NOT_FOUND');
+      expectError(
+        await ctx()
+          .api.as('jan')
+          .delete(`/problems/${encodeURIComponent(bad)}`),
+        404,
+        'NOT_FOUND',
+      );
     });
   });
 });

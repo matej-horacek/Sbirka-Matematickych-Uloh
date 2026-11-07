@@ -22,7 +22,8 @@ export class ProblemSetsService {
   /** Children become standalone PRIVATE problems; the parent is soft-deleted. */
   async dissolve(parent: ProblemRow, children: ProblemRow[]): Promise<ProblemRow[]> {
     const freed: ProblemRow[] = [];
-    for (const c of children) freed.push(await this.repo.update(c.id, { parentId: null, position: null, publishStatus: 'PRIVATE' }));
+    for (const c of children)
+      freed.push(await this.repo.update(c.id, { parentId: null, position: null, publishStatus: 'PRIVATE' }));
     await this.repo.softDelete([parent.id]);
     return freed;
   }
@@ -65,7 +66,10 @@ export class ProblemSetsService {
         throw ApiError.conflict(ErrorCode.CANNOT_ADD_TO_SET, 'This problem is already in a set.');
       }
       if (source.publishStatus !== 'PRIVATE') {
-        throw ApiError.conflict(ErrorCode.CANNOT_ADD_TO_SET, 'Only a private problem can be moved into a set. Copy it instead.');
+        throw ApiError.conflict(
+          ErrorCode.CANNOT_ADD_TO_SET,
+          'Only a private problem can be moved into a set. Copy it instead.',
+        );
       }
     }
 
@@ -87,7 +91,10 @@ export class ProblemSetsService {
     if (published) {
       licenseId = licenseId ?? set.source.licenseId;
       if (licenseId !== null && !(await this.licenses.findById(licenseId))?.allowsPublication) {
-        throw ApiError.conflict(ErrorCode.LICENSE_REQUIRED, `"${source.name}" has a licence that does not allow publication.`);
+        throw ApiError.conflict(
+          ErrorCode.LICENSE_REQUIRED,
+          `"${source.name}" has a licence that does not allow publication.`,
+        );
       }
     }
 
@@ -113,7 +120,12 @@ export class ProblemSetsService {
    * reorderSetChild: `set` is the caller's own problem. Order of checks: child belongs to the set (404),
    * afterId (400), lock (409). Returns `accepted: true` for the 202 path (nothing stored).
    */
-  async reorderChild(user: CurrentUserData, set: ProblemRow, childId: number, body: ReorderChildRequest): Promise<{ accepted: boolean }> {
+  async reorderChild(
+    user: CurrentUserData,
+    set: ProblemRow,
+    childId: number,
+    body: ReorderChildRequest,
+  ): Promise<{ accepted: boolean }> {
     const children = await this.repo.findChildren(set.id);
     if (!children.some((c) => c.id === childId)) throw ApiError.notFound();
 
@@ -142,11 +154,19 @@ export class ProblemSetsService {
    * removeSetChild: the set's lockVersion comes from If-Match (412 on a mismatch).
    * The child is not deleted: it becomes a standalone PRIVATE problem.
    */
-  async removeChild(user: CurrentUserData, set: ProblemRow, childId: number, lockVersion: number): Promise<{ accepted: boolean }> {
+  async removeChild(
+    user: CurrentUserData,
+    set: ProblemRow,
+    childId: number,
+    lockVersion: number,
+  ): Promise<{ accepted: boolean }> {
     const child = (await this.repo.findChildren(set.id)).find((c) => c.id === childId);
     if (!child) throw ApiError.notFound();
     if (lockVersion !== set.lockVersion) {
-      throw ApiError.preconditionFailed(ErrorCode.LOCK_MISMATCH, 'Someone saved this set in between. Reload and try again.');
+      throw ApiError.preconditionFailed(
+        ErrorCode.LOCK_MISMATCH,
+        'Someone saved this set in between. Reload and try again.',
+      );
     }
     if (this.needsReview(user, set)) return { accepted: true };
 

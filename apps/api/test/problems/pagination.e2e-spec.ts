@@ -14,7 +14,10 @@ describe('Pagination and filter edge cases (listProblems, listTags)', () => {
   beforeAll(async () => {
     const { api } = ctx();
     for (let i = 0; i < N - 2; i++) {
-      await createProblem(api, 'eva', { tagIds: i % 2 ? [seed.tags.linear] : [seed.tags.geometry], language: i % 3 ? 'cs' : 'sk' });
+      await createProblem(api, 'eva', {
+        tagIds: i % 2 ? [seed.tags.linear] : [seed.tags.geometry],
+        language: i % 3 ? 'cs' : 'sk',
+      });
     }
   });
 
@@ -23,7 +26,8 @@ describe('Pagination and filter edge cases (listProblems, listTags)', () => {
     const first = await api.as('eva').get(`/problems?${query}&limit=${limit}&page=1`).expect(200);
     const pages = [first.body];
     const count = Math.ceil(first.body.meta.total / limit);
-    for (let page = 2; page <= count; page++) pages.push((await api.as('eva').get(`/problems?${query}&limit=${limit}&page=${page}`).expect(200)).body);
+    for (let page = 2; page <= count; page++)
+      pages.push((await api.as('eva').get(`/problems?${query}&limit=${limit}&page=${page}`).expect(200)).body);
     return pages;
   }
 
@@ -67,7 +71,9 @@ describe('Pagination and filter edge cases (listProblems, listTags)', () => {
   });
 
   it('filters and pagination combine: total counts the filtered set, pages split it', async () => {
-    const filtered = (await ctx().api.as('eva').get(`/problems?scope=mine&tagId=${seed.tags.linear}&language=cs&limit=100`).expect(200)).body;
+    const filtered = (
+      await ctx().api.as('eva').get(`/problems?scope=mine&tagId=${seed.tags.linear}&language=cs&limit=100`).expect(200)
+    ).body;
     expect(filtered.meta.total).toBeGreaterThan(0);
     expect(filtered.meta.total).toBeLessThan(N);
     const pages = await allPages(2, `scope=mine&tagId=${seed.tags.linear}&language=cs`);
@@ -76,7 +82,10 @@ describe('Pagination and filter edge cases (listProblems, listTags)', () => {
   });
 
   it('a combined filter that matches nothing gives an empty first page with total 0', async () => {
-    const res = await ctx().api.as('eva').get(`/problems?scope=mine&tagId=${seed.tags.quadratic}&language=sk`).expect(200);
+    const res = await ctx()
+      .api.as('eva')
+      .get(`/problems?scope=mine&tagId=${seed.tags.quadratic}&language=sk`)
+      .expect(200);
     expect(res.body).toEqual({ items: [], meta: { page: 1, limit: 20, total: 0 } });
   });
 

@@ -19,7 +19,10 @@ describe('requests.http (baseline scenarios, in file order)', () => {
   it('2. Public browser, filtered by chapter (includes child chapters)', async () => {
     // requests.http uses chapterId=UkLWZ ("Rovnice"); no PUBLISHED problem is in it or its children,
     // so 0 items is correct (the baseline note from T1.3 is explained, not a bug).
-    const res = await ctx().api.as('eva').get(`/problems?scope=public&chapterId=${seed.chapters.equations}`).expect(200);
+    const res = await ctx()
+      .api.as('eva')
+      .get(`/problems?scope=public&chapterId=${seed.chapters.equations}`)
+      .expect(200);
     expect(res.body.items).toEqual([]);
   });
 
@@ -35,18 +38,43 @@ describe('requests.http (baseline scenarios, in file order)', () => {
     const mk = async (body: object) => (await api.as('jan').post('/problems', body).expect(201)).body;
     const a = await mk({ name: 'Rovnice a)', assignment: '2x + 3 = 11', result: 'x = 4' });
     const b = await mk({ name: 'Rovnice b)', assignment: 'x^2 = 9' });
-    const set = await mk({ name: 'Řešte rovnice', assignment: 'Vyřešte rovnice:', tagIds: [seed.tags.linear], chapterIds: [seed.chapters.equations] });
+    const set = await mk({
+      name: 'Řešte rovnice',
+      assignment: 'Vyřešte rovnice:',
+      tagIds: [seed.tags.linear],
+      chapterIds: [seed.chapters.equations],
+    });
 
-    let r = await api.as('jan').post(`/problems/${set.id}/children`, { lockVersion: set.lockVersion, problemId: a.id }).expect(200);
-    r = await api.as('jan').post(`/problems/${set.id}/children`, { lockVersion: r.body.lockVersion, copyFromId: P.pythagoras, afterId: null }).expect(200);
+    let r = await api
+      .as('jan')
+      .post(`/problems/${set.id}/children`, { lockVersion: set.lockVersion, problemId: a.id })
+      .expect(200);
+    r = await api
+      .as('jan')
+      .post(`/problems/${set.id}/children`, {
+        lockVersion: r.body.lockVersion,
+        copyFromId: P.pythagoras,
+        afterId: null,
+      })
+      .expect(200);
     const copyId = r.body.children[0].id;
-    r = await api.as('jan').post(`/problems/${set.id}/children`, { lockVersion: r.body.lockVersion, problemId: b.id, afterId: a.id }).expect(200);
+    r = await api
+      .as('jan')
+      .post(`/problems/${set.id}/children`, { lockVersion: r.body.lockVersion, problemId: b.id, afterId: a.id })
+      .expect(200);
     expect(r.body.children.map((c: { id: string }) => c.id)).toEqual([copyId, a.id, b.id]);
 
-    r = await api.as('jan').patch(`/problems/${set.id}/children/${copyId}`, { lockVersion: r.body.lockVersion, afterId: b.id }).expect(200);
+    r = await api
+      .as('jan')
+      .patch(`/problems/${set.id}/children/${copyId}`, { lockVersion: r.body.lockVersion, afterId: b.id })
+      .expect(200);
     expect(r.body.children.map((c: { id: string }) => c.id)).toEqual([a.id, b.id, copyId]);
 
-    r = await api.as('jan').delete(`/problems/${set.id}/children/${a.id}`).set('If-Match', `"${r.body.lockVersion}"`).expect(200);
+    r = await api
+      .as('jan')
+      .delete(`/problems/${set.id}/children/${a.id}`)
+      .set('If-Match', `"${r.body.lockVersion}"`)
+      .expect(200);
     expect(r.body.children.map((c: { id: string }) => c.id)).toEqual([b.id, copyId]);
     await store.expectRecord('problems', a.id, { parentId: null, publishStatus: 'PRIVATE' });
   });

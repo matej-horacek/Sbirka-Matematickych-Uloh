@@ -39,7 +39,14 @@ try {
     const parts = text.replace(/\r\n/g, '\n').split(/\n(?=export )/);
     for (const part of parts) {
       const m = part.match(/^export (?:type|const|interface|enum) (\w+)/);
-      if (m) map.set(m[1], part.replace(/\/\*\*[\s\S]*?\*\//g, '').replace(/\s+/g, ' ').trim());
+      if (m)
+        map.set(
+          m[1],
+          part
+            .replace(/\/\*\*[\s\S]*?\*\//g, '')
+            .replace(/\s+/g, ' ')
+            .trim(),
+        );
     }
     return map;
   };
@@ -58,7 +65,9 @@ try {
     console.log(`changed (${changed.length}): ${changed.join(', ') || '-'}`);
     if (showDiff && (removed.length || added.length || changed.length)) {
       try {
-        execSync(`git diff --no-index --stat --patch -- "${join(current, file)}" "${join(out, file)}"`, { stdio: 'inherit' });
+        execSync(`git diff --no-index --stat --patch -- "${join(current, file)}" "${join(out, file)}"`, {
+          stdio: 'inherit',
+        });
       } catch {
         // git diff --no-index exits 1 when files differ
       }

@@ -69,7 +69,8 @@ function walk(schema: Json): Json {
 
 function strictSpec(spec: Json): Json {
   const copy: Json = structuredClone(spec);
-  for (const [name, s] of Object.entries(copy.components?.schemas ?? {})) copy.components.schemas[name] = walk(s as Json);
+  for (const [name, s] of Object.entries(copy.components?.schemas ?? {}))
+    copy.components.schemas[name] = walk(s as Json);
   const fixContent = (content: Json | undefined) => {
     for (const media of Object.values(content ?? {}) as Json[]) if (media.schema) media.schema = walk(media.schema);
   };
@@ -89,7 +90,8 @@ export class Contract {
   readonly spec: Json;
   private readonly ajv: Ajv2019;
   private readonly validators = new Map<string, ValidateFunction>();
-  private readonly routes: { method: Method; template: string; regex: RegExp; names: string[]; operationId: string }[] = [];
+  private readonly routes: { method: Method; template: string; regex: RegExp; names: string[]; operationId: string }[] =
+    [];
 
   constructor(specPath = SPEC_PATH) {
     // Spec 2.0.0 has many YAML aliases; the default alias limit rejects it (R-001).
@@ -101,9 +103,12 @@ export class Contract {
     for (const [template, item] of Object.entries(this.spec.paths as Json)) {
       const names: string[] = [];
       const regex = new RegExp(
-        '^' + template.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{(\w+)\}/g, (_, n) => (names.push(n), '([^/]+)')) + '$',
+        '^' +
+          template.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{(\w+)\}/g, (_, n) => (names.push(n), '([^/]+)')) +
+          '$',
       );
-      for (const m of METHODS) if (item[m]) this.routes.push({ method: m, template, regex, names, operationId: item[m].operationId });
+      for (const m of METHODS)
+        if (item[m]) this.routes.push({ method: m, template, regex, names, operationId: item[m].operationId });
     }
     // Literal segments win over templates (e.g. a future /problems/search over /problems/{id}).
     this.routes.sort((a, b) => (a.template.match(/\{/g)?.length ?? 0) - (b.template.match(/\{/g)?.length ?? 0));
@@ -145,11 +150,18 @@ export class Contract {
     const { op, path: template, method: m } = this.operation(match.operationId);
     const label = `${match.operationId} (${m.toUpperCase()} ${template}) → ${res.status}`;
 
-    const declared = op.responses?.[String(res.status)] ?? op.responses?.[`${String(res.status)[0]}XX`] ?? op.responses?.default;
+    const declared =
+      op.responses?.[String(res.status)] ?? op.responses?.[`${String(res.status)[0]}XX`] ?? op.responses?.default;
     if (!declared) {
-      return [`${label}: status ${res.status} is not declared in the spec (declared: ${Object.keys(op.responses ?? {}).join(', ')})`];
+      return [
+        `${label}: status ${res.status} is not declared in the spec (declared: ${Object.keys(op.responses ?? {}).join(', ')})`,
+      ];
     }
-    const statusKey = op.responses[String(res.status)] ? String(res.status) : op.responses[`${String(res.status)[0]}XX`] ? `${String(res.status)[0]}XX` : 'default';
+    const statusKey = op.responses[String(res.status)]
+      ? String(res.status)
+      : op.responses[`${String(res.status)[0]}XX`]
+        ? `${String(res.status)[0]}XX`
+        : 'default';
     let responsePath: (string | number)[] = ['paths', template, m, 'responses', statusKey];
     let response: Json = declared;
     if (response.$ref) {
@@ -158,21 +170,31 @@ export class Contract {
       responsePath = ['components', 'responses', name];
     }
 
-    const contentType = String(res.headers['content-type'] ?? '').split(';')[0].trim();
-    const hasBody = res.text !== undefined ? res.text.length > 0 : res.body !== undefined && res.body !== null && !(typeof res.body === 'object' && Object.keys(res.body as object).length === 0);
+    const contentType = String(res.headers['content-type'] ?? '')
+      .split(';')[0]
+      .trim();
+    const hasBody =
+      res.text !== undefined
+        ? res.text.length > 0
+        : res.body !== undefined &&
+          res.body !== null &&
+          !(typeof res.body === 'object' && Object.keys(res.body as object).length === 0);
     if (!response.content) {
       return hasBody ? [`${label}: the spec declares no body, but the response has one (${contentType})`] : [];
     }
     const media = response.content[contentType];
     if (!media) {
-      return [`${label}: content type "${contentType || '(none)'}" is not declared (declared: ${Object.keys(response.content).join(', ')})`];
+      return [
+        `${label}: content type "${contentType || '(none)'}" is not declared (declared: ${Object.keys(response.content).join(', ')})`,
+      ];
     }
     if (!media.schema) return [];
     const validate = this.validator([...responsePath, 'content', contentType, 'schema']);
     if (validate(res.body)) return [];
     return (validate.errors ?? []).map((e) => {
       const extra = e.params && 'unevaluatedProperty' in e.params ? ` "${(e.params as Json).unevaluatedProperty}"` : '';
-      const allowed = e.params && 'allowedValues' in e.params ? ` ${JSON.stringify((e.params as Json).allowedValues)}` : '';
+      const allowed =
+        e.params && 'allowedValues' in e.params ? ` ${JSON.stringify((e.params as Json).allowedValues)}` : '';
       return `${label}: body${e.instancePath || ''} ${e.message}${extra}${allowed}`;
     });
   }

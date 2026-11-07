@@ -38,7 +38,11 @@ export interface CountOptions {
 
 export interface StoreProbe {
   /** Asserts the row exists (and is not soft-deleted) and matches `fields` (toMatchObject). Returns it. */
-  expectRecord<C extends Collection>(collection: C, id: Id, fields?: Partial<Rows[C]> | Record<string, unknown>): Promise<Rows[C]>;
+  expectRecord<C extends Collection>(
+    collection: C,
+    id: Id,
+    fields?: Partial<Rows[C]> | Record<string, unknown>,
+  ): Promise<Rows[C]>;
   /** Asserts that no row with this id exists at all (not even soft-deleted). */
   expectNoRecord(collection: Collection, id: Id): Promise<void>;
   /** Asserts the row exists but is soft-deleted (problems). */
@@ -68,7 +72,9 @@ export class MockStoreProbe implements StoreProbe {
   }
 
   private static isDeleted(row: unknown): boolean {
-    return !!row && typeof row === 'object' && 'deletedAt' in row && (row as { deletedAt: Date | null }).deletedAt !== null;
+    return (
+      !!row && typeof row === 'object' && 'deletedAt' in row && (row as { deletedAt: Date | null }).deletedAt !== null
+    );
   }
 
   async find<C extends Collection>(collection: C, id: Id): Promise<Rows[C] | undefined> {
@@ -78,9 +84,14 @@ export class MockStoreProbe implements StoreProbe {
 
   async expectRecord<C extends Collection>(collection: C, id: Id, fields?: Partial<Rows[C]> | Record<string, unknown>) {
     const row = await this.find(collection, id);
-    if (!row) throw new Error(`StoreProbe: expected ${collection} #${this.toDbId(id)} (${id}) to exist, but there is no such row`);
+    if (!row)
+      throw new Error(
+        `StoreProbe: expected ${collection} #${this.toDbId(id)} (${id}) to exist, but there is no such row`,
+      );
     if (MockStoreProbe.isDeleted(row)) {
-      throw new Error(`StoreProbe: expected ${collection} #${this.toDbId(id)} (${id}) to exist, but it is soft-deleted`);
+      throw new Error(
+        `StoreProbe: expected ${collection} #${this.toDbId(id)} (${id}) to exist, but it is soft-deleted`,
+      );
     }
     if (fields) expect(row).toMatchObject(fields);
     return row;
@@ -93,8 +104,14 @@ export class MockStoreProbe implements StoreProbe {
 
   async expectDeleted(collection: 'problems', id: Id) {
     const row = await this.find(collection, id);
-    if (!row) throw new Error(`StoreProbe: expected ${collection} #${this.toDbId(id)} to be soft-deleted, but there is no such row`);
-    if (!MockStoreProbe.isDeleted(row)) throw new Error(`StoreProbe: expected ${collection} #${this.toDbId(id)} to be soft-deleted, but deletedAt is null`);
+    if (!row)
+      throw new Error(
+        `StoreProbe: expected ${collection} #${this.toDbId(id)} to be soft-deleted, but there is no such row`,
+      );
+    if (!MockStoreProbe.isDeleted(row))
+      throw new Error(
+        `StoreProbe: expected ${collection} #${this.toDbId(id)} to be soft-deleted, but deletedAt is null`,
+      );
     return row;
   }
 
@@ -104,16 +121,22 @@ export class MockStoreProbe implements StoreProbe {
         ? () => true
         : typeof where === 'function'
           ? where
-          : (row: Rows[C]) => Object.entries(where).every(([k, v]) => isEqual((row as unknown as Record<string, unknown>)[k], v));
-    return this.rows(collection).filter((r) => (options.includeDeleted || !MockStoreProbe.isDeleted(r)) && match(r)).length;
+          : (row: Rows[C]) =>
+              Object.entries(where).every(([k, v]) => isEqual((row as unknown as Record<string, unknown>)[k], v));
+    return this.rows(collection).filter((r) => (options.includeDeleted || !MockStoreProbe.isDeleted(r)) && match(r))
+      .length;
   }
 
   async children(parentId: Id) {
     const pid = this.toDbId(parentId);
-    return this.rows('problems')
-      .filter((p) => p.parentId === pid && p.deletedAt === null)
-      // Byte order, like fractional-indexing keys and Postgres text with C collation (not localeCompare: R-020).
-      .sort((a, b) => ((a.position ?? '') < (b.position ?? '') ? -1 : (a.position ?? '') > (b.position ?? '') ? 1 : 0));
+    return (
+      this.rows('problems')
+        .filter((p) => p.parentId === pid && p.deletedAt === null)
+        // Byte order, like fractional-indexing keys and Postgres text with C collation (not localeCompare: R-020).
+        .sort((a, b) =>
+          (a.position ?? '') < (b.position ?? '') ? -1 : (a.position ?? '') > (b.position ?? '') ? 1 : 0,
+        )
+    );
   }
 }
 

@@ -34,7 +34,12 @@ async function main() {
   for (const u of users) {
     created.push(
       await prisma.user.create({
-        data: { ...u, email: `${u.username}@example.test`, password_hash: PLACEHOLDER_PASSWORD_HASH, language_id: cs.id },
+        data: {
+          ...u,
+          email: `${u.username}@example.test`,
+          password_hash: PLACEHOLDER_PASSWORD_HASH,
+          language_id: cs.id,
+        },
       }),
     );
   }

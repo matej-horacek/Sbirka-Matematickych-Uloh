@@ -23,7 +23,9 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
   /** Jan's new published original + Eva's copy of it. */
   async function originalAndCopy(api: Api) {
     const created = await createProblem(api, 'jan', { result: 'r1', difficulty: 2, tagIds: [seed.tags.geometry] });
-    const original = (await api.as('jan').post(`/problems/${created.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)).body;
+    const original = (
+      await api.as('jan').post(`/problems/${created.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)
+    ).body;
     const copy = (await api.as('eva').post(`/problems/${original.id}/copy`).expect(201)).body;
     return { original, copy };
   }
@@ -31,7 +33,12 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
   /** Jan edits his original (trusted → applied, version + 1). */
   async function editOriginal(api: Api, id: string, fields: object) {
     const current = await getProblem(api, 'jan', id);
-    return (await api.as('jan').patch(`/problems/${id}`, { lockVersion: current.lockVersion, ...fields }).expect(200)).body;
+    return (
+      await api
+        .as('jan')
+        .patch(`/problems/${id}`, { lockVersion: current.lockVersion, ...fields })
+        .expect(200)
+    ).body;
   }
 
   describe('updateAvailable on read [R-007 not in mock]', () => {
@@ -68,7 +75,10 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
       // Eva's published Pythagoras; Jan copies it; Eva's edit goes to review (202) and changes nothing.
       const copy = (await api.as('jan').post(`/problems/${P.pythagoras}/copy`).expect(201)).body;
       const orig = await getProblem(api, 'eva', P.pythagoras);
-      await api.as('eva').patch(`/problems/${P.pythagoras}`, { lockVersion: orig.lockVersion, name: 'K revizi' }).expect(202);
+      await api
+        .as('eva')
+        .patch(`/problems/${P.pythagoras}`, { lockVersion: orig.lockVersion, name: 'K revizi' })
+        .expect(202);
       expect((await getProblem(api, 'jan', copy.id)).updateAvailable).toBe(false);
     });
 
@@ -76,7 +86,9 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
       const { api } = ctx();
       // Jan copies his own published original and publishes the copy, so Eva can see the copy.
       const created = await createProblem(api, 'jan');
-      const original = (await api.as('jan').post(`/problems/${created.id}/publish`, { licenseId: seed.licenses.cc0 }).expect(200)).body;
+      const original = (
+        await api.as('jan').post(`/problems/${created.id}/publish`, { licenseId: seed.licenses.cc0 }).expect(200)
+      ).body;
       const copy = (await api.as('jan').post(`/problems/${original.id}/copy`).expect(201)).body;
       await api.as('jan').post(`/problems/${copy.id}/publish`).expect(200);
       await editOriginal(api, original.id, { name: 'v2' });
@@ -123,7 +135,8 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
 
     it.skip('with limit=1, meta.total is the badge count [R-007 not in mock]', async () => {
       const { api } = ctx();
-      const before = (await api.as('eva').get('/problems?scope=mine&updateAvailable=true&limit=1').expect(200)).body.meta.total;
+      const before = (await api.as('eva').get('/problems?scope=mine&updateAvailable=true&limit=1').expect(200)).body
+        .meta.total;
       // Two new copies, only one of them gets an update: an ignored filter would count both.
       const a = await originalAndCopy(api);
       await originalAndCopy(api);
@@ -134,7 +147,11 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
     });
 
     it.skip('updateAvailable with scope=public → 400 VALIDATION_FAILED [R-007 not in mock]', async () => {
-      expectError(await ctx().api.as('eva').get('/problems?scope=public&updateAvailable=true'), 400, 'VALIDATION_FAILED');
+      expectError(
+        await ctx().api.as('eva').get('/problems?scope=public&updateAvailable=true'),
+        400,
+        'VALIDATION_FAILED',
+      );
     });
   });
 
@@ -142,23 +159,47 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
     it.skip('replaces the copy’s content with the original’s current version; updateAvailable becomes false [R-005 not in mock]', async () => {
       const { api, store } = ctx();
       const { original, copy } = await originalAndCopy(api);
-      const v2 = await editOriginal(api, original.id, { name: 'v2', assignment: 'zadání v2', result: null, language: 'sk', difficulty: 7 });
+      const v2 = await editOriginal(api, original.id, {
+        name: 'v2',
+        assignment: 'zadání v2',
+        result: null,
+        language: 'sk',
+        difficulty: 7,
+      });
 
-      const res = await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: copy.lockVersion }).expect(200);
+      const res = await api
+        .as('eva')
+        .post(`/problems/${copy.id}/take-over-update`, { lockVersion: copy.lockVersion })
+        .expect(200);
 
       expect(pickContent(res.body)).toEqual(pickContent(v2));
       expect(res.body.updateAvailable).toBe(false);
       expect(res.body.id).toBe(copy.id); // the same record, not a new copy
-      await store.expectRecord('problems', copy.id, { name: 'v2', assignment: 'zadání v2', result: null, languageCode: 'sk', difficulty: 7, authorId: 2 });
+      await store.expectRecord('problems', copy.id, {
+        name: 'v2',
+        assignment: 'zadání v2',
+        result: null,
+        languageCode: 'sk',
+        difficulty: 7,
+        authorId: 2,
+      });
       expect((await getProblem(api, 'eva', copy.id)).updateAvailable).toBe(false);
     });
 
     it.skip('overwrites the copy holder’s own edits [R-005 not in mock]', async () => {
       const { api } = ctx();
       const { original, copy } = await originalAndCopy(api);
-      const edited = (await api.as('eva').patch(`/problems/${copy.id}`, { lockVersion: copy.lockVersion, assignment: 'moje úprava' }).expect(200)).body;
+      const edited = (
+        await api
+          .as('eva')
+          .patch(`/problems/${copy.id}`, { lockVersion: copy.lockVersion, assignment: 'moje úprava' })
+          .expect(200)
+      ).body;
       await editOriginal(api, original.id, { name: 'v2' });
-      const res = await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: edited.lockVersion }).expect(200);
+      const res = await api
+        .as('eva')
+        .post(`/problems/${copy.id}/take-over-update`, { lockVersion: edited.lockVersion })
+        .expect(200);
       expect(res.body.assignment).toBe(original.assignment);
       expect(res.body.name).toBe('v2');
     });
@@ -167,9 +208,17 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
       const { api, store } = ctx();
       const { original, copy } = await originalAndCopy(api);
       const before = structuredClone(await store.expectRecord('problems', copy.id));
-      await editOriginal(api, original.id, { name: 'v2', tagIds: [seed.tags.linear], chapterIds: [seed.chapters.planimetry] });
+      await editOriginal(api, original.id, {
+        name: 'v2',
+        tagIds: [seed.tags.linear],
+        chapterIds: [seed.chapters.planimetry],
+      });
       await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: copy.lockVersion }).expect(200);
-      await store.expectRecord('problems', copy.id, { tagIds: before.tagIds, chapterIds: before.chapterIds, source: before.source });
+      await store.expectRecord('problems', copy.id, {
+        tagIds: before.tagIds,
+        chapterIds: before.chapterIds,
+        source: before.source,
+      });
     });
 
     it.skip('the original is unchanged by a take-over [R-005 not in mock]', async () => {
@@ -185,7 +234,9 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
       const { api, store } = ctx();
       const fresh = await (async () => {
         const { set } = await buildSet(api, 'jan', 2);
-        const pub = (await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)).body;
+        const pub = (
+          await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200)
+        ).body;
         const copy = (await api.as('eva').post(`/problems/${set.id}/copy`).expect(201)).body;
         return { set: pub, copy };
       })();
@@ -193,12 +244,17 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
       await editOriginal(api, fresh.set.id, { name: 'sada v2' });
       const originalChildren = (await getProblem(api, 'jan', fresh.set.id)).children;
 
-      const res = await api.as('eva').post(`/problems/${fresh.copy.id}/take-over-update`, { lockVersion: fresh.copy.lockVersion }).expect(200);
+      const res = await api
+        .as('eva')
+        .post(`/problems/${fresh.copy.id}/take-over-update`, { lockVersion: fresh.copy.lockVersion })
+        .expect(200);
 
       expect(res.body.children.map(pickContent)).toEqual(originalChildren.map(pickContent));
       for (const c of res.body.children) expect(oldChildIds).not.toContain(c.id); // fresh copies
       const kids = await store.children(fresh.copy.id);
-      expect(kids.map((k) => k.originalProblemId)).toEqual(originalChildren.map((c: { id: string }) => store.toDbId(c.id)));
+      expect(kids.map((k) => k.originalProblemId)).toEqual(
+        originalChildren.map((c: { id: string }) => store.toDbId(c.id)),
+      );
       for (const k of kids) expect(k.authorId).toBe(2);
     });
 
@@ -206,34 +262,57 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
       const { api, store } = ctx();
       const { original, copy } = await originalAndCopy(api);
       await editOriginal(api, original.id, { name: 'v2' });
-      expectError(await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: copy.lockVersion + 5 }), 409, 'LOCK_MISMATCH');
+      expectError(
+        await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: copy.lockVersion + 5 }),
+        409,
+        'LOCK_MISMATCH',
+      );
       await store.expectRecord('problems', copy.id, { name: copy.name });
     });
 
     it.skip('409 NO_UPDATE_AVAILABLE when there is no newer version [R-005 not in mock]', async () => {
       const { api } = ctx();
       const { copy } = await originalAndCopy(api);
-      expectError(await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: copy.lockVersion }), 409, 'NO_UPDATE_AVAILABLE');
+      expectError(
+        await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: copy.lockVersion }),
+        409,
+        'NO_UPDATE_AVAILABLE',
+      );
     });
 
     it.skip('409 NO_UPDATE_AVAILABLE on a problem that is not a copy [R-005 not in mock]', async () => {
       const { api } = ctx();
       const p = await createProblem(api, 'eva');
-      expectError(await api.as('eva').post(`/problems/${p.id}/take-over-update`, { lockVersion: 1 }), 409, 'NO_UPDATE_AVAILABLE');
+      expectError(
+        await api.as('eva').post(`/problems/${p.id}/take-over-update`, { lockVersion: 1 }),
+        409,
+        'NO_UPDATE_AVAILABLE',
+      );
     });
 
     it.skip('409 NO_UPDATE_AVAILABLE a second time (already taken over) [R-005 not in mock]', async () => {
       const { api } = ctx();
       const { original, copy } = await originalAndCopy(api);
       await editOriginal(api, original.id, { name: 'v2' });
-      const r = await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: copy.lockVersion }).expect(200);
-      expectError(await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: r.body.lockVersion }), 409, 'NO_UPDATE_AVAILABLE');
+      const r = await api
+        .as('eva')
+        .post(`/problems/${copy.id}/take-over-update`, { lockVersion: copy.lockVersion })
+        .expect(200);
+      expectError(
+        await api.as('eva').post(`/problems/${copy.id}/take-over-update`, { lockVersion: r.body.lockVersion }),
+        409,
+        'NO_UPDATE_AVAILABLE',
+      );
     });
 
     it.skip('409 IS_SET_CHILD on a set child [R-005 not in mock]', async () => {
       const { api } = ctx();
       const copy = (await api.as('jan').post(`/problems/${P.set}/copy`).expect(201)).body;
-      expectError(await api.as('jan').post(`/problems/${copy.children[0].id}/take-over-update`, { lockVersion: 1 }), 409, 'IS_SET_CHILD');
+      expectError(
+        await api.as('jan').post(`/problems/${copy.children[0].id}/take-over-update`, { lockVersion: 1 }),
+        409,
+        'IS_SET_CHILD',
+      );
     });
 
     it.skip('400 VALIDATION_FAILED without lockVersion [R-005 not in mock, SPEC_CHECK C-5]', async () => {
@@ -247,16 +326,32 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
     it.skip('ownership: 404 on another teacher’s private copy, 403 on a published one [R-005 not in mock]', async () => {
       const { api } = ctx();
       const { copy } = await originalAndCopy(api);
-      expectError(await api.as('jan').post(`/problems/${copy.id}/take-over-update`, { lockVersion: 1 }), 404, 'NOT_FOUND');
-      expectError(await api.as('eva').post(`/problems/${P.circle}/take-over-update`, { lockVersion: 1 }), 403, 'FORBIDDEN');
+      expectError(
+        await api.as('jan').post(`/problems/${copy.id}/take-over-update`, { lockVersion: 1 }),
+        404,
+        'NOT_FOUND',
+      );
+      expectError(
+        await api.as('eva').post(`/problems/${P.circle}/take-over-update`, { lockVersion: 1 }),
+        403,
+        'FORBIDDEN',
+      );
     });
 
     it.skip('401 without a token; 404 for unknown or malformed ids [R-005 not in mock]', async () => {
       const { api } = ctx();
       expectError(await api.post(`/problems/${P.circle}/take-over-update`, { lockVersion: 1 }), 401, 'UNAUTHENTICATED');
-      expectError(await api.as('eva').post(`/problems/${unknownId}/take-over-update`, { lockVersion: 1 }), 404, 'NOT_FOUND');
+      expectError(
+        await api.as('eva').post(`/problems/${unknownId}/take-over-update`, { lockVersion: 1 }),
+        404,
+        'NOT_FOUND',
+      );
       for (const bad of malformedIds) {
-        expectError(await api.as('eva').post(`/problems/${encodeURIComponent(bad)}/take-over-update`, { lockVersion: 1 }), 404, 'NOT_FOUND');
+        expectError(
+          await api.as('eva').post(`/problems/${encodeURIComponent(bad)}/take-over-update`, { lockVersion: 1 }),
+          404,
+          'NOT_FOUND',
+        );
       }
     });
   });
@@ -272,7 +367,10 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
 
       expect(res.body.updateAvailable).toBe(false);
       expect(pickContent(res.body)).toEqual(pickContent(before));
-      expect({ version: res.body.version, lockVersion: res.body.lockVersion }).toEqual({ version: before.version, lockVersion: before.lockVersion });
+      expect({ version: res.body.version, lockVersion: res.body.lockVersion }).toEqual({
+        version: before.version,
+        lockVersion: before.lockVersion,
+      });
       const after = await getProblem(api, 'eva', copy.id);
       expect(after.updateAvailable).toBe(false);
       expect(after.name).toBe(copy.name); // not taken over
@@ -315,7 +413,8 @@ describe('Copy updates: updateAvailable, takeOverUpdate, dismissUpdate', () => {
       const { api } = ctx();
       expectError(await api.post(`/problems/${P.circle}/dismiss-update`), 401, 'UNAUTHENTICATED');
       expectError(await api.as('eva').post(`/problems/${unknownId}/dismiss-update`), 404, 'NOT_FOUND');
-      for (const bad of malformedIds) expectError(await api.as('eva').post(`/problems/${encodeURIComponent(bad)}/dismiss-update`), 404, 'NOT_FOUND');
+      for (const bad of malformedIds)
+        expectError(await api.as('eva').post(`/problems/${encodeURIComponent(bad)}/dismiss-update`), 404, 'NOT_FOUND');
     });
   });
 });

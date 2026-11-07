@@ -10,15 +10,7 @@ import { TagsModule } from './modules/tags/tags.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
-  imports: [
-    DatabaseModule,
-    UsersModule,
-    LicensesModule,
-    TagsModule,
-    ChaptersModule,
-    ProblemsModule,
-    PublicationModule,
-  ],
+  imports: [DatabaseModule, UsersModule, LicensesModule, TagsModule, ChaptersModule, ProblemsModule, PublicationModule],
   // Every route needs a login (the spec's global bearerAuth).
   providers: [{ provide: APP_GUARD, useClass: MockAuthGuard }],
 })

@@ -60,7 +60,11 @@ export class PrismaProblemsRepository implements ProblemsRepository {
    * - page/limit → skip/take, and `total` = count of ALL matching rows (not just this page): use a transaction
    *   or Promise.all for findMany + count with the same `where`.
    */
-  async findMany(_filter: ProblemFilter, _page: number, _limit: number): Promise<{ rows: ProblemRow[]; total: number }> {
+  async findMany(
+    _filter: ProblemFilter,
+    _page: number,
+    _limit: number,
+  ): Promise<{ rows: ProblemRow[]; total: number }> {
     throw new NotImplementedException('TODO Daniel');
   }
 

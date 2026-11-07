@@ -16,7 +16,13 @@ import { ProblemsService } from './services/problems.service.js';
 @Module({
   imports: [UsersModule, TagsModule, ChaptersModule, LicensesModule],
   controllers: [ProblemsController],
-  providers: [repositoryProvider(PROBLEMS_REPOSITORY, MockProblemsRepository, PrismaProblemsRepository), ProblemRelationsService, ProblemCopiesService, ProblemSetsService, ProblemsService],
+  providers: [
+    repositoryProvider(PROBLEMS_REPOSITORY, MockProblemsRepository, PrismaProblemsRepository),
+    ProblemRelationsService,
+    ProblemCopiesService,
+    ProblemSetsService,
+    ProblemsService,
+  ],
   // Other modules get only the facade.
   exports: [ProblemsService],
 })

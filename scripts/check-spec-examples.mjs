@@ -60,7 +60,12 @@ function check(where, schemaPath, value) {
     where,
     schema: human(schemaPath),
     ok,
-    errors: ok ? [] : validate.errors.map((e) => `${e.instancePath || '(root)'} ${e.message}${e.params?.allowedValues ? ' ' + JSON.stringify(e.params.allowedValues) : ''}`),
+    errors: ok
+      ? []
+      : validate.errors.map(
+          (e) =>
+            `${e.instancePath || '(root)'} ${e.message}${e.params?.allowedValues ? ' ' + JSON.stringify(e.params.allowedValues) : ''}`,
+        ),
   });
 }
 
@@ -110,10 +115,14 @@ function walkResponse(resp, path) {
 }
 
 const METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
-for (const [name, schema] of Object.entries(spec.components?.schemas ?? {})) walkSchema(schema, ['components', 'schemas', name]);
-for (const [name, p] of Object.entries(spec.components?.parameters ?? {})) walkParameter(p, ['components', 'parameters', name]);
-for (const [name, r] of Object.entries(spec.components?.responses ?? {})) walkResponse(r, ['components', 'responses', name]);
-for (const [name, rb] of Object.entries(spec.components?.requestBodies ?? {})) walkMediaTypes(rb.content, ['components', 'requestBodies', name]);
+for (const [name, schema] of Object.entries(spec.components?.schemas ?? {}))
+  walkSchema(schema, ['components', 'schemas', name]);
+for (const [name, p] of Object.entries(spec.components?.parameters ?? {}))
+  walkParameter(p, ['components', 'parameters', name]);
+for (const [name, r] of Object.entries(spec.components?.responses ?? {}))
+  walkResponse(r, ['components', 'responses', name]);
+for (const [name, rb] of Object.entries(spec.components?.requestBodies ?? {}))
+  walkMediaTypes(rb.content, ['components', 'requestBodies', name]);
 for (const [route, item] of Object.entries(spec.paths ?? {})) {
   (item.parameters ?? []).forEach((p, i) => walkParameter(p, ['paths', route, 'parameters', i]));
   for (const method of METHODS) {
@@ -134,6 +143,8 @@ if (asJson) {
     console.log(`${r.ok ? 'ok  ' : 'FAIL'} ${r.where}`);
     for (const e of r.errors) console.log(`       ${e}`);
   }
-  console.log(`\n${results.length} examples checked, ${results.length - failed.length} valid, ${failed.length} invalid`);
+  console.log(
+    `\n${results.length} examples checked, ${results.length - failed.length} valid, ${failed.length} invalid`,
+  );
 }
 process.exit(failed.length ? 1 : 0);

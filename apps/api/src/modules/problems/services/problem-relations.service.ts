@@ -22,7 +22,8 @@ export class ProblemRelationsService {
   async chapterIds(userId: number, ids: string[] | undefined, field = 'chapterIds'): Promise<number[] | undefined> {
     if (ids === undefined) return undefined;
     const decoded = this.decodeAll(ids, field);
-    if ((await this.chapters.findNotUsable(userId, decoded)).length) throw ApiError.badRequest(`${field}: unknown chapter`);
+    if ((await this.chapters.findNotUsable(userId, decoded)).length)
+      throw ApiError.badRequest(`${field}: unknown chapter`);
     return decoded;
   }
 

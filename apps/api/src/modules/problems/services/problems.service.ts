@@ -109,7 +109,11 @@ export class ProblemsService {
   }
 
   /** Returns `accepted: true` when the change must wait for review (HTTP 202). */
-  async update(user: CurrentUserData, id: number, body: ProblemPatch): Promise<{ accepted: boolean; problem: ProblemDetail }> {
+  async update(
+    user: CurrentUserData,
+    id: number,
+    body: ProblemPatch,
+  ): Promise<{ accepted: boolean; problem: ProblemDetail }> {
     const row = await this.findOwn(user, id);
     if (row.parentId !== null) {
       throw ApiError.conflict(ErrorCode.IS_SET_CHILD, 'Edit a set child through its parent.');
@@ -168,21 +172,35 @@ export class ProblemsService {
   }
 
   /** addSetChild – the set's author. Returns the whole set; `accepted` means 202 (waiting for review). */
-  async addSetChild(user: CurrentUserData, id: number, body: AddChildRequest): Promise<{ accepted: boolean; problem: ProblemDetail }> {
+  async addSetChild(
+    user: CurrentUserData,
+    id: number,
+    body: AddChildRequest,
+  ): Promise<{ accepted: boolean; problem: ProblemDetail }> {
     const set = await this.findOwn(user, id);
     const { accepted } = await this.sets.addChild(user, set, body);
     return { accepted, problem: await this.detail((await this.repo.findById(id))!, user) };
   }
 
   /** reorderSetChild – the set's author. */
-  async reorderSetChild(user: CurrentUserData, id: number, childId: number, body: ReorderChildRequest): Promise<{ accepted: boolean; problem: ProblemDetail }> {
+  async reorderSetChild(
+    user: CurrentUserData,
+    id: number,
+    childId: number,
+    body: ReorderChildRequest,
+  ): Promise<{ accepted: boolean; problem: ProblemDetail }> {
     const set = await this.findOwn(user, id);
     const { accepted } = await this.sets.reorderChild(user, set, childId, body);
     return { accepted, problem: await this.detail((await this.repo.findById(id))!, user) };
   }
 
   /** removeSetChild – the set's author; the lock comes from the If-Match header. */
-  async removeSetChild(user: CurrentUserData, id: number, childId: number, ifMatch: string | undefined): Promise<{ accepted: boolean; problem: ProblemDetail }> {
+  async removeSetChild(
+    user: CurrentUserData,
+    id: number,
+    childId: number,
+    ifMatch: string | undefined,
+  ): Promise<{ accepted: boolean; problem: ProblemDetail }> {
     const set = await this.findOwn(user, id);
     const { accepted } = await this.sets.removeChild(user, set, childId, parseIfMatch(ifMatch));
     return { accepted, problem: await this.detail((await this.repo.findById(id))!, user) };
@@ -191,7 +209,10 @@ export class ProblemsService {
   // ---------- facade for other modules (publication) ----------
 
   /** The caller's own problem with its children; 404/403 like the endpoints. */
-  async findOwnWithChildren(user: CurrentUserData, id: number): Promise<{ problem: ProblemRow; children: ProblemRow[] }> {
+  async findOwnWithChildren(
+    user: CurrentUserData,
+    id: number,
+  ): Promise<{ problem: ProblemRow; children: ProblemRow[] }> {
     const problem = await this.findOwn(user, id);
     return { problem, children: await this.repo.findChildren(problem.id) };
   }
@@ -200,9 +221,10 @@ export class ProblemsService {
   async applyPublication(ids: number[], status: PublishStatus, licenseIdForUnlicensed: number | null): Promise<void> {
     for (const id of ids) {
       const row = (await this.repo.findById(id))!;
-      const source = row.source.licenseId === null && licenseIdForUnlicensed !== null
-        ? { ...row.source, licenseId: licenseIdForUnlicensed }
-        : row.source;
+      const source =
+        row.source.licenseId === null && licenseIdForUnlicensed !== null
+          ? { ...row.source, licenseId: licenseIdForUnlicensed }
+          : row.source;
       await this.repo.update(id, { publishStatus: status, source });
     }
   }
@@ -238,7 +260,9 @@ export class ProblemsService {
       users: await this.users.refsByIds(rows.map((r) => r.authorId)),
       tags: await this.tags.refsByIds(rows.flatMap((r) => r.tagIds)),
       chapters: await this.chapters.refsByIds(rows.flatMap((r) => r.chapterIds)),
-      licenses: await this.licenses.refsByIds(rows.flatMap((r) => (r.source.licenseId === null ? [] : [r.source.licenseId]))),
+      licenses: await this.licenses.refsByIds(
+        rows.flatMap((r) => (r.source.licenseId === null ? [] : [r.source.licenseId])),
+      ),
       childCounts: await this.repo.countChildren(rows.map((r) => r.id)),
     };
   }

@@ -15,7 +15,9 @@ describe('Test harness', () => {
     const { api } = ctx();
     await expect(api.as('jan').get('/licenses').expect(200)).resolves.toBeDefined();
     // A path outside the spec can never pass, whatever its status: proves the check is wired in.
-    await expect(api.as('jan').get('/not-in-spec')).rejects.toThrow(/Contract violation[\s\S]*not an operation in openapi.yaml/);
+    await expect(api.as('jan').get('/not-in-spec')).rejects.toThrow(
+      /Contract violation[\s\S]*not an operation in openapi.yaml/,
+    );
   });
 
   it('reads the same MockDatabase instance the app uses', async () => {

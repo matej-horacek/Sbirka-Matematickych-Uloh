@@ -8,7 +8,10 @@ import { LicensesService } from './services/licenses.service.js';
 
 @Module({
   controllers: [LicensesController],
-  providers: [repositoryProvider(LICENSES_REPOSITORY, MockLicensesRepository, PrismaLicensesRepository), LicensesService],
+  providers: [
+    repositoryProvider(LICENSES_REPOSITORY, MockLicensesRepository, PrismaLicensesRepository),
+    LicensesService,
+  ],
   exports: [LicensesService],
 })
 export class LicensesModule {}

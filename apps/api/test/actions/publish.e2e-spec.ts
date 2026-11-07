@@ -21,8 +21,15 @@ describe('publishProblem POST /problems/{id}/publish', () => {
       const { api, store } = ctx();
       const p = await createProblem(api, 'jan');
       const res = await api.as('jan').post(`/problems/${p.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200);
-      expect(res.body).toMatchObject({ id: p.id, status: 'PUBLISHED', source: { type: 'OWN', license: { id: seed.licenses.ccBy, name: 'CC BY 4.0' } } });
-      await store.expectRecord('problems', p.id, { publishStatus: 'PUBLISHED', source: { licenseId: 2, originType: 'OWN' } });
+      expect(res.body).toMatchObject({
+        id: p.id,
+        status: 'PUBLISHED',
+        source: { type: 'OWN', license: { id: seed.licenses.ccBy, name: 'CC BY 4.0' } },
+      });
+      await store.expectRecord('problems', p.id, {
+        publishStatus: 'PUBLISHED',
+        source: { licenseId: 2, originType: 'OWN' },
+      });
       // Visible to everyone now.
       await ctx().api.as('petr').get(`/problems/${p.id}`).expect(200);
     });
@@ -39,7 +46,11 @@ describe('publishProblem POST /problems/{id}/publish', () => {
     it('registered (petr) → 403 TRUST_TOO_LOW, nothing changes', async () => {
       const { api, store } = ctx();
       const p = await createProblem(api, 'petr');
-      expectError(await api.as('petr').post(`/problems/${p.id}/publish`, { licenseId: seed.licenses.cc0 }), 403, 'TRUST_TOO_LOW');
+      expectError(
+        await api.as('petr').post(`/problems/${p.id}/publish`, { licenseId: seed.licenses.cc0 }),
+        403,
+        'TRUST_TOO_LOW',
+      );
       await store.expectRecord('problems', p.id, { publishStatus: 'PRIVATE', source: { licenseId: null } });
     });
   });
@@ -56,19 +67,31 @@ describe('publishProblem POST /problems/{id}/publish', () => {
     it('a licence that does not allow publication → 409 LICENSE_REQUIRED, nothing changes', async () => {
       const { api, store } = ctx();
       const p = await createProblem(api, 'jan');
-      expectError(await api.as('jan').post(`/problems/${p.id}/publish`, { licenseId: seed.licenses.allRightsReserved }), 409, 'LICENSE_REQUIRED');
+      expectError(
+        await api.as('jan').post(`/problems/${p.id}/publish`, { licenseId: seed.licenses.allRightsReserved }),
+        409,
+        'LICENSE_REQUIRED',
+      );
       await store.expectRecord('problems', p.id, { publishStatus: 'PRIVATE', source: { licenseId: null } });
     });
 
     it('an unknown licenseId → 409 LICENSE_REQUIRED', async () => {
       const { api } = ctx();
       const p = await createProblem(api, 'jan');
-      expectError(await api.as('jan').post(`/problems/${p.id}/publish`, { licenseId: unknownId }), 409, 'LICENSE_REQUIRED');
+      expectError(
+        await api.as('jan').post(`/problems/${p.id}/publish`, { licenseId: unknownId }),
+        409,
+        'LICENSE_REQUIRED',
+      );
     });
 
     it('a problem whose existing licence does not allow publication → 409 LICENSE_REQUIRED', async () => {
       const { api, store } = ctx();
-      expectError(await api.as('jan').post(`/problems/${P.textbook}/publish`, { licenseId: seed.licenses.ccBy }), 409, 'LICENSE_REQUIRED');
+      expectError(
+        await api.as('jan').post(`/problems/${P.textbook}/publish`, { licenseId: seed.licenses.ccBy }),
+        409,
+        'LICENSE_REQUIRED',
+      );
       await store.expectRecord('problems', P.textbook, { publishStatus: 'PRIVATE', source: { licenseId: 4 } });
     });
 
@@ -76,7 +99,10 @@ describe('publishProblem POST /problems/{id}/publish', () => {
       const { api, store } = ctx();
       // A copy of Eva's CC0 problem inherits CC0.
       const copy = (await api.as('jan').post(`/problems/${P.pythagoras}/copy`).expect(201)).body;
-      const res = await api.as('jan').post(`/problems/${copy.id}/publish`, { licenseId: seed.licenses.ccBy }).expect(200);
+      const res = await api
+        .as('jan')
+        .post(`/problems/${copy.id}/publish`, { licenseId: seed.licenses.ccBy })
+        .expect(200);
       expect(res.body).toMatchObject({ status: 'PUBLISHED', source: { license: { id: seed.licenses.cc0 } } });
       await store.expectRecord('problems', copy.id, { publishStatus: 'PUBLISHED', source: { licenseId: 1 } });
     });
@@ -92,7 +118,11 @@ describe('publishProblem POST /problems/{id}/publish', () => {
       // Status not asserted (400 is not declared for publish, C-6): only "not 500". raw() because 500 is not in the spec either.
       const { api } = ctx();
       const p = await createProblem(api, 'jan');
-      const res = await api.raw().post(`/api/v1/problems/${p.id}/publish`).set(auth.jan).send({ licenseId: overflowIds[0] });
+      const res = await api
+        .raw()
+        .post(`/api/v1/problems/${p.id}/publish`)
+        .set(auth.jan)
+        .send({ licenseId: overflowIds[0] });
       expect(res.status).toBeLessThan(500);
     });
 
@@ -118,7 +148,11 @@ describe('publishProblem POST /problems/{id}/publish', () => {
       // On a fresh copy of the set, so the child is still PRIVATE.
       const copy = (await app2.api.as('jan').post(`/problems/${P.set}/copy`).expect(201)).body;
       const child = copy.children[0].id;
-      expectError(await app2.api.as('jan').post(`/problems/${child}/publish`, { licenseId: seed.licenses.ccBy }), 409, 'SET_CHILD_NOT_PUBLISHABLE');
+      expectError(
+        await app2.api.as('jan').post(`/problems/${child}/publish`, { licenseId: seed.licenses.ccBy }),
+        409,
+        'SET_CHILD_NOT_PUBLISHABLE',
+      );
       await app2.store.expectRecord('problems', child, { publishStatus: 'PRIVATE' });
     });
   });
@@ -128,7 +162,9 @@ describe('publishProblem POST /problems/{id}/publish', () => {
       // Arrange the 2.0.0 way: copy the textbook problem (All rights reserved) into a new set.
       const { api, store } = ctx();
       const set = await createProblem(api, 'jan');
-      const withChild = (await api.as('jan').post(`/problems/${set.id}/children`, { lockVersion: 1, copyFromId: P.textbook }).expect(200)).body;
+      const withChild = (
+        await api.as('jan').post(`/problems/${set.id}/children`, { lockVersion: 1, copyFromId: P.textbook }).expect(200)
+      ).body;
       const res = await api.as('jan').post(`/problems/${set.id}/publish`, { licenseId: seed.licenses.ccBy });
       expectError(res, 409, 'LICENSE_REQUIRED');
       expect(res.body.detail).toContain('Úloha z učebnice');
@@ -141,7 +177,10 @@ describe('publishProblem POST /problems/{id}/publish', () => {
     it('PUBLISHED', async () => {
       const { api, store } = ctx();
       const before = structuredClone(await store.expectRecord('problems', P.circle));
-      const res = await api.as('jan').post(`/problems/${P.circle}/publish`, { licenseId: seed.licenses.cc0 }).expect(200);
+      const res = await api
+        .as('jan')
+        .post(`/problems/${P.circle}/publish`, { licenseId: seed.licenses.cc0 })
+        .expect(200);
       expect(res.body).toMatchObject({ status: 'PUBLISHED', source: { license: { id: seed.licenses.ccBy } } });
       expect(await store.expectRecord('problems', P.circle)).toEqual(before);
     });
@@ -159,7 +198,11 @@ describe('publishProblem POST /problems/{id}/publish', () => {
 
   describe('auth and ownership', () => {
     it('401 UNAUTHENTICATED without a token', async () => {
-      expectError(await ctx().api.post(`/problems/${P.evaPrivate}/publish`, { licenseId: seed.licenses.cc0 }), 401, 'UNAUTHENTICATED');
+      expectError(
+        await ctx().api.post(`/problems/${P.evaPrivate}/publish`, { licenseId: seed.licenses.cc0 }),
+        401,
+        'UNAUTHENTICATED',
+      );
     });
 
     it('403 FORBIDDEN for another teacher’s PUBLISHED problem', async () => {
@@ -168,14 +211,19 @@ describe('publishProblem POST /problems/{id}/publish', () => {
 
     it('404 NOT_FOUND for another teacher’s PRIVATE problem; nothing changes', async () => {
       const { api, store } = ctx();
-      expectError(await api.as('jan').post(`/problems/${P.evaPrivate}/publish`, { licenseId: seed.licenses.cc0 }), 404, 'NOT_FOUND');
+      expectError(
+        await api.as('jan').post(`/problems/${P.evaPrivate}/publish`, { licenseId: seed.licenses.cc0 }),
+        404,
+        'NOT_FOUND',
+      );
       await store.expectRecord('problems', P.evaPrivate, { publishStatus: 'PRIVATE' });
     });
 
     it('404 for an unknown or malformed id', async () => {
       const { api } = ctx();
       expectError(await api.as('jan').post(`/problems/${unknownId}/publish`), 404, 'NOT_FOUND');
-      for (const bad of malformedIds) expectError(await api.as('jan').post(`/problems/${encodeURIComponent(bad)}/publish`), 404, 'NOT_FOUND');
+      for (const bad of malformedIds)
+        expectError(await api.as('jan').post(`/problems/${encodeURIComponent(bad)}/publish`), 404, 'NOT_FOUND');
     });
   });
 });

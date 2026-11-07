@@ -29,7 +29,10 @@ export async function createTestApp(): Promise<TestContext> {
   app.setGlobalPrefix('api/v1'); // keep in sync with src/main.ts
   app.useGlobalFilters(new ProblemDetailsFilter()); // keep in sync with src/main.ts
   await app.init();
-  const store = dataSource() === 'prisma' ? new PrismaStoreProbe(app.get(PrismaService)) : new MockStoreProbe(app.get(MockDatabase));
+  const store =
+    dataSource() === 'prisma'
+      ? new PrismaStoreProbe(app.get(PrismaService))
+      : new MockStoreProbe(app.get(MockDatabase));
   return { app, api: createApi(app), store };
 }
 

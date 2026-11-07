@@ -70,7 +70,14 @@ describe('createProblem POST /problems', () => {
       const { api, store } = ctx();
       const res = await api.as('eva').post('/problems', { name: 'N', assignment: 'A' }).expect(201);
       expect(res.body).toMatchObject({ result: null, language: null, difficulty: null, tags: [], chapters: [] });
-      await store.expectRecord('problems', res.body.id, { authorId: users.eva.id, result: null, languageCode: null, difficulty: null, tagIds: [], chapterIds: [] });
+      await store.expectRecord('problems', res.body.id, {
+        authorId: users.eva.id,
+        result: null,
+        languageCode: null,
+        difficulty: null,
+        tagIds: [],
+        chapterIds: [],
+      });
     });
 
     it('a registered (unverified) teacher may create too (petr)', async () => {
@@ -125,8 +132,16 @@ describe('createProblem POST /problems', () => {
     it('a tagId/chapterId that decodes beyond the safe integer range → 400, never 500 [R-021]', async () => {
       const { api } = ctx();
       for (const bad of overflowIds) {
-        expectError(await api.as('jan').post('/problems', { name: 'N', assignment: 'A', tagIds: [bad] }), 400, 'VALIDATION_FAILED');
-        expectError(await api.as('jan').post('/problems', { name: 'N', assignment: 'A', chapterIds: [bad] }), 400, 'VALIDATION_FAILED');
+        expectError(
+          await api.as('jan').post('/problems', { name: 'N', assignment: 'A', tagIds: [bad] }),
+          400,
+          'VALIDATION_FAILED',
+        );
+        expectError(
+          await api.as('jan').post('/problems', { name: 'N', assignment: 'A', chapterIds: [bad] }),
+          400,
+          'VALIDATION_FAILED',
+        );
       }
     });
 
@@ -134,8 +149,16 @@ describe('createProblem POST /problems', () => {
       // Visibility: eva cannot see Jan's personal tag/chapter (listTags/listChapters), so she cannot use them.
       const { api, store } = ctx();
       const before = await store.countRecords('problems');
-      expectError(await api.as('eva').post('/problems', { name: 'N', assignment: 'A', tagIds: [seed.tags.janPersonal] }), 400, 'VALIDATION_FAILED');
-      expectError(await api.as('eva').post('/problems', { name: 'N', assignment: 'A', chapterIds: [seed.chapters.janPersonal] }), 400, 'VALIDATION_FAILED');
+      expectError(
+        await api.as('eva').post('/problems', { name: 'N', assignment: 'A', tagIds: [seed.tags.janPersonal] }),
+        400,
+        'VALIDATION_FAILED',
+      );
+      expectError(
+        await api.as('eva').post('/problems', { name: 'N', assignment: 'A', chapterIds: [seed.chapters.janPersonal] }),
+        400,
+        'VALIDATION_FAILED',
+      );
       expect(await store.countRecords('problems')).toBe(before);
     });
   });

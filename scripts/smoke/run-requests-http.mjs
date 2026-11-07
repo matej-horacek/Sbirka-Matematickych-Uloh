@@ -11,7 +11,10 @@ const file = resolve(import.meta.dirname, '../../apps/api/requests.http');
 const base = process.argv[2] ?? 'http://localhost:3000/api/v1';
 const text = readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
 
-const blocks = text.split(/^###.*$/m).map((b) => b.trim()).filter(Boolean);
+const blocks = text
+  .split(/^###.*$/m)
+  .map((b) => b.trim())
+  .filter(Boolean);
 const titles = [...text.matchAll(/^###(.*)$/gm)].map((m) => m[1].trim());
 let results = [];
 let n = 0;
@@ -38,4 +41,6 @@ for (const [i, block] of blocks.entries()) {
   if (process.env.VERBOSE) console.log(`     ${summary}`);
 }
 const failed = results.filter((r) => r.status >= 400);
-console.log(`\n${results.length} requests, ${results.length - failed.length} returned 2xx, ${failed.length} returned 4xx/5xx`);
+console.log(
+  `\n${results.length} requests, ${results.length - failed.length} returned 2xx, ${failed.length} returned 4xx/5xx`,
+);

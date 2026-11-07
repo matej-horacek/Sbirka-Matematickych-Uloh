@@ -52,8 +52,14 @@ function toProblemRow(p: DbProblem): ProblemRow {
       showInPdf: s.show_in_pdf,
     },
     // D-04: a problem's tags and chapters are ordered by name.
-    tagIds: p.problem_tag.map((pt) => pt.tag).sort(byName).map((t) => t.id),
-    chapterIds: p.problem_chapter.map((pc) => pc.chapter).sort(byName).map((c) => c.id),
+    tagIds: p.problem_tag
+      .map((pt) => pt.tag)
+      .sort(byName)
+      .map((t) => t.id),
+    chapterIds: p.problem_chapter
+      .map((pc) => pc.chapter)
+      .sort(byName)
+      .map((c) => c.id),
     createdAt: p.created_at,
     updatedAt: p.updated_at,
     deletedAt: p.deleted_at,
@@ -78,35 +84,46 @@ export class PrismaStoreProbe implements StoreProbe {
   private async load(collection: Collection): Promise<unknown[]> {
     switch (collection) {
       case 'problems':
-        return (await this.prisma.problem.findMany({ include: PROBLEM_INCLUDE, orderBy: { id: 'asc' } })).map(toProblemRow);
+        return (await this.prisma.problem.findMany({ include: PROBLEM_INCLUDE, orderBy: { id: 'asc' } })).map(
+          toProblemRow,
+        );
       case 'users':
         return (await this.prisma.user.findMany({ orderBy: { id: 'asc' } })).map((u): UserRow => toUserRow(u));
       case 'tags':
-        return (await this.prisma.tag.findMany({ orderBy: { id: 'asc' } })).map(
-          (t): TagRow => ({ id: t.id, name: t.name, isGlobal: t.is_global, ownerId: t.author_id }),
-        );
+        return (await this.prisma.tag.findMany({ orderBy: { id: 'asc' } })).map((t): TagRow => ({
+          id: t.id,
+          name: t.name,
+          isGlobal: t.is_global,
+          ownerId: t.author_id,
+        }));
       case 'chapters':
         return (await this.prisma.chapter.findMany({ where: { deleted_at: null }, orderBy: { id: 'asc' } })).map(
-          (c): ChapterRow => ({ id: c.id, name: c.name, isGlobal: c.is_global, ownerId: c.author_id, parentId: c.parent_id }),
-        );
-      case 'licenses':
-        return (await this.prisma.license.findMany({ orderBy: { id: 'asc' } })).map(
-          (l): LicenseRow => ({
-            id: l.id,
-            name: l.name,
-            description: l.description,
-            url: l.url,
-            requiresAttribution: l.requires_attribution,
-            allowsModification: l.allows_modification,
-            requiresShareAlike: l.requires_share_alike,
-            allowsPublication: l.allows_publication,
+          (c): ChapterRow => ({
+            id: c.id,
+            name: c.name,
+            isGlobal: c.is_global,
+            ownerId: c.author_id,
+            parentId: c.parent_id,
           }),
         );
+      case 'licenses':
+        return (await this.prisma.license.findMany({ orderBy: { id: 'asc' } })).map((l): LicenseRow => ({
+          id: l.id,
+          name: l.name,
+          description: l.description,
+          url: l.url,
+          requiresAttribution: l.requires_attribution,
+          allowsModification: l.allows_modification,
+          requiresShareAlike: l.requires_share_alike,
+          allowsPublication: l.allows_publication,
+        }));
     }
   }
 
   private static isDeleted(row: unknown): boolean {
-    return !!row && typeof row === 'object' && 'deletedAt' in row && (row as { deletedAt: Date | null }).deletedAt !== null;
+    return (
+      !!row && typeof row === 'object' && 'deletedAt' in row && (row as { deletedAt: Date | null }).deletedAt !== null
+    );
   }
 
   async find<C extends Collection>(collection: C, id: Id): Promise<Rows[C] | undefined> {
@@ -116,9 +133,14 @@ export class PrismaStoreProbe implements StoreProbe {
 
   async expectRecord<C extends Collection>(collection: C, id: Id, fields?: Partial<Rows[C]> | Record<string, unknown>) {
     const row = await this.find(collection, id);
-    if (!row) throw new Error(`StoreProbe: expected ${collection} #${this.toDbId(id)} (${id}) to exist, but there is no such row`);
+    if (!row)
+      throw new Error(
+        `StoreProbe: expected ${collection} #${this.toDbId(id)} (${id}) to exist, but there is no such row`,
+      );
     if (PrismaStoreProbe.isDeleted(row)) {
-      throw new Error(`StoreProbe: expected ${collection} #${this.toDbId(id)} (${id}) to exist, but it is soft-deleted`);
+      throw new Error(
+        `StoreProbe: expected ${collection} #${this.toDbId(id)} (${id}) to exist, but it is soft-deleted`,
+      );
     }
     if (fields) expect(row).toMatchObject(fields);
     return row;
@@ -131,8 +153,14 @@ export class PrismaStoreProbe implements StoreProbe {
 
   async expectDeleted(collection: 'problems', id: Id) {
     const row = await this.find(collection, id);
-    if (!row) throw new Error(`StoreProbe: expected ${collection} #${this.toDbId(id)} to be soft-deleted, but there is no such row`);
-    if (!PrismaStoreProbe.isDeleted(row)) throw new Error(`StoreProbe: expected ${collection} #${this.toDbId(id)} to be soft-deleted, but deletedAt is null`);
+    if (!row)
+      throw new Error(
+        `StoreProbe: expected ${collection} #${this.toDbId(id)} to be soft-deleted, but there is no such row`,
+      );
+    if (!PrismaStoreProbe.isDeleted(row))
+      throw new Error(
+        `StoreProbe: expected ${collection} #${this.toDbId(id)} to be soft-deleted, but deletedAt is null`,
+      );
     return row;
   }
 
@@ -142,15 +170,24 @@ export class PrismaStoreProbe implements StoreProbe {
         ? () => true
         : typeof where === 'function'
           ? where
-          : (row: Rows[C]) => Object.entries(where).every(([k, v]) => JSON.stringify((row as unknown as Record<string, unknown>)[k]) === JSON.stringify(v));
-    return (await this.all(collection)).filter((r) => (options.includeDeleted || !PrismaStoreProbe.isDeleted(r)) && match(r)).length;
+          : (row: Rows[C]) =>
+              Object.entries(where).every(
+                ([k, v]) => JSON.stringify((row as unknown as Record<string, unknown>)[k]) === JSON.stringify(v),
+              );
+    return (await this.all(collection)).filter(
+      (r) => (options.includeDeleted || !PrismaStoreProbe.isDeleted(r)) && match(r),
+    ).length;
   }
 
   async children(parentId: Id) {
     const pid = this.toDbId(parentId);
-    return (await this.all('problems'))
-      .filter((p) => p.parentId === pid && p.deletedAt === null)
-      // Byte order, like the mock (fractional-indexing keys, R-020).
-      .sort((a, b) => ((a.position ?? '') < (b.position ?? '') ? -1 : (a.position ?? '') > (b.position ?? '') ? 1 : 0));
+    return (
+      (await this.all('problems'))
+        .filter((p) => p.parentId === pid && p.deletedAt === null)
+        // Byte order, like the mock (fractional-indexing keys, R-020).
+        .sort((a, b) =>
+          (a.position ?? '') < (b.position ?? '') ? -1 : (a.position ?? '') > (b.position ?? '') ? 1 : 0,
+        )
+    );
   }
 }

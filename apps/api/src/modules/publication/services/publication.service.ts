@@ -30,10 +30,15 @@ export class PublicationService {
 
     // The licence: every problem in the set needs one that allows publication.
     const all = [problem, ...children];
-    const licensed = await this.licenses.rowsByIds(all.flatMap((p) => (p.source.licenseId === null ? [] : [p.source.licenseId])));
+    const licensed = await this.licenses.rowsByIds(
+      all.flatMap((p) => (p.source.licenseId === null ? [] : [p.source.licenseId])),
+    );
     for (const p of all) {
       if (p.source.licenseId !== null && !licensed.get(p.source.licenseId)?.allowsPublication) {
-        throw ApiError.conflict(ErrorCode.LICENSE_REQUIRED, `"${p.name}" has a licence that does not allow publication.`);
+        throw ApiError.conflict(
+          ErrorCode.LICENSE_REQUIRED,
+          `"${p.name}" has a licence that does not allow publication.`,
+        );
       }
     }
 
@@ -48,7 +53,11 @@ export class PublicationService {
       newLicenseId = license.id;
     }
 
-    await this.problems.applyPublication(all.map((p) => p.id), status, newLicenseId);
+    await this.problems.applyPublication(
+      all.map((p) => p.id),
+      status,
+      newLicenseId,
+    );
     return this.problems.detailFor(user, id);
   }
 }
