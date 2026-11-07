@@ -1,7 +1,8 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service.js';
-import type { ProblemRow } from '../../../database/mock-database.js';
+import type { ContentSourceRow, ProblemRow } from '../../../database/mock-database.js';
 import type { NewProblem, ProblemFilter, ProblemsRepository } from './problems.repository.js';
+import type { Prisma } from '../../../generated/prisma/client.js';
 
 /*
  * Mapping every method below has to do between the DB and ProblemRow (see mock-database.ts):
@@ -13,19 +14,101 @@ import type { NewProblem, ProblemFilter, ProblemsRepository } from './problems.r
  *  - originalProblemId/Version = original_problem_id / original_problem_version;
  *  - Timestamps are timestamptz (D-02); updated_at is maintained by Prisma @updatedAt.
  */
+
+/**
+ * Every relation a ProblemRow needs. EVERY query that returns a problem must pass this as `include`,
+ * otherwise `toProblemRow` does not compile (its parameter type is derived from this constant).
+ * The tag and chapter rows are included with their parent record, because we sort by its name.
+ */
+export const PROBLEM_INCLUDE = {
+  language: true,
+  content_source: true,
+  problem_part_problem_part_child_idToproblem: true, // parent_id + position, null for a standalone problem
+  problem_tag: { include: { tag: true } },
+  problem_chapter: { include: { chapter: true } },
+} satisfies Prisma.problemInclude;
+
+/** A problem row plus all the relations from PROBLEM_INCLUDE (the type Prisma returns for that include). */
+export type ProblemWithRelations = Prisma.problemGetPayload<{ include: typeof PROBLEM_INCLUDE }>;
+
+/* Parts of ProblemWithRelations, named so the small mappers below stay readable. */
+type SourceRelation = ProblemWithRelations['content_source'];
+type PartRelation = ProblemWithRelations['problem_part_problem_part_child_idToproblem'];
+type TagRelations = ProblemWithRelations['problem_tag'];
+type ChapterRelations = ProblemWithRelations['problem_chapter'];
+
+/** content_source (snake_case) → ContentSourceRow (camelCase). The DB `id` is not part of the row. */
+export function toSourceRow(cs: SourceRelation): ContentSourceRow {
+  return {
+    originType: cs.origin_type,
+    sourceCitationText: cs.source_citation_text,
+    licenseId: cs.license_id,
+    licenseNote: cs.license_note,
+    citationAudience: cs.citation_audience,
+    showInWeb: cs.show_in_web,
+    showInPdf: cs.show_in_pdf,
+  };
+}
+
+/** problem_part → where the problem sits in a set. A standalone problem has no row, so both are null. */
+export function toPlacement(part: PartRelation): Pick<ProblemRow, 'parentId' | 'position'> {
+  return {
+    parentId: part?.parent_id ?? null,
+    position: part?.position ?? null,
+  };
+}
+
+/** Tag ids sorted by tag name (D-04), Czech collation like the mock. */
+export function toTagIds(rows: TagRelations): number[] {
+  return [...rows].sort((a, b) => a.tag.name.localeCompare(b.tag.name, 'cs')).map((r) => r.tag_id);
+}
+
+/** Chapter ids sorted by chapter name (D-04), Czech collation like the mock. */
+export function toChapterIds(rows: ChapterRelations): number[] {
+  return [...rows].sort((a, b) => a.chapter.name.localeCompare(b.chapter.name, 'cs')).map((r) => r.chapter_id);
+}
+
+/** DB problem (with its relations) → ProblemRow. The relation parts are delegated to the mappers above. */
+export function toProblemRow(p: ProblemWithRelations): ProblemRow {
+  return {
+    id: p.id,
+    name: p.name,
+    assignment: p.assignment,
+    result: p.result,
+    languageCode: p.language?.code ?? null,
+    difficulty: p.difficulty,
+    authorId: p.author_id,
+    publishStatus: p.publish_status,
+    version: p.version,
+    lockVersion: p.lock_version,
+    ...toPlacement(p.problem_part_problem_part_child_idToproblem),
+    originalProblemId: p.original_problem_id,
+    originalProblemVersion: p.original_problem_version,
+    source: toSourceRow(p.content_source),
+    tagIds: toTagIds(p.problem_tag),
+    chapterIds: toChapterIds(p.problem_chapter),
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+    deletedAt: p.deleted_at,
+  };
+}
+
 @Injectable()
 export class PrismaProblemsRepository implements ProblemsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * TODO Daniel. Must do:
    * - find by id with `deleted_at IS NULL` (a soft-deleted problem is "not found");
    * - NO visibility check here: ProblemsService applies canView (author sees all theirs, others only
    *   PUBLISHED; others' private problems must look like 404);
    * - include language, content_source, problem_part (as child), problem_tag and problem_chapter (see mapping above).
    */
-  async findById(_id: number): Promise<ProblemRow | undefined> {
-    throw new NotImplementedException('TODO Daniel');
+  async findById(id: number): Promise<ProblemRow | undefined> {
+    const problem = await this.prisma.problem.findFirst({
+      where: { id: id },
+      include: PROBLEM_INCLUDE,
+    });
+    return problem ? toProblemRow(problem): undefined;
   }
 
   /**
