@@ -1,4 +1,4 @@
-import { Injectable, NotImplementedException } from '@nestjs/common';
+import { Injectable} from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service.js';
 import type { user } from '../../../generated/prisma/client.js';
 import type { Role, TrustLevel, UserRow } from '../../../database/mock-database.js';
@@ -26,13 +26,17 @@ export class PrismaUsersRepository implements UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * TODO Daniel. Must do (DECISIONS D-05, spec UserRef):
    * - one query for all ids (`where: { id: { in: ids } }`), order does not matter (the caller builds a Map);
    * - map every row with `toUserRow` (displayName fallback, role/trust);
    * - ids that do not exist are simply missing from the result.
    */
-  async findByIds(_ids: number[]): Promise<UserRow[]> {
-    throw new NotImplementedException('TODO Daniel');
+  async findByIds(ids: number[]): Promise<UserRow[]> {
+    const rows = await this.prisma.user.findMany({
+      where: {
+        id: { in: ids },
+      }
+    });
+    return rows.map(toUserRow);
   }
 
   /**
