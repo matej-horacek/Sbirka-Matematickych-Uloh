@@ -5,7 +5,25 @@ info:
     Documentation of endpoints for the math problem library
     (Komunitní sbírka úloh z matematiky).
 
+    ## Authentication
+    - `access_token`: JWT, ~15 min, Path=/api, sent with every API call.
+    - `refresh_token`: random opaque token, Path=/api/v1/auth, used only by the auth endpoints.
+    Both cookies: HttpOnly; Secure; SameSite=Lax.
+
+    Frontend flow: on 401 UNAUTHENTICATED, call POST /auth/refresh once and retry the request.
+    If refresh fails too, go to the login page. Requests need `credentials: 'include'`.
+
+    CSRF: every POST, PATCH and DELETE must send the header `X-Requested-With: XMLHttpRequest`.
+    Without it → 403 CSRF_CHECK_FAILED.
+
+
     ## Changelog
+    - 3.0.0 (2026-11-08): authentication. Bearer header replaced by httpOnly cookies
+      (access_token, refresh_token); POST/PATCH/DELETE must send X-Requested-With (CSRF).
+      New endpoints /auth/register, /auth/login, /auth/me, /auth/refresh, /auth/logout.
+      New codes INVALID_CREDENTIALS, ACCOUNT_BLOCKED, EMAIL_TAKEN, USERNAME_TAKEN,
+      CSRF_CHECK_FAILED.
+
     - 2.0.0 (2026-10-29): block model. Problems are created one at a time (`children` removed
       from create and patch); sets are built with POST/PATCH/DELETE /problems/{id}/children
       (move your own problem in, or copy a foreign one; position with `afterId`). A set child is
@@ -13,37 +31,38 @@ info:
       on the list; copy updates with take-over-update and dismiss-update. New codes
       CANNOT_ADD_TO_SET and NO_UPDATE_AVAILABLE; SET_CHILD_EDIT_VIA_PARENT renamed to IS_SET_CHILD;
       412 for a failed If-Match.
-      Revised 2026-10-31 (before any implementation): copying your own problem keeps source OWN;
-      copy holders see `updateAvailable` (no stored notifications); `required` fixed on ProblemCreate
-      and ProblemListItem; 400 declared on take-over-update and publish; examples corrected; no YAML anchors.
-      Revised 2026-11-01: `name` max 255 characters (matches the database column).
     - 1.0.1 (2026-10-25): documentation only. operationId on every endpoint, grouping
       sections (Problems, Problem actions, Pickers), realistic request and response examples.
     - 1.0.0 (2026-10-25): frozen contract for the problem part. Problems CRUD with whole-set
       editing (`children`), copy, publish, dissolve; read-only pickers for tags, chapters
       and licences; RFC 9457 errors with `code` values; bearer (JWT) auth on all endpoints.
-  version: 2.0.0
+  version: 3.0.0
+
 servers:
-- url: https://main.server.com/api/v1
-  description: Not implemented yet
+  - url: https://main.server.com/api/v1
+    description: Not implemented yet
+
 security:
-- bearerAuth: []
+  - cookieAuth: []
+
 tags:
-- name: Problems
-  description: Create, read, update and delete problems and whole sets.
-- name: Sets
-  description: 'Build a set from blocks: add (move or copy), reorder and take out children.'
-- name: Problem actions
-  description: Copy, publish, dissolve and copy updates.
-- name: Pickers
-  description: Read-only lists for the editor (tags, chapters, licences).
+  - name: Problems
+    description: Create, read, update and delete problems and whole sets.
+  - name: Sets
+    description: 'Build a set from blocks: add (move or copy), reorder and take out children.'
+  - name: Problem actions
+    description: Copy, publish, dissolve and copy updates.
+  - name: Pickers
+    description: Read-only lists for the editor (tags, chapters, licences).
+  - name: Authorization
+    description: Register, Login, Logout, Refresh.
 paths:
   /problems:
     get:
       summary: List problems
       operationId: listProblems
       tags:
-      - Problems
+        - Problems
       description: |
         Who: any logged-in teacher.
         scope=mine returns the caller's own problems (dashboard),
@@ -53,14 +72,14 @@ paths:
         Several tagId / chapterId values match problems having any of them.
         Codes: 400 VALIDATION_FAILED (e.g. updateAvailable with scope=public).
       parameters:
-      - $ref: '#/components/parameters/Scope'
-      - $ref: '#/components/parameters/Page'
-      - $ref: '#/components/parameters/Limit'
-      - $ref: '#/components/parameters/TagIdFilter'
-      - $ref: '#/components/parameters/ChapterIdFilter'
-      - $ref: '#/components/parameters/LanguageFilter'
-      - $ref: '#/components/parameters/IdsFilter'
-      - $ref: '#/components/parameters/UpdateAvailableFilter'
+        - $ref: '#/components/parameters/Scope'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/TagIdFilter'
+        - $ref: '#/components/parameters/ChapterIdFilter'
+        - $ref: '#/components/parameters/LanguageFilter'
+        - $ref: '#/components/parameters/IdsFilter'
+        - $ref: '#/components/parameters/UpdateAvailableFilter'
       responses:
         '200':
           description: Problems received successfully.
@@ -70,45 +89,46 @@ paths:
                 $ref: '#/components/schemas/ProblemPage'
               example:
                 items:
-                - id: k3Xa9
-                  name: Řešte rovnice
-                  assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                  result: null
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 2
-                - id: p5Qw8
-                  name: Obsah kruhu
-                  assignment: Vypočítejte obsah kruhu o poloměru \( r = 5\,\text{cm} \).
-                  result: \( S = 25\pi\,\text{cm}^2 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t5Gh6
-                    name: geometrie
-                    scope: global
-                  chapters:
-                  - id: c2Xy5
-                    name: Planimetrie
-                    scope: global
-                  childCount: 0
+                  - id: k3Xa9
+                    name: Řešte rovnice
+                    assignment: 'Vyřešte rovnice v oboru reálných čísel:'
+                    result:
+                    language: cs
+                    difficulty: 3
+                    author: &id001
+                      id: u7Hn2
+                      displayName: Jan Novák
+                    tags: &id007
+                      - &id009
+                        id: t1Ab3
+                        name: lineární rovnice
+                        scope: global
+                      - &id012
+                        id: t2Cd4
+                        name: kvadratické rovnice
+                        scope: global
+                    chapters: &id008
+                      - &id010
+                        id: c9Kd1
+                        name: Rovnice
+                        scope: global
+                    childCount: 2
+                  - id: p5Qw8
+                    name: Obsah kruhu
+                    assignment: Vypočítejte obsah kruhu o poloměru \( r = 5\,\text{cm} \).
+                    result: \( S = 25\pi\,\text{cm}^2 \)
+                    language: cs
+                    difficulty: 2
+                    author: *id001
+                    tags: &id016
+                      - id: t5Gh6
+                        name: geometrie
+                        scope: global
+                    chapters: &id017
+                      - id: c2Xy5
+                        name: Planimetrie
+                        scope: global
+                    childCount: 0
                 meta:
                   page: 1
                   limit: 20
@@ -121,7 +141,7 @@ paths:
       summary: Create a problem
       operationId: createProblem
       tags:
-      - Problems
+        - Problems
       description: |
         Who: any logged-in teacher (registered teachers too; creating is private).
         Creates one problem. The new problem is PRIVATE, owned by the caller, with source OWN
@@ -144,9 +164,9 @@ paths:
                   language: cs
                   difficulty: 2
                   tagIds:
-                  - t1Ab3
+                    - t1Ab3
                   chapterIds:
-                  - c4Lm7
+                    - c4Lm7
       responses:
         '201':
           description: Created successfully.
@@ -155,54 +175,90 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
               example:
-                id: a1B2c
-                name: Rovnice a)
-                assignment: '\( 2x + 3 = 11 \)'
-                result: \( x = 4 \)
+                id: k3Xa9
+                name: Řešte rovnice
+                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
+                result:
                 language: cs
-                difficulty: 2
-                author:
+                difficulty: 3
+                author: &id002
                   id: u7Hn2
                   displayName: Jan Novák
                 tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
+                  - &id003
+                    id: t1Ab3
+                    name: lineární rovnice
+                    scope: global
+                  - &id006
+                    id: t2Cd4
+                    name: kvadratické rovnice
+                    scope: global
                 chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 0
+                  - &id004
+                    id: c9Kd1
+                    name: Rovnice
+                    scope: global
+                childCount: 2
                 createdAt: '2026-10-25T14:02:00Z'
                 updatedAt: '2026-10-25T14:02:00Z'
-                source:
+                source: &id005
                   type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
+                  license:
+                  citation:
+                  licenseNote:
                   showInWeb: true
                   showInPdf: true
                 status: PRIVATE
                 version: 1
                 lockVersion: 1
-                parentId: null
-                children: []
-                originalId: null
+                parentId:
+                children:
+                  - id: a1B2c
+                    name: Rovnice a)
+                    assignment: \( 2x + 3 = 11 \)
+                    result: \( x = 4 \)
+                    language: cs
+                    difficulty: 2
+                    author: *id002
+                    tags:
+                      - *id003
+                    chapters:
+                      - *id004
+                    childCount: 0
+                    createdAt: '2026-10-25T14:02:00Z'
+                    updatedAt: '2026-10-25T14:02:00Z'
+                    source: *id005
+                  - id: d4E5f
+                    name: Rovnice b)
+                    assignment: \( x^2 = 9 \)
+                    result: \( x = \pm 3 \)
+                    language: cs
+                    difficulty: 3
+                    author: *id002
+                    tags:
+                      - *id006
+                    chapters:
+                      - *id004
+                    childCount: 0
+                    createdAt: '2026-10-25T14:02:00Z'
+                    updatedAt: '2026-10-25T14:02:00Z'
+                    source: *id005
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
   /problems/{id}:
     get:
       summary: Problem detail
       operationId: getProblem
       tags:
-      - Problems
+        - Problems
       description: |
         Who: the author, or any logged-in teacher when the problem is published.
         Otherwise 404 (the problem's existence is not revealed).
       parameters:
-      - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Id'
       responses:
         '200':
           description: OK
@@ -210,99 +266,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-              example:
+              example: &id014
                 id: k3Xa9
                 name: Řešte rovnice
                 assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
+                result:
                 language: cs
                 difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
+                author: *id001
+                tags: *id007
+                chapters: *id008
                 childCount: 2
                 createdAt: '2026-10-20T09:15:00Z'
                 updatedAt: '2026-10-25T14:02:00Z'
-                source:
+                source: &id011
                   type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
+                  license:
+                  citation:
+                  licenseNote:
                   showInWeb: true
                   showInPdf: true
                 status: PRIVATE
                 version: 1
                 lockVersion: 3
-                originalId: null
-                parentId: null
+                originalId:
+                parentId:
                 children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
+                  - &id013
+                    id: a1B2c
+                    name: Rovnice a)
+                    assignment: \( 2x + 3 = 11 \)
+                    result: \( x = 4 \)
+                    language: cs
+                    difficulty: 2
+                    author: *id001
+                    tags: &id023
+                      - *id009
+                    chapters: &id024
+                      - *id010
+                    childCount: 0
+                    createdAt: '2026-10-20T09:15:00Z'
+                    updatedAt: '2026-10-25T14:02:00Z'
+                    source: *id011
+                    lockVersion: 1
+                  - id: d4E5f
+                    name: Rovnice b)
+                    assignment: \( x^2 = 9 \)
+                    result: \( x = \pm 3 \)
+                    language: cs
+                    difficulty: 3
+                    author: *id001
+                    tags: &id025
+                      - *id012
+                    chapters: &id026
+                      - *id010
+                    childCount: 0
+                    createdAt: '2026-10-20T09:15:00Z'
+                    updatedAt: '2026-10-25T14:02:00Z'
+                    source: *id011
+                    lockVersion: 1
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -311,11 +333,11 @@ paths:
       summary: Update a problem
       operationId: updateProblem
       tags:
-      - Problems
+        - Problems
       description: |
         Who: the author only. Works on any problem, including a set child.
         Send the problem's own lockVersion. Editing a set child also raises the set's version
-        (copy holders of the set see `updateAvailable`); it does not change the set's lockVersion.
+        (copy holders of the set are notified); it does not change the set's lockVersion.
         A non-author gets 403 on a published problem and 404 on a private one.
         - 200: the change is applied (private problem, or author is a trusted teacher/admin).
         - 202: the problem (or the set it belongs to) is published and the author is not trusted;
@@ -323,7 +345,7 @@ paths:
         Codes: 400 VALIDATION_FAILED; 403 FORBIDDEN; 404 NOT_FOUND;
         409 LOCK_MISMATCH, SET_PARENT_HAS_RESULT (a result on a set).
       parameters:
-      - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Id'
       requestBody:
         required: true
         content:
@@ -347,222 +369,85 @@ paths:
                 id: k3Xa9
                 name: Řešte rovnice
                 assignment: 'Vyřešte rovnice v oboru reálných čísel a proveďte zkoušku:'
-                result: null
+                result:
                 language: cs
                 difficulty: 3
                 author:
                   id: u7Hn2
                   displayName: Jan Novák
                 tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
+                  - id: t1Ab3
+                    name: lineární rovnice
+                    scope: global
+                  - id: t2Cd4
+                    name: kvadratické rovnice
+                    scope: global
                 chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
+                  - id: c9Kd1
+                    name: Rovnice
+                    scope: global
                 childCount: 3
                 createdAt: '2026-10-20T09:15:00Z'
                 updatedAt: '2026-10-25T14:02:00Z'
                 source:
                   type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
+                  license:
+                  citation:
+                  licenseNote:
                   showInWeb: true
                   showInPdf: true
                 status: PRIVATE
                 version: 2
                 lockVersion: 4
-                parentId: null
+                parentId:
                 children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: g7H8j
-                  name: Rovnice c)
-                  assignment: \( 3x - 1 = 2x + 4 \)
-                  result: \( x = 5 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                - id: m2N3p
-                  name: Rovnice d)
-                  assignment: \( \frac{x}{2} = 6 \)
-                  result: \( x = 12 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: LICENSED_USE
-                    license:
-                      id: L2bY4
-                      name: CC BY 4.0
-                      url: https://creativecommons.org/licenses/by/4.0/
-                    citation: 'Převzato od: Petr Dvořák'
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
+                  - *id013
+                  - id: g7H8j
+                    name: Rovnice c)
+                    assignment: \( 3x - 1 = 2x + 4 \)
+                    result: \( x = 5 \)
+                    language: cs
+                    difficulty: 2
+                    author: *id001
+                    tags:
+                      - *id009
+                    chapters:
+                      - *id010
+                    childCount: 0
+                    createdAt: '2026-10-20T09:15:00Z'
+                    updatedAt: '2026-10-25T14:02:00Z'
+                    source: *id011
+                  - id: m2N3p
+                    name: Rovnice d)
+                    assignment: \( \frac{x}{2} = 6 \)
+                    result: \( x = 12 \)
+                    language: cs
+                    difficulty: 2
+                    author: *id001
+                    tags:
+                      - *id009
+                    chapters:
+                      - *id010
+                    childCount: 0
+                    createdAt: '2026-10-20T09:15:00Z'
+                    updatedAt: '2026-10-25T14:02:00Z'
+                    source:
+                      type: LICENSED_USE
+                      license: &id018
+                        id: L2bY4
+                        name: CC BY 4.0
+                        url: https://creativecommons.org/licenses/by/4.0/
+                      citation: 'Převzato od: Petr Dvořák'
+                      licenseNote:
+                      showInWeb: true
+                      showInPdf: true
         '202':
           description: Change accepted for review; the problem itself is not changed yet.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
+              example: *id014
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -577,7 +462,7 @@ paths:
       summary: Soft delete a problem
       operationId: deleteProblem
       tags:
-      - Problems
+        - Problems
       description: |
         Who: the author only. Not allowed on a set child: take it out of the set first
         (DELETE /problems/{setId}/children/{childId}), then delete it.
@@ -585,7 +470,7 @@ paths:
         To keep the children, use POST /problems/{id}/dissolve instead.
         Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 IS_SET_CHILD.
       parameters:
-      - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Id'
       responses:
         '204':
           description: Deleted successfully.
@@ -597,12 +482,13 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+
   /problems/{id}/children:
     post:
       summary: Add a child to a set
       operationId: addSetChild
       tags:
-      - Sets
+        - Sets
       description: |
         Who: the set's author. `id` is the set (or a standalone problem that becomes a set with its first child).
         - `problemId`: moves your own PRIVATE standalone problem into the set (no copy).
@@ -615,7 +501,7 @@ paths:
         403 FORBIDDEN; 404 NOT_FOUND (the set); 409 LOCK_MISMATCH, SET_PARENT_HAS_RESULT,
         IS_SET_CHILD, CANNOT_ADD_TO_SET, LICENSE_REQUIRED.
       parameters:
-      - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Id'
       requestBody:
         required: true
         content:
@@ -639,7 +525,7 @@ paths:
                 value:
                   lockVersion: 3
                   problemId: d4E5f
-                  afterId: null
+                  afterId:
       responses:
         '200':
           description: Child added. Returns the whole set.
@@ -647,198 +533,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-        '202':
+              example: *id014
+        '202': &id015
           description: 'The set is published and you are not trusted: the change waits for review; the returned set is unchanged.'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
+              example: *id014
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -854,15 +556,15 @@ paths:
       summary: Move a child within its set
       operationId: reorderSetChild
       tags:
-      - Sets
+        - Sets
       description: |
         Who: the set's author.
         `afterId` is required: null = first, a child id = right after that child.
         Codes: 400 VALIDATION_FAILED (missing afterId, afterId not in the set or the child itself);
         403 FORBIDDEN; 404 NOT_FOUND (set, or childId not in this set); 409 LOCK_MISMATCH.
       parameters:
-      - $ref: '#/components/parameters/Id'
-      - $ref: '#/components/parameters/ChildId'
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ChildId'
       requestBody:
         required: true
         content:
@@ -874,7 +576,7 @@ paths:
                 summary: Move to first
                 value:
                   lockVersion: 4
-                  afterId: null
+                  afterId:
               afterOther:
                 summary: Move right after child d4E5f
                 value:
@@ -887,198 +589,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
+              example: *id014
         '202':
-          description: 'The set is published and you are not trusted: the change waits for review; the returned set is unchanged.'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
+          $ref: '#/components/responses/ReviewPending'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1093,7 +606,7 @@ paths:
       summary: Take a child out of its set
       operationId: removeSetChild
       tags:
-      - Sets
+        - Sets
       description: |
         Who: the set's author. The child is not deleted: it becomes a standalone PRIVATE problem again.
         (To delete it, call DELETE /problems/{childId} afterwards.) When the last child is taken out,
@@ -1103,9 +616,9 @@ paths:
         Codes: 400 VALIDATION_FAILED (missing or malformed If-Match); 403 FORBIDDEN;
         404 NOT_FOUND (set, or childId not in this set); 412 LOCK_MISMATCH.
       parameters:
-      - $ref: '#/components/parameters/Id'
-      - $ref: '#/components/parameters/ChildId'
-      - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ChildId'
+        - $ref: '#/components/parameters/IfMatch'
       responses:
         '200':
           description: Child taken out. Returns the whole set.
@@ -1113,198 +626,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
+              example: *id014
         '202':
-          description: 'The set is published and you are not trusted: the change waits for review; the returned set is unchanged.'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
+          $ref: '#/components/responses/ReviewPending'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1320,7 +644,7 @@ paths:
       summary: Copy a problem
       operationId: copyProblem
       tags:
-      - Problem actions
+        - Problem actions
       description: |
         Who: any logged-in teacher who can see the problem (own problems, or published ones).
         No request body. Creates a new problem owned by the caller:
@@ -1329,14 +653,13 @@ paths:
         - set child → standalone copy (the original set is not changed)
         The copy is PRIVATE and keeps a link to the original and its version
         (used for "update available" checks).
-        Source: OWN → LICENSED_USE citing the original author, except when you copy your own problem
-        (then it stays OWN, without a citation); LICENSED_USE and FREE_USE keep their type and citation;
-        the licence is always inherited.
+        Source: OWN → LICENSED_USE citing the original author;
+        LICENSED_USE and FREE_USE keep their type and citation; the licence is always inherited.
         Tags and chapters: only global ones are copied, unless the caller owns the original.
         Attachments point to the same stored images (no file is duplicated).
         Codes: 404 NOT_FOUND.
       parameters:
-      - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Id'
       responses:
         '201':
           description: Copy created.
@@ -1354,42 +677,34 @@ paths:
                 author:
                   id: u3Kp8
                   displayName: Eva Svobodová
-                tags:
-                - id: t5Gh6
-                  name: geometrie
-                  scope: global
-                chapters:
-                - id: c2Xy5
-                  name: Planimetrie
-                  scope: global
+                tags: *id016
+                chapters: *id017
                 childCount: 0
                 createdAt: '2026-10-25T14:02:00Z'
                 updatedAt: '2026-10-25T14:02:00Z'
                 source:
                   type: LICENSED_USE
-                  license:
-                    id: L2bY4
-                    name: CC BY 4.0
-                    url: https://creativecommons.org/licenses/by/4.0/
+                  license: *id018
                   citation: 'Převzato od: Jan Novák'
-                  licenseNote: null
+                  licenseNote:
                   showInWeb: true
                   showInPdf: true
                 status: PRIVATE
                 version: 1
                 lockVersion: 1
-                parentId: null
+                parentId:
                 children: []
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
   /problems/{id}/publish:
     post:
       summary: Publish a problem
       operationId: publishProblem
       tags:
-      - Problem actions
+        - Problem actions
       description: |
         Who: the author, if verified or trusted. Not allowed on a set child;
         publishing a set publishes the parent with all its children as one unit.
@@ -1403,10 +718,10 @@ paths:
         a child whose licence does not allow publication → 409 LICENSE_REQUIRED
         (the `detail` names the child).
         Already PUBLISHED or REVIEWING → 200 with no change. BLOCKED → 403 FORBIDDEN.
-        Codes: 400 VALIDATION_FAILED; 403 FORBIDDEN, TRUST_TOO_LOW; 404 NOT_FOUND;
+        Codes: 403 FORBIDDEN, TRUST_TOO_LOW; 404 NOT_FOUND;
         409 LICENSE_REQUIRED, SET_CHILD_NOT_PUBLISHABLE.
       parameters:
-      - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Id'
       requestBody:
         required: false
         content:
@@ -1429,103 +744,83 @@ paths:
                 id: k3Xa9
                 name: Řešte rovnice
                 assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
+                result:
                 language: cs
                 difficulty: 3
-                author:
+                author: &id019
                   id: u7Hn2
                   displayName: Jan Novák
                 tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
+                  - &id020
+                    id: t1Ab3
+                    name: lineární rovnice
+                    scope: global
+                  - &id022
+                    id: t2Cd4
+                    name: kvadratické rovnice
+                    scope: global
                 chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
+                  - &id021
+                    id: c9Kd1
+                    name: Rovnice
+                    scope: global
                 childCount: 2
                 createdAt: '2026-10-20T09:15:00Z'
                 updatedAt: '2026-10-25T14:02:00Z'
                 source:
                   type: OWN
-                  license:
-                    id: L2bY4
-                    name: CC BY 4.0
-                    url: https://creativecommons.org/licenses/by/4.0/
-                  citation: null
-                  licenseNote: null
+                  license: *id018
+                  citation:
+                  licenseNote:
                   showInWeb: true
                   showInPdf: true
                 status: PUBLISHED
                 version: 1
                 lockVersion: 3
-                parentId: null
+                parentId:
                 children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license:
-                      id: L2bY4
-                      name: CC BY 4.0
-                      url: https://creativecommons.org/licenses/by/4.0/
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license:
-                      id: L2bY4
-                      name: CC BY 4.0
-                      url: https://creativecommons.org/licenses/by/4.0/
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-        '400':
-          $ref: '#/components/responses/BadRequest'
+                  - id: a1B2c
+                    name: Rovnice a)
+                    assignment: \( 2x + 3 = 11 \)
+                    result: \( x = 4 \)
+                    language: cs
+                    difficulty: 2
+                    author: *id019
+                    tags:
+                      - *id020
+                    chapters:
+                      - *id021
+                    childCount: 0
+                    createdAt: '2026-10-20T09:15:00Z'
+                    updatedAt: '2026-10-25T14:02:00Z'
+                    source:
+                      type: OWN
+                      license: *id018
+                      citation:
+                      licenseNote:
+                      showInWeb: true
+                      showInPdf: true
+                  - id: d4E5f
+                    name: Rovnice b)
+                    assignment: \( x^2 = 9 \)
+                    result: \( x = \pm 3 \)
+                    language: cs
+                    difficulty: 3
+                    author: *id019
+                    tags:
+                      - *id022
+                    chapters:
+                      - *id021
+                    childCount: 0
+                    createdAt: '2026-10-20T09:15:00Z'
+                    updatedAt: '2026-10-25T14:02:00Z'
+                    source:
+                      type: OWN
+                      license: *id018
+                      citation:
+                      licenseNote:
+                      showInWeb: true
+                      showInPdf: true
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1534,12 +829,13 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+
   /problems/{id}/dissolve:
     post:
       summary: Dissolve a set
       operationId: dissolveSet
       tags:
-      - Problem actions
+        - Problem actions
       description: |
         Who: the author only. Only on a set parent.
         The parent is soft-deleted and every child becomes a standalone PRIVATE problem
@@ -1547,7 +843,7 @@ paths:
         No request body. Returns the now-standalone problems in their former order.
         Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 NOT_A_SET, IS_SET_CHILD.
       parameters:
-      - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Id'
       responses:
         '200':
           description: Set dissolved.
@@ -1557,42 +853,26 @@ paths:
                 $ref: '#/components/schemas/ProblemList'
               example:
                 items:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
+                  - id: a1B2c
+                    name: Rovnice a)
+                    assignment: \( 2x + 3 = 11 \)
+                    result: \( x = 4 \)
+                    language: cs
+                    difficulty: 2
+                    author: *id001
+                    tags: *id023
+                    chapters: *id024
+                    childCount: 0
+                  - id: d4E5f
+                    name: Rovnice b)
+                    assignment: \( x^2 = 9 \)
+                    result: \( x = \pm 3 \)
+                    language: cs
+                    difficulty: 3
+                    author: *id001
+                    tags: *id025
+                    chapters: *id026
+                    childCount: 0
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1601,12 +881,13 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+
   /problems/{id}/take-over-update:
     post:
       summary: Take over the newer version of the original
       operationId: takeOverUpdate
       tags:
-      - Problem actions
+        - Problem actions
       description: |
         Who: the author of a copy whose `updateAvailable` is true.
         Replaces the copy's content (name, assignment, result, language, difficulty) with the original's
@@ -1614,9 +895,9 @@ paths:
         Tags, chapters and the source stay as they are. Your own edits to the copy are overwritten,
         so the copy's lockVersion is required. Look at the original first via `originalId`.
         On a published copy of a non-trusted author → 202 (review), like PATCH.
-        Codes: 400 VALIDATION_FAILED; 403 FORBIDDEN; 404 NOT_FOUND; 409 LOCK_MISMATCH, NO_UPDATE_AVAILABLE, IS_SET_CHILD.
+        Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 LOCK_MISMATCH, NO_UPDATE_AVAILABLE, IS_SET_CHILD.
       parameters:
-      - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Id'
       requestBody:
         required: true
         content:
@@ -1632,200 +913,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
+              example: *id014
         '202':
           description: Waiting for review; the returned problem is unchanged.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-        '400':
-          $ref: '#/components/responses/BadRequest'
+              example: *id014
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1839,13 +934,13 @@ paths:
       summary: Dismiss the update notice
       operationId: dismissUpdate
       tags:
-      - Problem actions
+        - Problem actions
       description: |
         Who: the author of a copy whose `updateAvailable` is true. No request body.
         Hides the notice until the original gets another new version. Nothing else changes.
         Codes: 403 FORBIDDEN; 404 NOT_FOUND; 409 NO_UPDATE_AVAILABLE.
       parameters:
-      - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Id'
       responses:
         '200':
           description: Notice dismissed.
@@ -1853,99 +948,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
-              example:
-                id: k3Xa9
-                name: Řešte rovnice
-                assignment: 'Vyřešte rovnice v oboru reálných čísel:'
-                result: null
-                language: cs
-                difficulty: 3
-                author:
-                  id: u7Hn2
-                  displayName: Jan Novák
-                tags:
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                chapters:
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                childCount: 2
-                createdAt: '2026-10-20T09:15:00Z'
-                updatedAt: '2026-10-25T14:02:00Z'
-                source:
-                  type: OWN
-                  license: null
-                  citation: null
-                  licenseNote: null
-                  showInWeb: true
-                  showInPdf: true
-                status: PRIVATE
-                version: 1
-                lockVersion: 3
-                originalId: null
-                parentId: null
-                children:
-                - id: a1B2c
-                  name: Rovnice a)
-                  assignment: \( 2x + 3 = 11 \)
-                  result: \( x = 4 \)
-                  language: cs
-                  difficulty: 2
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t1Ab3
-                    name: lineární rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
-                - id: d4E5f
-                  name: Rovnice b)
-                  assignment: \( x^2 = 9 \)
-                  result: \( x = \pm 3 \)
-                  language: cs
-                  difficulty: 3
-                  author:
-                    id: u7Hn2
-                    displayName: Jan Novák
-                  tags:
-                  - id: t2Cd4
-                    name: kvadratické rovnice
-                    scope: global
-                  chapters:
-                  - id: c9Kd1
-                    name: Rovnice
-                    scope: global
-                  childCount: 0
-                  createdAt: '2026-10-20T09:15:00Z'
-                  updatedAt: '2026-10-25T14:02:00Z'
-                  source:
-                    type: OWN
-                    license: null
-                    citation: null
-                    licenseNote: null
-                    showInWeb: true
-                    showInPdf: true
-                  lockVersion: 1
+              example: *id014
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1954,20 +957,21 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+
   /tags:
     get:
       summary: List tags (for pickers and autocomplete)
       operationId: listTags
       tags:
-      - Pickers
+        - Pickers
       description: |
         Who: any logged-in teacher.
         Returns global tags and the caller's own personal tags.
         With `q`, returns only tags whose name contains it (case-insensitive).
       parameters:
-      - $ref: '#/components/parameters/TagQuery'
-      - $ref: '#/components/parameters/Page'
-      - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/TagQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
           description: OK
@@ -1977,15 +981,11 @@ paths:
                 $ref: '#/components/schemas/TagPage'
               example:
                 items:
-                - id: t2Cd4
-                  name: kvadratické rovnice
-                  scope: global
-                - id: t1Ab3
-                  name: lineární rovnice
-                  scope: global
-                - id: t8Mn1
-                  name: opakování 2.A
-                  scope: personal
+                  - *id012
+                  - *id009
+                  - id: t8Mn1
+                    name: opakování 2.A
+                    scope: personal
                 meta:
                   page: 1
                   limit: 20
@@ -1994,12 +994,13 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
   /chapters:
     get:
       summary: List chapters (flat, build the tree with parentId)
       operationId: listChapters
       tags:
-      - Pickers
+        - Pickers
       description: |
         Who: any logged-in teacher.
         Returns all global chapters and the caller's own personal chapters as a flat list.
@@ -2016,30 +1017,31 @@ paths:
                 $ref: '#/components/schemas/ChapterList'
               example:
                 items:
-                - id: c2Xy5
-                  name: Planimetrie
-                  scope: global
-                  parentId: null
-                - id: c9Kd1
-                  name: Rovnice
-                  scope: global
-                  parentId: null
-                - id: c4Lm7
-                  name: Lineární rovnice
-                  scope: global
-                  parentId: c9Kd1
-                - id: c6Pr2
-                  name: Rovnice – opakování 2.A
-                  scope: personal
-                  parentId: c9Kd1
+                  - id: c2Xy5
+                    name: Planimetrie
+                    scope: global
+                    parentId:
+                  - id: c9Kd1
+                    name: Rovnice
+                    scope: global
+                    parentId:
+                  - id: c4Lm7
+                    name: Lineární rovnice
+                    scope: global
+                    parentId: c9Kd1
+                  - id: c6Pr2
+                    name: Rovnice – opakování 2.A
+                    scope: personal
+                    parentId: c9Kd1
         '401':
           $ref: '#/components/responses/Unauthorized'
+
   /licenses:
     get:
       summary: List licences that allow publication
       operationId: listLicenses
       tags:
-      - Pickers
+        - Pickers
       description: |
         Who: any logged-in teacher.
         Returns only licences that allow publication (the choices when publishing).
@@ -2053,36 +1055,218 @@ paths:
                 $ref: '#/components/schemas/LicenseList'
               example:
                 items:
-                - id: L1aX3
-                  name: CC0 1.0
-                  url: https://creativecommons.org/publicdomain/zero/1.0/
-                  description: Volné dílo, bez nutnosti uvádět autora.
-                  requiresAttribution: false
-                  allowsModification: true
-                  requiresShareAlike: false
-                - id: L2bY4
-                  name: CC BY 4.0
-                  url: https://creativecommons.org/licenses/by/4.0/
-                  description: Užití i úpravy s uvedením autora.
-                  requiresAttribution: true
-                  allowsModification: true
-                  requiresShareAlike: false
-                - id: L3cZ5
-                  name: CC BY-SA 4.0
-                  url: https://creativecommons.org/licenses/by-sa/4.0/
-                  description: S uvedením autora, úpravy pod stejnou licencí.
-                  requiresAttribution: true
-                  allowsModification: true
-                  requiresShareAlike: true
+                  - id: L1aX3
+                    name: CC0 1.0
+                    url: https://creativecommons.org/publicdomain/zero/1.0/
+                    description: Volné dílo, bez nutnosti uvádět autora.
+                    requiresAttribution: false
+                    allowsModification: true
+                    requiresShareAlike: false
+                  - id: L2bY4
+                    name: CC BY 4.0
+                    url: https://creativecommons.org/licenses/by/4.0/
+                    description: Užití i úpravy s uvedením autora.
+                    requiresAttribution: true
+                    allowsModification: true
+                    requiresShareAlike: false
+                  - id: L3cZ5
+                    name: CC BY-SA 4.0
+                    url: https://creativecommons.org/licenses/by-sa/4.0/
+                    description: S uvedením autora, úpravy pod stejnou licencí.
+                    requiresAttribution: true
+                    allowsModification: true
+                    requiresShareAlike: true
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /auth/register:
+    post:
+      summary: Register a teacher account
+      operationId: register
+      tags:
+        - Authorization
+      description: |
+        Who: anyone (no login needed).
+        Creates a REGISTERED_TEACHER account and logs the user in right away (sets both cookies).
+        `language` is the user's default content language; missing = cs.
+        Codes: 400 VALIDATION_FAILED; 409 EMAIL_TAKEN, USERNAME_TAKEN.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: jan.novak@skola.cz
+              username: jnovak
+              password: '********'
+              displayName: Jan Novák
+              language: cs
+      responses:
+        '201':
+          description: Account created and logged in. Both cookies are set.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetAuthCookies'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+              example: &currentUserExample
+                id: eXkfA
+                username: jnovak
+                displayName: Jan Novák
+                role: REGISTERED_TEACHER
+                email: jan.novak@skola.cz
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /auth/login:
+    post:
+      summary: Log in
+      operationId: login
+      tags:
+        - Authorization
+      description: |
+        Who: anyone (no login needed).
+        Checks email and password, then sets the access and refresh cookies.
+        A blocked account gets 403, but only after a correct password
+        (checking it earlier would reveal that the email exists).
+        Codes: 400 VALIDATION_FAILED; 401 INVALID_CREDENTIALS; 403 ACCOUNT_BLOCKED.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: jan.novak@skola.cz
+              password: '********'
+      responses:
+        '200':
+          description: Logged in. Both cookies are set.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetAuthCookies'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+              example: *currentUserExample
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '403':
+          $ref: '#/components/responses/AccountBlocked'
+
+  /auth/me:
+    get:
+      summary: Current user
+      operationId: getCurrentUser
+      tags:
+        - Authorization
+      description: |
+        Who: any logged-in user.
+        Returns the user the access cookie belongs to. The frontend calls it on startup
+        (after a reload it cannot read the httpOnly cookie to know who is logged in).
+        Codes: 401 UNAUTHENTICATED; 403 ACCOUNT_BLOCKED.
+      responses:
+        '200':
+          description: The logged-in user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+              example: *currentUserExample
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AccountBlocked'
+
+  /auth/refresh:
+    post:
+      summary: Renew the access token
+      operationId: refreshSession
+      tags:
+        - Authorization
+      description: |
+        Who: a user with a valid refresh_token cookie (the access token may already be expired).
+        No request body. Rotates the refresh token: the old one is revoked and both cookies
+        are set again. Using an already rotated token revokes its whole chain (likely theft).
+        Call it once after a 401 UNAUTHENTICATED, then retry the original request;
+        if this call fails, go to the login page.
+        Codes: 401 UNAUTHENTICATED (missing, expired, revoked or reused token); 403 ACCOUNT_BLOCKED.
+      security:
+        - refreshCookie: []
+      responses:
+        '200':
+          description: Session renewed. Both cookies are set again.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SetAuthCookies'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+              example: *currentUserExample
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AccountBlocked'
+
+  /auth/logout:
+    post:
+      summary: Log out
+      operationId: logout
+      tags:
+        - Authorization
+      description: |
+        Who: anyone. No valid access token needed (logging out with an expired one must work).
+        Revokes the refresh token from the cookie, if one was sent, and clears both cookies.
+        Always succeeds: a missing, expired or already revoked token still ends in 204.
+      security:
+        - {}
+        - refreshCookie: []
+      responses:
+        '204':
+          description: Logged out. Both cookies are cleared.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/ClearAuthCookies'
+
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: Access token from the auth part (not in this spec yet).
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: Short-lived JWT (~15 min), set by login, register and refresh.
+
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: Long-lived opaque token, sent by the browser only to /api/v1/auth/*.
+  headers:
+    SetAuthCookies:
+      description: |
+        Sets two cookies, both HttpOnly; Secure; SameSite=Lax:
+        access_token (Path=/api, ~15 min) and refresh_token (Path=/api/v1/auth).
+      schema:
+        type: string
+        example: access_token=eyJhbGciOi...; Path=/api; Max-Age=900; HttpOnly; Secure; SameSite=Lax
+    ClearAuthCookies:
+      description: |
+        Clears both cookies: access_token (Path=/api) and refresh_token (Path=/api/v1/auth),
+        each sent again with Max-Age=0.
+      schema:
+        type: string
+        example: access_token=; Path=/api; Max-Age=0; HttpOnly; Secure; SameSite=Lax
+
   parameters:
     Id:
       name: id
@@ -2163,6 +1347,7 @@ components:
         you have not taken over or dismissed. With limit=1, meta.total is the badge count.
       schema:
         type: boolean
+
   responses:
     BadRequest:
       description: Invalid input.
@@ -2219,6 +1404,7 @@ components:
             status: 409
             code: LOCK_MISMATCH
             detail: Someone saved this problem in between. Reload and try again.
+
     PreconditionFailed:
       description: The If-Match version does not match the current version (RFC 9110).
       content:
@@ -2231,7 +1417,39 @@ components:
             status: 412
             code: LOCK_MISMATCH
             detail: Someone changed this set in between. Reload and try again.
+    InvalidCredentials:
+      description: Wrong email or password
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+          example:
+            type: about:blank
+            title: Invalid Credentials
+            status: 401
+            code: INVALID_CREDENTIALS
+            detail: Log in credentials are invalid
+    AccountBlocked:
+      description: Account is blocked
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+          example:
+            type: about:blank
+            title: Account Blocked
+            status: 403
+            code: ACCOUNT_BLOCKED
+            detail: Your account was blocked by moderation
+    ReviewPending:
+      description: 'The set is published and you are not trusted: the change waits for review; the returned set is unchanged.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
   schemas:
+    # --- building blocks ---
     Sqid:
       type: string
       example: k3Xa9
@@ -2241,6 +1459,65 @@ components:
       properties:
         id: {$ref: '#/components/schemas/Sqid'}
         displayName: {type: string}
+    Username:
+      type: string
+      minLength: 4
+      maxLength: 100
+      example: user123
+    Email:
+      type: string
+      format: email
+      maxLength: 255
+      example: example@gmail.com
+    Password:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: |
+        Any existing password, no rules. Used by login, so changing the rules
+        for new passwords never locks out existing accounts.
+      example: correct horse battery staple
+    NewPassword:
+      type: string
+      minLength: 8
+      maxLength: 255
+      description: Rules for a new password (register, later password change).
+      example: correct horse battery staple
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: {$ref: '#/components/schemas/Email'}
+        password: {$ref: '#/components/schemas/Password'}
+    RegisterRequest:
+      type: object
+      required: [email, username, password]
+      properties:
+        email: {$ref: '#/components/schemas/Email'}
+        username: {$ref: '#/components/schemas/Username'}
+        password: {$ref: '#/components/schemas/NewPassword'}
+        displayName:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Missing or null = the username is shown instead.
+        language:
+          type: string
+          example: cs
+          description: Code of the user's default language (language.code). Missing = cs.
+    CurrentUser:
+      allOf:
+        - $ref: '#/components/schemas/UserRef'
+        - type: object
+          required: [username, role, email]
+          properties:
+            username: {$ref: '#/components/schemas/Username'}
+            email: {$ref: '#/components/schemas/Email'}
+            role:
+              type: string
+              enum: [REGISTERED_TEACHER, VERIFIED_TEACHER, TRUSTED_TEACHER, ADMIN, SUPERADMIN]
+              description: For the UI only (which buttons to show). The server checks permissions itself.
+
     TagRef:
       type: object
       required: [id, name, scope]
@@ -2272,11 +1549,10 @@ components:
         license:
           description: The licence, or null when none is set yet (OWN before publishing).
           anyOf:
-          - $ref: '#/components/schemas/LicenseRef'
-          - type: object
-            nullable: true
-            enum:
-            - null
+            - $ref: '#/components/schemas/LicenseRef'
+            - type: object
+              nullable: true
+              enum:
         citation:
           type: string
           nullable: true
@@ -2287,123 +1563,128 @@ components:
         licenseNote: {type: string, nullable: true}
         showInWeb: {type: boolean}
         showInPdf: {type: boolean}
+
+    # --- problem: input ---
     ProblemBase:
       type: object
       properties:
-        name: {type: string, minLength: 1, maxLength: 255}
+        name: {type: string, minLength: 1}
         assignment: {type: string, minLength: 1}
         result: {type: string, nullable: true}
         language: {type: string, nullable: true, example: cs}
         difficulty: {type: integer, nullable: true, minimum: 1, maximum: 10}
     ProblemCreate:
       allOf:
-      - $ref: '#/components/schemas/ProblemBase'
-      - type: object
-        required: [name, assignment]
-        properties:
-          name: {type: string, minLength: 1, maxLength: 255}
-          assignment: {type: string, minLength: 1}
-          tagIds:
-            type: array
-            items: {$ref: '#/components/schemas/Sqid'}
-          chapterIds:
-            type: array
-            items: {$ref: '#/components/schemas/Sqid'}
+        - $ref: '#/components/schemas/ProblemBase'
+        - type: object
+          required: [name, assignment]
+          properties:
+            tagIds:
+              type: array
+              items: {$ref: '#/components/schemas/Sqid'}
+            chapterIds:
+              type: array
+              items: {$ref: '#/components/schemas/Sqid'}
+
     ProblemPatch:
       allOf:
-      - $ref: '#/components/schemas/ProblemBase'
-      - type: object
-        required: [lockVersion]
-        properties:
-          lockVersion: {type: integer}
-          tagIds:
-            type: array
-            description: Missing = unchanged. Sent = replaces the whole list.
-            items: {$ref: '#/components/schemas/Sqid'}
-          chapterIds:
-            type: array
-            description: Missing = unchanged. Sent = replaces the whole list.
-            items: {$ref: '#/components/schemas/Sqid'}
+        - $ref: '#/components/schemas/ProblemBase'
+        - type: object
+          required: [lockVersion]
+          properties:
+            lockVersion: {type: integer}
+            tagIds:
+              type: array
+              description: Missing = unchanged. Sent = replaces the whole list.
+              items: {$ref: '#/components/schemas/Sqid'}
+            chapterIds:
+              type: array
+              description: Missing = unchanged. Sent = replaces the whole list.
+              items: {$ref: '#/components/schemas/Sqid'}
+
+    # --- problem: output ---
     ProblemListItem:
       allOf:
-      - $ref: '#/components/schemas/ProblemBase'
-      - type: object
-        required: [id, name, assignment, author, tags, chapters, childCount]
-        properties:
-          name: {type: string, minLength: 1, maxLength: 255}
-          assignment: {type: string, minLength: 1}
-          id: {$ref: '#/components/schemas/Sqid'}
-          author: {$ref: '#/components/schemas/UserRef'}
-          tags:
-            type: array
-            items: {$ref: '#/components/schemas/TagRef'}
-          chapters:
-            type: array
-            items: {$ref: '#/components/schemas/ChapterRef'}
-          childCount:
-            type: integer
-            minimum: 0
-            description: 0 = standalone problem, more = set. Counted by the server, not stored.
-          updateAvailable:
-            type: boolean
-            description: |
-              Present only for the author of a copy (on a set: only on the set itself, never on its children).
-              true = the original has a newer version than the one taken over, and it was not dismissed.
-              Computed on read, not stored.
+        - $ref: '#/components/schemas/ProblemBase'
+        - type: object
+          required: [id, name, assignment, author, tags, chapters, childCount]
+          properties:
+            id: {$ref: '#/components/schemas/Sqid'}
+            author: {$ref: '#/components/schemas/UserRef'}
+            tags:
+              type: array
+              items: {$ref: '#/components/schemas/TagRef'}
+            chapters:
+              type: array
+              items: {$ref: '#/components/schemas/ChapterRef'}
+            childCount:
+              type: integer
+              minimum: 0
+              description: 0 = standalone problem, more = set. Counted by the server, not stored.
+
+            updateAvailable:
+              type: boolean
+              description: |
+                Present only for the author of a copy (on a set: only on the set itself, never on its children).
+                true = the original has a newer version than the one taken over, and it was not dismissed.
+                Computed on read, not stored.
     ProblemDetailCore:
       description: Detail fields shared by a problem and by each child inside a set.
       allOf:
-      - $ref: '#/components/schemas/ProblemListItem'
-      - type: object
-        required: [source]
-        properties:
-          createdAt: {type: string, format: date-time}
-          updatedAt: {type: string, format: date-time}
-          source: {$ref: '#/components/schemas/SourceRef'}
-          lockVersion:
-            type: integer
-            description: |
-              Present only for the author. Send back in PATCH /problems/{id}.
-              For a set, also send it with the /children endpoints (structure changes).
-              Each child has its own lockVersion for editing its content.
+        - $ref: '#/components/schemas/ProblemListItem'
+        - type: object
+          required: [source]
+          properties:
+            createdAt: {type: string, format: date-time}
+            updatedAt: {type: string, format: date-time}
+            source: {$ref: '#/components/schemas/SourceRef'}
+            lockVersion:
+              type: integer
+              description: |
+                Present only for the author. Send back in PATCH /problems/{id}.
+                For a set, also send it with the /children endpoints (structure changes).
+                Each child has its own lockVersion for editing its content.
+
     ProblemDetail:
       allOf:
-      - $ref: '#/components/schemas/ProblemDetailCore'
-      - type: object
-        required: [parentId, children]
-        properties:
-          status:
-            type: string
-            enum: [PRIVATE, REVIEWING, PUBLISHED, WITHDRAWN, BLOCKED]
-            description: Present only for the author.
-          version:
-            type: integer
-            description: Present only for the author. A change to any child also raises the set's version.
-          parentId:
-            type: string
-            nullable: true
-            example: k3Xa9
-            description: Sqid of the set this problem belongs to, or null when it is not a set child.
-          children:
-            type: array
-            description: Ordered children of a set. Empty for a standalone problem or a child.
-            items: {$ref: '#/components/schemas/ProblemDetailCore'}
-          originalId:
-            type: string
-            nullable: true
-            example: VqXmZ
-            description: Present only for the author. The problem this one was copied from (to look at a newer version before taking it over), or null.
+        - $ref: '#/components/schemas/ProblemDetailCore'
+        - type: object
+          required: [parentId, children]
+          properties:
+            status:
+              type: string
+              enum: [PRIVATE, REVIEWING, PUBLISHED, WITHDRAWN, BLOCKED]
+              description: Present only for the author.
+            version:
+              type: integer
+              description: Present only for the author. A change to any child also raises the set's version.
+            parentId:
+              type: string
+              nullable: true
+              example: k3Xa9
+              description: Sqid of the set this problem belongs to, or null when it is not a set child.
+            children:
+              type: array
+              description: Ordered children of a set. Empty for a standalone problem or a child.
+              items: {$ref: '#/components/schemas/ProblemDetailCore'}
+            originalId:
+              type: string
+              nullable: true
+              example: VqXmZ
+              description: Present only for the author. The problem this one was copied from (to look at a newer version before taking it over), or null.
+
+    # --- pickers ---
     ChapterNode:
       allOf:
-      - $ref: '#/components/schemas/ChapterRef'
-      - type: object
-        required: [parentId]
-        properties:
-          parentId:
-            type: string
-            nullable: true
-            example: c9Kd1
-            description: Sqid of the parent chapter, or null for a top-level chapter.
+        - $ref: '#/components/schemas/ChapterRef'
+        - type: object
+          required: [parentId]
+          properties:
+            parentId:
+              type: string
+              nullable: true
+              example: c9Kd1
+              description: Sqid of the parent chapter, or null for a top-level chapter.
     ChapterList:
       type: object
       required: [items]
@@ -2421,16 +1702,16 @@ components:
         meta: {$ref: '#/components/schemas/PageMeta'}
     License:
       allOf:
-      - $ref: '#/components/schemas/LicenseRef'
-      - type: object
-        required: [requiresAttribution, allowsModification, requiresShareAlike]
-        properties:
-          description: {type: string, nullable: true}
-          requiresAttribution: {type: boolean}
-          allowsModification: {type: boolean}
-          requiresShareAlike:
-            type: boolean
-            description: Copies inherit the licence.
+        - $ref: '#/components/schemas/LicenseRef'
+        - type: object
+          required: [requiresAttribution, allowsModification, requiresShareAlike]
+          properties:
+            description: {type: string, nullable: true}
+            requiresAttribution: {type: boolean}
+            allowsModification: {type: boolean}
+            requiresShareAlike:
+              type: boolean
+              description: Copies inherit the licence.
     LicenseList:
       type: object
       required: [items]
@@ -2438,17 +1719,19 @@ components:
         items:
           type: array
           items: {$ref: '#/components/schemas/License'}
+
+    # --- actions ---
     PublishRequest:
       type: object
       properties:
         licenseId:
           allOf:
-          - $ref: '#/components/schemas/Sqid'
+            - $ref: '#/components/schemas/Sqid'
           description: Required only when the problem has no licence yet. Must allow publication.
     AddChildRequest:
       type: object
       required:
-      - lockVersion
+        - lockVersion
       description: |
         Exactly one of `problemId` (move your own problem in) or `copyFromId` (copy any visible problem in).
         Both or neither → 400 VALIDATION_FAILED.
@@ -2458,11 +1741,11 @@ components:
           description: The set's lockVersion.
         problemId:
           allOf:
-          - $ref: '#/components/schemas/Sqid'
+            - $ref: '#/components/schemas/Sqid'
           description: 'Move: your own PRIVATE standalone problem that is not a set. It becomes a child; no copy is made.'
         copyFromId:
           allOf:
-          - $ref: '#/components/schemas/Sqid'
+            - $ref: '#/components/schemas/Sqid'
           description: 'Copy: any problem you can see that is not a set. The copy becomes the child (usual copy rules).'
         afterId:
           type: string
@@ -2473,8 +1756,8 @@ components:
     ReorderChildRequest:
       type: object
       required:
-      - lockVersion
-      - afterId
+        - lockVersion
+        - afterId
       properties:
         lockVersion:
           type: integer
@@ -2487,7 +1770,7 @@ components:
     TakeOverRequest:
       type: object
       required:
-      - lockVersion
+        - lockVersion
       properties:
         lockVersion:
           type: integer
@@ -2499,6 +1782,8 @@ components:
         items:
           type: array
           items: {$ref: '#/components/schemas/ProblemListItem'}
+
+    # --- pagination wrapper ---
     PageMeta:
       type: object
       required: [page, limit, total]
@@ -2514,6 +1799,8 @@ components:
           type: array
           items: {$ref: '#/components/schemas/ProblemListItem'}
         meta: {$ref: '#/components/schemas/PageMeta'}
+
+    # --- errors (RFC 9457) ---
     ErrorDetails:
       type: object
       required: [type, title, status]
@@ -2529,8 +1816,11 @@ components:
             Exact error case, so the frontend can show the right message.
             400 VALIDATION_FAILED - invalid input
             401 UNAUTHENTICATED - not logged in
+            401 INVALID_CREDENTIALS - invalid credentials when logging in
             403 FORBIDDEN - logged in, but not allowed
+            403 ACCOUNT_BLOCKED - the user is blocked by moderation
             403 TRUST_TOO_LOW - registered user trying to publish
+            403 CSRF_CHECK_FAILED - POST/PATCH/DELETE without the X-Requested-With header
             404 NOT_FOUND - problem does not exist or is hidden
             409 LOCK_MISMATCH - lockVersion does not match
             412 LOCK_MISMATCH - If-Match version does not match (DELETE …/children/{childId})
@@ -2542,4 +1832,7 @@ components:
             409 CANNOT_ADD_TO_SET - the problem cannot go into this set (already in a set, is a set, is the set itself,
                 or for a move: not yours or not private); `detail` says which
             409 NO_UPDATE_AVAILABLE - take-over or dismiss when the copy has no update (or is not a copy)
+            409 EMAIL_TAKEN - register with an email that already has an account
+            409 USERNAME_TAKEN - register with a username that is already used
+
         requestId: {type: string}
