@@ -37,13 +37,21 @@ function problem(p: Partial<ProblemRow> & Pick<ProblemRow, 'id' | 'name' | 'assi
   };
 }
 
+/** Password of every seeded user (dev and tests only). */
+export const SEED_PASSWORD = 'password123';
+/** argon2id hash of SEED_PASSWORD, precomputed so the sync seed needs no hashing. */
+export const SEED_PASSWORD_HASH =
+  '$argon2id$v=19$m=65536,t=3,p=4$etGr9EP72aYj1CmNssYmYw$JoTcKqF1TEb90z2W9rAd+flp7JQRQE23H9yyh4sJVs4';
+
 export function seed() {
-  // Log in to the mock with `Authorization: Bearer jan` (trusted),
-  // `Bearer eva` (verified) or `Bearer petr` (registered).
+  // Log in with <username>@example.test + SEED_PASSWORD: jan (trusted), eva (verified), petr (registered).
+  // blocked (id 4) is a blocked account, for the ACCOUNT_BLOCKED checks.
+  const base = { passwordHash: SEED_PASSWORD_HASH, status: 'ACTIVE', role: 'TEACHER' } as const;
   const users: UserRow[] = [
-    { id: 1, displayName: 'Jan Novák', role: 'TEACHER', trust: 'TRUSTED', mockToken: 'jan' },
-    { id: 2, displayName: 'Eva Svobodová', role: 'TEACHER', trust: 'VERIFIED', mockToken: 'eva' },
-    { id: 3, displayName: 'Petr Dvořák', role: 'TEACHER', trust: 'REGISTERED', mockToken: 'petr' },
+    { ...base, id: 1, username: 'jan', email: 'jan@example.test', displayName: 'Jan Novák', dbRole: 'TRUSTED_TEACHER', trust: 'TRUSTED' },
+    { ...base, id: 2, username: 'eva', email: 'eva@example.test', displayName: 'Eva Svobodová', dbRole: 'VERIFIED_TEACHER', trust: 'VERIFIED' },
+    { ...base, id: 3, username: 'petr', email: 'petr@example.test', displayName: 'Petr Dvořák', dbRole: 'REGISTERED_TEACHER', trust: 'REGISTERED' },
+    { ...base, id: 4, username: 'blocked', email: 'blocked@example.test', displayName: 'Blokovaný Uživatel', dbRole: 'REGISTERED_TEACHER', trust: 'REGISTERED', status: 'BLOCKED' },
   ];
 
   const licenses: LicenseRow[] = [

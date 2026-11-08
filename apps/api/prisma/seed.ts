@@ -4,13 +4,12 @@
  * Mirrors the mock seed (src/database/mock-seed.ts) closely enough for the e2e tests:
  * same users, same ids on an EMPTY database (autoincrement starts at 1), same names.
  * Runs only on an empty database, so running it twice does not duplicate anything.
- * Login in prisma mode: `Authorization: Bearer jan` (username).
+ * Login in prisma mode: <username>@example.test + SEED_PASSWORD (jan, eva, petr; `blocked` is blocked).
  */
 import { PrismaPg } from '@prisma/adapter-pg';
+import * as argon2 from 'argon2';
+import { SEED_PASSWORD } from '../src/database/mock-seed.js';
 import { PrismaClient } from '../src/generated/prisma/client.js';
-
-// Not a real hash: nobody can log in with a password until the auth module exists.
-const PLACEHOLDER_PASSWORD_HASH = 'PLACEHOLDER-NOT-A-REAL-HASH';
 
 // Same fallback as prisma.config.ts (docker-compose.dev.yml).
 const connectionString = process.env.DATABASE_URL ?? 'postgresql://app:app@localhost:5432/sbirka';
@@ -43,11 +42,14 @@ async function main() {
   const cs = await prisma.language.create({ data: { code: 'cs', name: 'Čeština' } });
 
   // One after another, so ids are 1, 2, 3 in this order (the tests rely on it).
+  // `blocked` is for the ACCOUNT_BLOCKED checks.
   const users = [
-    { username: 'jan', display_name: 'Jan Novák', role: 'TRUSTED_TEACHER' },
-    { username: 'eva', display_name: 'Eva Svobodová', role: 'VERIFIED_TEACHER' },
-    { username: 'petr', display_name: 'Petr Dvořák', role: 'REGISTERED_TEACHER' },
+    { username: 'jan', display_name: 'Jan Novák', role: 'TRUSTED_TEACHER', status: 'ACTIVE' },
+    { username: 'eva', display_name: 'Eva Svobodová', role: 'VERIFIED_TEACHER', status: 'ACTIVE' },
+    { username: 'petr', display_name: 'Petr Dvořák', role: 'REGISTERED_TEACHER', status: 'ACTIVE' },
+    { username: 'blocked', display_name: 'Blokovaný Uživatel', role: 'REGISTERED_TEACHER', status: 'BLOCKED' },
   ] as const;
+  const passwordHash = await argon2.hash(SEED_PASSWORD);
   const created = [];
   for (const u of users) {
     created.push(
@@ -55,7 +57,7 @@ async function main() {
         data: {
           ...u,
           email: `${u.username}@example.test`,
-          password_hash: PLACEHOLDER_PASSWORD_HASH,
+          password_hash: passwordHash,
           language_id: cs.id,
         },
       }),
@@ -236,7 +238,7 @@ async function main() {
     chapterIds: [2],
   });
 
-  console.log('db:seed done: 1 language, 3 users (jan, eva, petr), 4 licences, 4 tags, 4 chapters, 7 problems.');
+  console.log('db:seed done: 1 language, 4 users (jan, eva, petr, blocked), 4 licences, 4 tags, 4 chapters, 7 problems.');
 }
 
 main()

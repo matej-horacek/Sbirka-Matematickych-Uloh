@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { apiReference } from '@scalar/nestjs-api-reference';
 import { parse, stringify } from 'yaml';
@@ -13,6 +14,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.setGlobalPrefix('api/v1');
   app.useGlobalFilters(new ProblemDetailsFilter());
+  app.use(cookieParser());
   // CORS for the web app (Vite dev server). CORS_ORIGIN = comma-separated list of allowed origins.
   // credentials: true because the web's axios instance sends withCredentials (so '*' is not allowed).
   const origins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://127.0.0.1:5173')

@@ -112,27 +112,27 @@ export class PrismaProblemsRepository implements ProblemsRepository {
   }
 
   /**
-   * TODO Daniel. Must do:
+   * TODO. Must do:
    * - live (deleted_at IS NULL) problems whose problem_part.parent_id = parentId;
    * - ORDER BY problem_part.position in BYTE order, not locale order: positions are fractional-indexing keys,
    *   case-sensitive ('aB' < 'ab'). Use a "C" collation (e.g. `position COLLATE "C"` via $queryRaw) or sort in
    *   code with comparePositions; Prisma's plain orderBy follows the DB collation and can get this wrong (R-020).
    */
   async findChildren(_parentId: number): Promise<ProblemRow[]> {
-    throw new NotImplementedException('TODO Daniel');
+    throw new NotImplementedException('TODO');
   }
 
   /**
-   * TODO Daniel. Must do:
+   * TODO. Must do:
    * - one grouped query: count live children (problem.deleted_at IS NULL) per problem_part.parent_id;
    * - EVERY requested id must be in the Map, with 0 when it has no children.
    */
   async countChildren(_parentIds: number[]): Promise<Map<number, number>> {
-    throw new NotImplementedException('TODO Daniel');
+    throw new NotImplementedException('TODO');
   }
 
   /**
-   * TODO Daniel. Must do (spec listProblems, DECISIONS D-04):
+   * TODO. Must do (spec listProblems, DECISIONS D-04):
    * - only live (deleted_at IS NULL) TOP-LEVEL problems: no problem_part row with child_id = problem.id;
    * - authorId → author_id; publishStatus → publish_status (scope=mine uses authorId, any other scope PUBLISHED);
    * - tagIds: has AT LEAST ONE of these tags (problem_tag `some`);
@@ -148,11 +148,11 @@ export class PrismaProblemsRepository implements ProblemsRepository {
     _page: number,
     _limit: number,
   ): Promise<{ rows: ProblemRow[]; total: number }> {
-    throw new NotImplementedException('TODO Daniel');
+    throw new NotImplementedException('TODO');
   }
 
   /**
-   * TODO Daniel. Must do, in ONE transaction ($transaction; all or nothing):
+   * TODO. Must do, in ONE transaction ($transaction; all or nothing):
    *  1. create the content_source row (origin_type, source_citation_text, license_id, license_note,
    *     citation_audience, show_in_web, show_in_pdf);
    *  2. create the problem with source_id = that row (language via code → language_id; author_id; publish_status;
@@ -163,11 +163,11 @@ export class PrismaProblemsRepository implements ProblemsRepository {
    * Copies of sets are inserted child by child by ProblemCopiesService, each call being its own transaction.
    */
   async insert(_data: NewProblem): Promise<ProblemRow> {
-    throw new NotImplementedException('TODO Daniel');
+    throw new NotImplementedException('TODO');
   }
 
   /**
-   * TODO Daniel. Must do (one transaction when several tables change):
+   * TODO. Must do (one transaction when several tables change):
    * - patch only the keys present in `data` (Partial<ProblemRow>); `updatedAt` is NOT sent, @updatedAt sets it;
    * - `tagIds` / `chapterIds` present → REPLACE the join rows (delete + createMany), absent → leave untouched;
    * - `parentId` / `position` present → upsert or delete the problem_part row (null parentId = delete the row);
@@ -177,16 +177,16 @@ export class PrismaProblemsRepository implements ProblemsRepository {
    * - return the updated problem mapped to ProblemRow.
    */
   async update(_id: number, _data: Partial<ProblemRow>): Promise<ProblemRow> {
-    throw new NotImplementedException('TODO Daniel');
+    throw new NotImplementedException('TODO');
   }
 
   /**
-   * TODO Daniel. Must do:
+   * TODO. Must do:
    * - set deleted_at = now() on every given id (soft delete, rows stay; join rows stay too);
    * - already-deleted or unknown ids are ignored (idempotent);
    * - the service passes a set together with its children in one call, so do it in one updateMany.
    */
   async softDelete(_ids: number[]): Promise<void> {
-    throw new NotImplementedException('TODO Daniel');
+    throw new NotImplementedException('TODO');
   }
 }

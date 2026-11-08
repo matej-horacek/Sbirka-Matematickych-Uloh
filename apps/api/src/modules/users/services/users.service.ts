@@ -1,9 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { UserRef } from '@matematika/contracts';
 import type { UserRow } from '../../../database/mock-database.js';
-import { dataSource } from '../../../config/data-source.js';
 import { encodeId } from '../../../common/utils/ids.js';
-import { USERS_REPOSITORY, type UsersRepository } from '../repositories/users.repository.js';
+import { USERS_REPOSITORY, type NewUser, type UsersRepository } from '../repositories/users.repository.js';
 
 /** Facade of the users module. */
 @Injectable()
@@ -18,13 +17,16 @@ export class UsersService {
     );
   }
 
-  /**
-   * Mock login: `Bearer <username>`. In mock mode an unknown name falls back to `jan` (as always);
-   * in prisma mode it is simply not found (→ 401).
-   */
-  async findByLogin(token: string): Promise<UserRow | undefined> {
-    const user = await this.repo.findByUsername(token);
-    if (user || dataSource() !== 'mock') return user;
-    return this.repo.findByUsername('jan');
+  findById(id: number): Promise<UserRow | undefined> {
+    return this.repo.findById(id);
+  }
+
+  findByEmail(email: string): Promise<UserRow | undefined> {
+    return this.repo.findByEmail(email);
+  }
+
+  /** Throws DuplicateUserError / UnknownLanguageError (the auth service maps them to API errors). */
+  create(user: NewUser): Promise<UserRow> {
+    return this.repo.create(user);
   }
 }

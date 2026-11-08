@@ -10,13 +10,33 @@ export type Role = 'TEACHER' | 'ADMIN';
 export type PublishStatus = 'PRIVATE' | 'REVIEWING' | 'PUBLISHED' | 'WITHDRAWN' | 'BLOCKED';
 export type OriginType = 'OWN' | 'LICENSED_USE' | 'FREE_USE';
 
+/** user_role of the database; `role` + `trust` below are derived from it. */
+export type UserRole = 'SUPERADMIN' | 'ADMIN' | 'TRUSTED_TEACHER' | 'VERIFIED_TEACHER' | 'REGISTERED_TEACHER';
+
 export interface UserRow {
   id: number;
+  username: string;
+  email: string;
+  /** argon2 hash. Never leaves the auth module. */
+  passwordHash: string;
+  /** COALESCE(display_name, username) (D-05). */
   displayName: string;
+  /** Raw database role (what `CurrentUser.role` returns). */
+  dbRole: UserRole;
+  status: 'ACTIVE' | 'BLOCKED';
   role: Role;
   trust: TrustLevel;
-  /** Mock login: `Authorization: Bearer <mockToken>` selects this user. */
-  mockToken: string;
+}
+
+/** refresh_token: opaque token stored only as a SHA-256 hash. */
+export interface RefreshTokenRow {
+  id: number;
+  userId: number;
+  tokenHash: string;
+  /** All tokens of one login chain; reuse of a rotated token revokes the family. */
+  familyId: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
 }
 
 export interface LicenseRow {
@@ -88,7 +108,10 @@ export class MockDatabase {
   tags: TagRow[] = [];
   chapters: ChapterRow[] = [];
   problems: ProblemRow[] = [];
+  refreshTokens: RefreshTokenRow[] = [];
   private nextProblemId = 1;
+  private nextUserId = 1;
+  private nextRefreshTokenId = 1;
 
   constructor() {
     const data = seed();
@@ -98,6 +121,15 @@ export class MockDatabase {
     this.chapters = data.chapters;
     this.problems = data.problems;
     this.nextProblemId = Math.max(0, ...this.problems.map((p) => p.id)) + 1;
+    this.nextUserId = Math.max(0, ...this.users.map((u) => u.id)) + 1;
+  }
+
+  newUserId(): number {
+    return this.nextUserId++;
+  }
+
+  newRefreshTokenId(): number {
+    return this.nextRefreshTokenId++;
   }
 
   newProblemId(): number {
