@@ -4,7 +4,7 @@
 //   2. creates the schema from schema.prisma (db push on the empty database: there are no migration files yet)
 //   3. seeds it (prisma/seed.ts)
 //   4. runs the create, get, list and picker e2e tests with DATA_SOURCE=prisma, one file at a time (shared database)
-// Until the Prisma…Repository classes are implemented, these tests fail with 501 (TODO Daniel).
+// Until the Prisma…Repository classes are implemented, these tests fail with 501 (TODO).
 //
 // Usage: pnpm test:prisma [--down] [extra vitest args]
 //   --down  stop and remove the test database afterwards
@@ -47,16 +47,17 @@ const steps = [
   ['create schema (prisma db push)', 'pnpm', ['exec', 'prisma', 'db', 'push'], apiDir, true],
   ['seed (prisma db seed)', 'pnpm', ['exec', 'prisma', 'db', 'seed'], apiDir, true],
   [
-    'e2e: create, get, list, pickers (DATA_SOURCE=prisma)',
+    'e2e: create, get, list, pickers, auth (DATA_SOURCE=prisma)',
     process.execPath,
     [
       resolve(root, 'scripts/test-capped.mjs'),
       '--maxWorkers=1', // one test file at a time: they share one database
-      // Vitest file filters are substrings of the path (not regexes): exactly these four files.
+      // Vitest file filters are substrings of the path (not regexes): exactly these five files.
       'problems/create.e2e-spec',
       'problems/get.e2e-spec',
       'problems/list.e2e-spec',
       'pickers.e2e-spec',
+      'auth.e2e-spec',
       ...testArgs,
     ],
     root,

@@ -1,4 +1,5 @@
 import { useTestApp } from './support/app.js';
+import { signAccessToken } from './support/auth.js';
 import { expectError } from './support/expect.js';
 import { seed } from './support/seed.js';
 
@@ -149,17 +150,14 @@ describe('Pickers', () => {
   });
 
   describe('authentication (all operations)', () => {
-    it.each(['Basic amFuOmphbg==', 'Bearer', 'jan'])(
-      '401 for a malformed Authorization header "%s"',
-      async (header) => {
-        const res = await ctx().api.raw().get('/api/v1/tags').set('Authorization', header);
-        expectError(res, 401, 'UNAUTHENTICATED');
-      },
-    );
-
-    it.skip('401 for an unknown bearer token [R-014]', async () => {
-      // Mock: any unknown token logs in as jan (mock-auth.guard.ts). Spec 401: "Not logged in, or the login expired."
-      const res = await ctx().api.raw().get('/api/v1/tags').set('Authorization', 'Bearer not-a-user');
+    it.each([
+      ['a Bearer header instead of the cookie', { Authorization: 'Bearer jan' }],
+      ['a garbage access_token cookie', { Cookie: 'access_token=jan' }],
+      ['a token signed with another key', { Cookie: `access_token=${signAccessToken(1, 900, new TextEncoder().encode('x'))}` }],
+      ['an expired token', { Cookie: `access_token=${signAccessToken(1, -60)}` }],
+      ['a token of a user that does not exist', { Cookie: `access_token=${signAccessToken(999)}` }],
+    ])('401 for %s', async (_name, headers) => {
+      const res = await ctx().api.raw().get('/api/v1/tags').set(headers);
       expectError(res, 401, 'UNAUTHENTICATED');
     });
   });

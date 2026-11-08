@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module.js';
@@ -19,8 +20,8 @@ export interface TestContext {
 
 /**
  * A fresh Nest app from the real AppModule, so every call gets its own MockDatabase
- * (seeded from scratch). Repeats the two lines of setup that live in main.ts
- * (global prefix and error filter), because main.ts starts a server on import.
+ * (seeded from scratch). Repeats the three lines of setup that live in main.ts
+ * (global prefix, error filter, cookie parser), because main.ts starts a server on import.
  * Nothing in src is changed or mocked.
  */
 export async function createTestApp(): Promise<TestContext> {
@@ -28,6 +29,7 @@ export async function createTestApp(): Promise<TestContext> {
   const app = moduleRef.createNestApplication({ logger: ['error'] });
   app.setGlobalPrefix('api/v1'); // keep in sync with src/main.ts
   app.useGlobalFilters(new ProblemDetailsFilter()); // keep in sync with src/main.ts
+  app.use(cookieParser()); // keep in sync with src/main.ts
   await app.init();
   const store =
     dataSource() === 'prisma'
