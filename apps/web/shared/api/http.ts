@@ -16,32 +16,17 @@ export type ApiErrorCode =
   | 'IS_SET_CHILD'
   | 'CANNOT_ADD_TO_SET'
   | 'NO_UPDATE_AVAILABLE'
+  | 'INVALID_CREDENTIALS'
+  | 'ACCOUNT_BLOCKED'
+  | 'EMAIL_TAKEN'
+  | 'USERNAME_TAKEN'
+  | 'CSRF_CHECK_FAILED'
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   headers?: Record<string, string>
 }
-
-const configuredBaseUrl = (
-  import.meta.env.VITE_API_URL ?? ''
-).replace(/\/+$/, '')
-
-function getApiBaseUrl(): string {
-  if (!configuredBaseUrl) return '/api/v1'
-
-  if (configuredBaseUrl.endsWith('/api/v1')) {
-    return configuredBaseUrl
-  }
-
-  if (configuredBaseUrl.endsWith('/api')) {
-    return `${configuredBaseUrl}/v1`
-  }
-
-  return `${configuredBaseUrl}/api/v1`
-}
-
-const BASE_URL = getApiBaseUrl()
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -106,8 +91,6 @@ export async function http<T>(
 ): Promise<T> {
   try {
     const response = await axiosHttp.request<T>({
-      baseURL: BASE_URL,
-
       url: path.startsWith('/')
         ? path
         : `/${path}`,

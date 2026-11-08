@@ -1,9 +1,19 @@
-export type Role = 'user' | 'teacher' | 'admin' // adjust to your privilege levels
+// Shapes of the auth endpoints (openapi.yaml: CurrentUser, LoginRequest, RegisterRequest).
 
-export interface User {
+/** Role as the API returns it. For the UI only (which buttons to show): the server checks permissions itself. */
+export type Role =
+  | 'REGISTERED_TEACHER'
+  | 'VERIFIED_TEACHER'
+  | 'TRUSTED_TEACHER'
+  | 'ADMIN'
+  | 'SUPERADMIN'
+
+/** The logged-in user (response of register, login, refresh and /auth/me). */
+export interface CurrentUser {
   id: string
+  username: string
+  displayName: string
   email: string
-  name: string
   role: Role
 }
 
@@ -13,10 +23,6 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload extends LoginPayload {
-  name: string
-}
-
-export interface AuthResponse {
-  accessToken: string
-  user: User
+  username: string
+  displayName?: string | null
 }

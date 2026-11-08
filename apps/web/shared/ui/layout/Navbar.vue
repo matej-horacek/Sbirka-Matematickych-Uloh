@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { useAuthStore } from '@/features/auth/stores/authStore'
 
 interface NavItem {
   label: string
@@ -23,7 +24,13 @@ const browseLinks: NavItem[] = [
 ]
 
 const router = useRouter()
+const auth = useAuthStore()
 const query = ref('')
+
+async function logout() {
+  await auth.logout()
+  await router.push({ name: 'login' })
+}
 
 function search() {
   const text = query.value.trim()
@@ -85,6 +92,12 @@ function search() {
             {{ item.label }}
           </RouterLink>
         </nav>
+
+        <template v-if="auth.user">
+          <span class="navbar__user" data-testid="navbar-user">{{ auth.user.displayName }}</span>
+          <button type="button" class="navbar__logout" @click="logout">Odhlásit</button>
+        </template>
+        <RouterLink v-else to="/login" class="navbar__personal-link">Přihlásit</RouterLink>
 
         <RouterLink
           to="/user"
@@ -222,6 +235,25 @@ function search() {
 .navbar__personal-link.router-link-active {
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+
+.navbar__user {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.navbar__logout {
+  padding: 0.2rem 0.75rem;
+  color: #000;
+  background: transparent;
+  border: 1px solid #000;
+  border-radius: 999px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.navbar__logout:hover {
+  background: rgb(0 0 0 / 0.08);
 }
 
 .navbar__avatar {
