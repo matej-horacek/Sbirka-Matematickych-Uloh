@@ -38,9 +38,10 @@ describe('getProblem GET /problems/{id}', () => {
 
     it('sees tags and chapters with their scope (global / personal)', async () => {
       const res = await ctx().api.as('jan').get(`/problems/${P.set}`).expect(200);
+      // D-04: ordered by name
       expect(res.body.tags).toEqual([
-        { id: seed.tags.linear, name: 'lineární rovnice', scope: 'global' },
         { id: seed.tags.quadratic, name: 'kvadratické rovnice', scope: 'global' },
+        { id: seed.tags.linear, name: 'lineární rovnice', scope: 'global' },
         { id: seed.tags.janPersonal, name: 'opakování 2.A', scope: 'personal' },
       ]);
       expect(res.body.chapters).toEqual([{ id: seed.chapters.equations, name: 'Rovnice', scope: 'global' }]);

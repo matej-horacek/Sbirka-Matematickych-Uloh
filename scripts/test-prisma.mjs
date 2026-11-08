@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-// Runs the data-layer e2e tests against a real Postgres through the Prisma repositories.
+// Runs ALL e2e tests against a real Postgres through the Prisma repositories.
 //   1. recreates the throwaway Postgres of docker-compose.test.yml (port 5433, tmpfs = always empty) and waits until healthy
-//   2. creates the schema from schema.prisma (db push on the empty database: there are no migration files yet)
-//   3. seeds it (prisma/seed.ts)
-//   4. runs the create, get, list and picker e2e tests with DATA_SOURCE=prisma, one file at a time (shared database)
-// Until the Prisma…Repository classes are implemented, these tests fail with 501 (TODO).
+//   2. applies prisma/migrations (migrate deploy), so the schema is the same as in production
+//   3. runs every *.e2e-spec.ts with DATA_SOURCE=prisma, one file at a time (shared database). Each file starts by
+//      truncating all tables and re-seeding (test/support/db-reset.ts), so no seeding step is needed here.
 //
 // Usage: pnpm test:prisma [--down] [extra vitest args]
 //   --down  stop and remove the test database afterwards
@@ -44,20 +43,14 @@ const steps = [
     root,
     false,
   ],
-  ['create schema (prisma db push)', 'pnpm', ['exec', 'prisma', 'db', 'push'], apiDir, true],
-  ['seed (prisma db seed)', 'pnpm', ['exec', 'prisma', 'db', 'seed'], apiDir, true],
+  ['apply migrations (prisma migrate deploy)', 'pnpm', ['exec', 'prisma', 'migrate', 'deploy'], apiDir, true],
   [
-    'e2e: create, get, list, pickers, auth (DATA_SOURCE=prisma)',
+    'e2e: all e2e-spec files (DATA_SOURCE=prisma)',
     process.execPath,
     [
       resolve(root, 'scripts/test-capped.mjs'),
       '--maxWorkers=1', // one test file at a time: they share one database
-      // Vitest file filters are substrings of the path (not regexes): exactly these five files.
-      'problems/create.e2e-spec',
-      'problems/get.e2e-spec',
-      'problems/list.e2e-spec',
-      'pickers.e2e-spec',
-      'auth.e2e-spec',
+      'e2e-spec', // Vitest file filters are substrings of the path (not regexes)
       ...testArgs,
     ],
     root,

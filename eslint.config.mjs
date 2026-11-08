@@ -22,7 +22,7 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.node, ...globals.vitest } },
   },
   {
-    // The TODO-Daniel stubs keep their (unused) parameters so the signatures read like the interface.
+    // The TODO stubs keep their (unused) parameters so the signatures read like the interface.
     files: ['apps/api/src/**/prisma-*.repository.ts'],
     rules: { '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }] },
   },

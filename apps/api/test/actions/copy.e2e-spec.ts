@@ -136,8 +136,9 @@ describe('copyProblem POST /problems/{id}/copy', () => {
         // Jan's set has tags [1, 2, 4(personal)] and chapter 1. Publish it so eva can see it.
         await api.as('jan').post(`/problems/${P.set}/publish`, { licenseId: seed.licenses.ccBy }).expect(200);
         const res = await api.as('eva').post(`/problems/${P.set}/copy`).expect(201);
-        expect(res.body.tags.map((t: { id: string }) => t.id)).toEqual([seed.tags.linear, seed.tags.quadratic]);
-        await store.expectRecord('problems', res.body.id, { tagIds: [1, 2], chapterIds: [1] });
+        // D-04: tags are ordered by name ('kvadratické rovnice' < 'lineární rovnice')
+        expect(res.body.tags.map((t: { id: string }) => t.id)).toEqual([seed.tags.quadratic, seed.tags.linear]);
+        await store.expectRecord('problems', res.body.id, { tagIds: [2, 1], chapterIds: [1] });
       } finally {
         await fresh.app.close();
       }
@@ -151,7 +152,7 @@ describe('copyProblem POST /problems/{id}/copy', () => {
       });
       const res = await api.as('jan').post(`/problems/${p.id}/copy`).expect(201);
       await store.expectRecord('problems', res.body.id, {
-        tagIds: [4, 1],
+        tagIds: [1, 4], // by name: 'lineární rovnice' < 'opakování 2.A'
         chapterIds: [4],
         originalProblemId: store.toDbId(p.id),
       });

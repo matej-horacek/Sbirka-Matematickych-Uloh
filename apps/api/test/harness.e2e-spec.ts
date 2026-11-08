@@ -1,3 +1,4 @@
+import { dataSource } from '../src/config/data-source.js';
 import { createTestApp, useTestApp } from './support/app.js';
 import { seed } from './support/seed.js';
 
@@ -37,7 +38,8 @@ describe('Test harness', () => {
     await store.expectNoRecord('problems', 9999);
   });
 
-  it('gives each app its own store', async () => {
+  // With DATA_SOURCE=prisma every app shares the one Postgres (and creating an app resets it), so this cannot hold.
+  it.skipIf(dataSource() === 'prisma')('gives each app its own store', async () => {
     const other = await createTestApp();
     try {
       // The problem created above exists in this file's app only.

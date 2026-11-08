@@ -71,7 +71,7 @@ describe('updateProblem PATCH /problems/{id}', () => {
         chapterIds: [seed.chapters.equations],
       });
       await api.as('jan').patch(`/problems/${p.id}`, { lockVersion: 1, name: 'Jiný název' }).expect(200);
-      await store.expectRecord('problems', p.id, { tagIds: [1, 2], chapterIds: [1] });
+      await store.expectRecord('problems', p.id, { tagIds: [2, 1], chapterIds: [1] }); // by name (D-04)
       const res = await api
         .as('jan')
         .patch(`/problems/${p.id}`, { lockVersion: 2, tagIds: [seed.tags.geometry], chapterIds: [] })
