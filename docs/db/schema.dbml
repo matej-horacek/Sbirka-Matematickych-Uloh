@@ -195,7 +195,8 @@ This model has constraints using non-default deferring rules and requires additi
 Table refresh_token {
   id Int [pk, increment]
   user_id Int [not null]
-  token_hash String [not null]
+  token_hash String [unique, not null]
+  family_id String [not null, note: 'All tokens of one login chain; reuse of a rotated token revokes the whole family.']
   expires_at DateTime [not null]
   revoked_at DateTime
 
