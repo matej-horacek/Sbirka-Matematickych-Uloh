@@ -1,28 +1,85 @@
 ### Requests for the JetBrains HTTP client (click the ▶ next to each one).
-### Mock login: Bearer jan (trusted), eva (verified), petr (registered).
+### Auth is by httpOnly cookies (access_token, refresh_token): run a login below first, the client keeps
+### the cookies and sends them with every later request. One session at a time: log in as eva to act as eva.
+### Seeded users (password password123): jan@example.test (trusted), eva@example.test (verified),
+### petr@example.test (registered), blocked@example.test (blocked).
+### Every POST/PATCH/DELETE needs the header X-Requested-With: XMLHttpRequest (CSRF check, 403 without it).
 ### Seed ids: set UkLWZ (children gbHJd, EfhxL), Obsah kruhu VqXmZ, Pythagorova věta uw2YK,
 ### Eva's private OIJLh, textbook problem AXs1i; chapter Rovnice UkLWZ; licence CC BY 4.0 gbHJd.
 
 @base = http://localhost:3000/api/v1
 
+### ---- Auth ----
+
+### Register a new teacher (also logs in: both cookies are set)
+POST {{base}}/auth/register
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json
+
+{ "email": "anna@skola.cz", "username": "anna", "password": "tajne-heslo-123", "displayName": "Anna Nováková" }
+
+### Log in as jan
+POST {{base}}/auth/login
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json
+
+{ "email": "jan@example.test", "password": "password123" }
+
+### Log in as eva
+POST {{base}}/auth/login
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json
+
+{ "email": "eva@example.test", "password": "password123" }
+
+### Who am I (the web app calls this on startup)
+GET {{base}}/auth/me
+
+### Renew the session: rotates the refresh token. Sending the OLD one again revokes the whole chain.
+POST {{base}}/auth/refresh
+X-Requested-With: XMLHttpRequest
+
+### Log out (always 204, clears both cookies)
+POST {{base}}/auth/logout
+X-Requested-With: XMLHttpRequest
+
+### Wrong password -> 401 INVALID_CREDENTIALS
+POST {{base}}/auth/login
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json
+
+{ "email": "jan@example.test", "password": "wrong" }
+
+### Blocked account -> 403 ACCOUNT_BLOCKED (only after a correct password)
+POST {{base}}/auth/login
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json
+
+{ "email": "blocked@example.test", "password": "password123" }
+
+### No X-Requested-With header -> 403 CSRF_CHECK_FAILED
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "jan@example.test", "password": "password123" }
+
+### ---- Problems (log in as jan first) ----
+
 ### My problems (dashboard)
 GET {{base}}/problems?scope=mine
-Authorization: Bearer jan
 
 ### Public browser, filtered by chapter (includes child chapters)
 GET {{base}}/problems?scope=public&chapterId=UkLWZ
-Authorization: Bearer eva
 
 ### Detail of a set
 GET {{base}}/problems/UkLWZ
-Authorization: Bearer jan
 
 ### 2.0.0 flow: create problems one at a time, nest them in a set, reorder, take one out.
 ### Run the requests below in order; each one stores what the next needs (ids, lockVersion).
 
 ### 1. Create problem A
 POST {{base}}/problems
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 Content-Type: application/json
 
 { "name": "Rovnice a)", "assignment": "\( 2x + 3 = 11 \)", "result": "\( x = 4 \)" }
@@ -31,7 +88,7 @@ Content-Type: application/json
 
 ### 2. Create problem B
 POST {{base}}/problems
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 Content-Type: application/json
 
 { "name": "Rovnice b)", "assignment": "\( x^2 = 9 \)", "result": "\( x = \pm 3 \)" }
@@ -40,7 +97,7 @@ Content-Type: application/json
 
 ### 3. Create the set parent (no result: a set parent must not have one)
 POST {{base}}/problems
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 Content-Type: application/json
 
 { "name": "Řešte rovnice", "assignment": "Vyřešte rovnice v oboru reálných čísel:", "tagIds": ["UkLWZ"], "chapterIds": ["UkLWZ"] }
@@ -49,7 +106,7 @@ Content-Type: application/json
 
 ### 4. Add A to the set by MOVE (your own private problem; same record)
 POST {{base}}/problems/{{set}}/children
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 Content-Type: application/json
 
 { "lockVersion": {{lock}}, "problemId": "{{a}}" }
@@ -58,7 +115,7 @@ Content-Type: application/json
 
 ### 5. Add a foreign problem (Pythagorova věta) by COPY, as the first child (afterId null)
 POST {{base}}/problems/{{set}}/children
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 Content-Type: application/json
 
 { "lockVersion": {{lock}}, "copyFromId": "uw2YK", "afterId": null }
@@ -67,7 +124,7 @@ Content-Type: application/json
 
 ### 6. Add B by move, right after A (afterId = A)
 POST {{base}}/problems/{{set}}/children
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 Content-Type: application/json
 
 { "lockVersion": {{lock}}, "problemId": "{{b}}", "afterId": "{{a}}" }
@@ -76,7 +133,7 @@ Content-Type: application/json
 
 ### 7. Reorder: move the copy to the end (afterId = the current last child, B)
 PATCH {{base}}/problems/{{set}}/children/{{copy}}
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 Content-Type: application/json
 
 { "lockVersion": {{lock}}, "afterId": "{{b}}" }
@@ -85,34 +142,31 @@ Content-Type: application/json
 
 ### 8. Take A out of the set (the lock travels in If-Match; A becomes a standalone private problem)
 DELETE {{base}}/problems/{{set}}/children/{{a}}
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 If-Match: "{{lock}}"
 
 > {% client.global.set("lock", response.body.lockVersion); %}
 
-### Copy a published problem
+### Copy a published problem (log in as eva)
 POST {{base}}/problems/VqXmZ/copy
-Authorization: Bearer eva
+X-Requested-With: XMLHttpRequest
 
-### Publish the set with a licence
+### Publish the set with a licence (log in as jan)
 POST {{base}}/problems/UkLWZ/publish
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 Content-Type: application/json
 
 { "licenseId": "gbHJd" }
 
 ### Dissolve a set (children become standalone)
 POST {{base}}/problems/UkLWZ/dissolve
-Authorization: Bearer jan
+X-Requested-With: XMLHttpRequest
 
 ### Pickers
 GET {{base}}/tags?q=rov
-Authorization: Bearer jan
 
 ###
 GET {{base}}/chapters
-Authorization: Bearer jan
 
 ###
 GET {{base}}/licenses
-Authorization: Bearer jan
