@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { positionAt } from '../../../common/utils/position.js';
 import { MockDatabase, type ProblemRow } from '../../../database/mock-database.js';
 import {
   comparePositions,
@@ -49,17 +50,21 @@ export class MockProblemsRepository implements ProblemsRepository {
     const now = new Date();
     const row: ProblemRow = { ...data, id: this.db.newProblemId(), createdAt: now, updatedAt: now, deletedAt: null };
     this.db.problems.push(row);
-    return row;
+    return this.db.sortRelations(row);
   }
 
   async update(id: number, data: Partial<ProblemRow>): Promise<ProblemRow> {
     const row = this.db.problems.find((p) => p.id === id)!;
     Object.assign(row, data, { updatedAt: new Date() });
-    return row;
+    return this.db.sortRelations(row);
   }
 
   async softDelete(ids: number[]): Promise<void> {
     const now = new Date();
     for (const p of this.db.problems) if (ids.includes(p.id)) p.deletedAt = now;
+  }
+
+  async renumberChildren(_parentId: number, orderedChildIds: number[]): Promise<void> {
+    for (const [i, id] of orderedChildIds.entries()) await this.update(id, { position: positionAt(i) });
   }
 }

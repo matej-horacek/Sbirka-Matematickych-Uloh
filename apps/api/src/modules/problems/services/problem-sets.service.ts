@@ -4,7 +4,6 @@ import type { ProblemRow } from '../../../database/mock-database.js';
 import type { CurrentUserData } from '../../../common/decorators/current-user.decorator.js';
 import { ApiError } from '../../../common/errors/api-error.js';
 import { decodeId } from '../../../common/utils/ids.js';
-import { positionAt } from '../../../common/utils/position.js';
 import { LicensesService } from '../../licenses/services/licenses.service.js';
 import { canView } from '../domain/visibility.js';
 import { PROBLEMS_REPOSITORY, type ProblemsRepository } from '../repositories/problems.repository.js';
@@ -107,10 +106,10 @@ export class ProblemSetsService {
       source: { ...child.source, licenseId: published ? licenseId : child.source.licenseId },
     });
 
-    // The mock renumbers all positions (see common/utils/position.ts).
+    // All children are renumbered on every save (see common/utils/position.ts).
     const order = existing.map((c) => c.id);
     order.splice(insertAt, 0, child.id);
-    for (const [i, id] of order.entries()) await this.repo.update(id, { position: positionAt(i) });
+    await this.repo.renumberChildren(set.id, order);
 
     await this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
     return { accepted: false };
@@ -145,7 +144,7 @@ export class ProblemSetsService {
     if (this.needsReview(user, set)) return { accepted: true };
 
     rest = [...rest.slice(0, insertAt), childId, ...rest.slice(insertAt)];
-    for (const [i, id] of rest.entries()) await this.repo.update(id, { position: positionAt(i) });
+    await this.repo.renumberChildren(set.id, rest);
     await this.repo.update(set.id, { lockVersion: set.lockVersion + 1 });
     return { accepted: false };
   }

@@ -32,4 +32,9 @@ export interface ProblemsRepository {
   insert(data: NewProblem): Promise<ProblemRow>;
   update(id: number, data: Partial<ProblemRow>): Promise<ProblemRow>;
   softDelete(ids: number[]): Promise<void>;
+  /**
+   * Gives the children of a set the positions positionAt(0), positionAt(1), … in the given order.
+   * One call, so the (parent, position) uniqueness never trips over a half-finished renumbering.
+   */
+  renumberChildren(parentId: number, orderedChildIds: number[]): Promise<void>;
 }

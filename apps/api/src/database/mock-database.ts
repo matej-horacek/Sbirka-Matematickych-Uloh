@@ -122,6 +122,19 @@ export class MockDatabase {
     this.problems = data.problems;
     this.nextProblemId = Math.max(0, ...this.problems.map((p) => p.id)) + 1;
     this.nextUserId = Math.max(0, ...this.users.map((u) => u.id)) + 1;
+    for (const p of this.problems) this.sortRelations(p);
+  }
+
+  /**
+   * D-04: a problem's tags and chapters are ordered by name (there is no position column, so the Prisma
+   * repository cannot return any other order). The mock keeps the same order so both behave alike.
+   */
+  sortRelations(row: ProblemRow): ProblemRow {
+    const byName = (items: { id: number; name: string }[]) => (a: number, b: number) =>
+      (items.find((i) => i.id === a)?.name ?? '').localeCompare(items.find((i) => i.id === b)?.name ?? '', 'cs');
+    row.tagIds = [...row.tagIds].sort(byName(this.tags));
+    row.chapterIds = [...row.chapterIds].sort(byName(this.chapters));
+    return row;
   }
 
   newUserId(): number {

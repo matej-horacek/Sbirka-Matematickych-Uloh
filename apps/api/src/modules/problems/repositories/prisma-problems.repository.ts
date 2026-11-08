@@ -1,7 +1,14 @@
-import { Injectable, NotImplementedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { ApiError } from '../../../common/errors/api-error.js';
+import { positionAt } from '../../../common/utils/position.js';
 import { PrismaService } from '../../../database/prisma.service.js';
 import type { ContentSourceRow, ProblemRow } from '../../../database/mock-database.js';
-import type { NewProblem, ProblemFilter, ProblemsRepository } from './problems.repository.js';
+import {
+  comparePositions,
+  type NewProblem,
+  type ProblemFilter,
+  type ProblemsRepository,
+} from './problems.repository.js';
 import type { Prisma } from '../../../generated/prisma/client.js';
 
 /*
@@ -93,100 +100,248 @@ export function toProblemRow(p: ProblemWithRelations): ProblemRow {
   };
 }
 
+/** ContentSourceRow fields that are present → content_source columns (for create and update). */
+function toSourceData(source: Partial<ContentSourceRow>) {
+  return {
+    ...(source.originType !== undefined && { origin_type: source.originType }),
+    ...(source.sourceCitationText !== undefined && { source_citation_text: source.sourceCitationText }),
+    ...(source.licenseId !== undefined && { license_id: source.licenseId }),
+    ...(source.licenseNote !== undefined && { license_note: source.licenseNote }),
+    ...(source.citationAudience !== undefined && { citation_audience: source.citationAudience }),
+    ...(source.showInWeb !== undefined && { show_in_web: source.showInWeb }),
+    ...(source.showInPdf !== undefined && { show_in_pdf: source.showInPdf }),
+  };
+}
+
+/**
+ * problem_part.position is NOT NULL and unique per parent. A problem that is put into a set without a
+ * position (the sets service renumbers right after) gets this placeholder, unique because the id is.
+ * '~' sorts after every real key ('a…'), so a forgotten placeholder would show up last, not first.
+ */
+const placeholderPosition = (problemId: number) => `~${problemId}`;
+
 @Injectable()
 export class PrismaProblemsRepository implements ProblemsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * - find by id with `deleted_at IS NULL` (a soft-deleted problem is "not found");
-   * - NO visibility check here: ProblemsService applies canView (author sees all theirs, others only
-   *   PUBLISHED; others' private problems must look like 404);
-   * - include language, content_source, problem_part (as child), problem_tag and problem_chapter (see mapping above).
-   */
+  /** language.code → language.id. A problem's language is free text in the API, so an unknown code is a 400. */
+  private async languageId(tx: Prisma.TransactionClient, code: string | null): Promise<number | null> {
+    if (code === null) return null;
+    const language = await tx.language.findUnique({ where: { code } });
+    if (!language) throw ApiError.badRequest(`language: unknown language code "${code}"`);
+    return language.id;
+  }
+
+  /** A live (not soft-deleted) problem by id. No visibility check: ProblemsService applies canView. */
   async findById(id: number): Promise<ProblemRow | undefined> {
     const problem = await this.prisma.problem.findFirst({
-      where: { id: id },
+      where: { id, deleted_at: null },
       include: PROBLEM_INCLUDE,
     });
-    return problem ? toProblemRow(problem): undefined;
+    return problem ? toProblemRow(problem) : undefined;
   }
 
   /**
-   * TODO. Must do:
-   * - live (deleted_at IS NULL) problems whose problem_part.parent_id = parentId;
-   * - ORDER BY problem_part.position in BYTE order, not locale order: positions are fractional-indexing keys,
-   *   case-sensitive ('aB' < 'ab'). Use a "C" collation (e.g. `position COLLATE "C"` via $queryRaw) or sort in
-   *   code with comparePositions; Prisma's plain orderBy follows the DB collation and can get this wrong (R-020).
+   * Live children of a set, in BYTE order of their position (comparePositions): positions are
+   * case-sensitive fractional-indexing keys, so the sort happens here and not in a locale-dependent query (R-020).
    */
-  async findChildren(_parentId: number): Promise<ProblemRow[]> {
-    throw new NotImplementedException('TODO');
+  async findChildren(parentId: number): Promise<ProblemRow[]> {
+    const rows = await this.prisma.problem.findMany({
+      where: { deleted_at: null, problem_part_problem_part_child_idToproblem: { is: { parent_id: parentId } } },
+      include: PROBLEM_INCLUDE,
+    });
+    return rows.map(toProblemRow).sort((a, b) => comparePositions(a.position ?? '', b.position ?? ''));
+  }
+
+  /** One grouped query; every requested id is in the Map, 0 when it has no live children. */
+  async countChildren(parentIds: number[]): Promise<Map<number, number>> {
+    const counts = new Map(parentIds.map((id) => [id, 0]));
+    if (parentIds.length === 0) return counts;
+    const groups = await this.prisma.problem_part.groupBy({
+      by: ['parent_id'],
+      where: { parent_id: { in: parentIds }, problem_problem_part_child_idToproblem: { deleted_at: null } },
+      _count: { _all: true },
+    });
+    for (const g of groups) counts.set(g.parent_id, g._count._all);
+    return counts;
   }
 
   /**
-   * TODO. Must do:
-   * - one grouped query: count live children (problem.deleted_at IS NULL) per problem_part.parent_id;
-   * - EVERY requested id must be in the Map, with 0 when it has no children.
+   * Top-level problems only (a set's children never appear in lists), newest first (updated_at DESC, id DESC so
+   * paging is stable). `total` counts all matching rows, not just this page. The chapter list is already expanded
+   * to descendants by ChaptersService, so the chapter filter is a plain `in`.
    */
-  async countChildren(_parentIds: number[]): Promise<Map<number, number>> {
-    throw new NotImplementedException('TODO');
+  async findMany(filter: ProblemFilter, page: number, limit: number): Promise<{ rows: ProblemRow[]; total: number }> {
+    const where: Prisma.problemWhereInput = {
+      deleted_at: null,
+      problem_part_problem_part_child_idToproblem: { is: null },
+      ...(filter.authorId !== undefined && { author_id: filter.authorId }),
+      ...(filter.publishStatus !== undefined && { publish_status: filter.publishStatus }),
+      ...(filter.tagIds?.length && { problem_tag: { some: { tag_id: { in: filter.tagIds } } } }),
+      ...(filter.chapterIds?.length && { problem_chapter: { some: { chapter_id: { in: filter.chapterIds } } } }),
+      ...(filter.languageCode !== undefined && { language: { is: { code: filter.languageCode } } }),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.problem.findMany({
+        where,
+        include: PROBLEM_INCLUDE,
+        orderBy: [{ updated_at: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.problem.count({ where }),
+    ]);
+    return { rows: rows.map(toProblemRow), total };
+  }
+
+  /** One transaction: content_source → problem → tag, chapter and (for a set child) problem_part rows. */
+  async insert(data: NewProblem): Promise<ProblemRow> {
+    return this.prisma.$transaction(async (tx) => {
+      const languageId = await this.languageId(tx, data.languageCode);
+      const source = await tx.content_source.create({
+        data: {
+          origin_type: data.source.originType,
+          source_citation_text: data.source.sourceCitationText,
+          license_id: data.source.licenseId,
+          license_note: data.source.licenseNote,
+          citation_audience: data.source.citationAudience,
+          show_in_web: data.source.showInWeb,
+          show_in_pdf: data.source.showInPdf,
+        },
+      });
+      const created = await tx.problem.create({
+        data: {
+          name: data.name,
+          assignment: data.assignment,
+          result: data.result,
+          difficulty: data.difficulty,
+          author_id: data.authorId,
+          publish_status: data.publishStatus,
+          version: data.version,
+          lock_version: data.lockVersion,
+          original_problem_id: data.originalProblemId,
+          original_problem_version: data.originalProblemVersion,
+          language_id: languageId,
+          source_id: source.id,
+        },
+      });
+      if (data.tagIds.length) {
+        await tx.problem_tag.createMany({ data: data.tagIds.map((tag_id) => ({ problem_id: created.id, tag_id })) });
+      }
+      if (data.chapterIds.length) {
+        await tx.problem_chapter.createMany({
+          data: data.chapterIds.map((chapter_id) => ({ problem_id: created.id, chapter_id })),
+        });
+      }
+      if (data.parentId !== null) {
+        await tx.problem_part.create({
+          data: {
+            parent_id: data.parentId,
+            child_id: created.id,
+            position: data.position ?? placeholderPosition(created.id),
+          },
+        });
+      }
+      return toProblemRow(
+        await tx.problem.findUniqueOrThrow({ where: { id: created.id }, include: PROBLEM_INCLUDE }),
+      );
+    });
   }
 
   /**
-   * TODO. Must do (spec listProblems, DECISIONS D-04):
-   * - only live (deleted_at IS NULL) TOP-LEVEL problems: no problem_part row with child_id = problem.id;
-   * - authorId → author_id; publishStatus → publish_status (scope=mine uses authorId, any other scope PUBLISHED);
-   * - tagIds: has AT LEAST ONE of these tags (problem_tag `some`);
-   * - chapterIds: in at least one of these chapters. The list is ALREADY expanded to descendants by
-   *   ChaptersService.withDescendants, so the filter itself is just `some: { chapter_id: { in } }`;
-   * - languageCode → language.code;
-   * - ORDER BY updated_at DESC (then id DESC so paging is stable);
-   * - page/limit → skip/take, and `total` = count of ALL matching rows (not just this page): use a transaction
-   *   or Promise.all for findMany + count with the same `where`.
+   * Patches only the keys present in `data`. tagIds / chapterIds replace the join rows; parentId null removes the
+   * problem from its set, a parentId puts it in one (without a position: placeholder, see renumberChildren);
+   * `source` patches the content_source row. updated_at is bumped on every call, like the mock does.
    */
-  async findMany(
-    _filter: ProblemFilter,
-    _page: number,
-    _limit: number,
-  ): Promise<{ rows: ProblemRow[]; total: number }> {
-    throw new NotImplementedException('TODO');
+  async update(id: number, data: Partial<ProblemRow>): Promise<ProblemRow> {
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.problem.update({
+        where: { id },
+        data: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.assignment !== undefined && { assignment: data.assignment }),
+          ...(data.result !== undefined && { result: data.result }),
+          ...(data.difficulty !== undefined && { difficulty: data.difficulty }),
+          ...(data.authorId !== undefined && { author_id: data.authorId }),
+          ...(data.publishStatus !== undefined && { publish_status: data.publishStatus }),
+          ...(data.version !== undefined && { version: data.version }),
+          ...(data.lockVersion !== undefined && { lock_version: data.lockVersion }),
+          ...(data.originalProblemId !== undefined && { original_problem_id: data.originalProblemId }),
+          ...(data.originalProblemVersion !== undefined && { original_problem_version: data.originalProblemVersion }),
+          ...(data.deletedAt !== undefined && { deleted_at: data.deletedAt }),
+          ...(data.languageCode !== undefined && { language_id: await this.languageId(tx, data.languageCode) }),
+        },
+      });
+
+      if (data.source) {
+        const sourceData = toSourceData(data.source);
+        if (Object.keys(sourceData).length) {
+          await tx.content_source.update({ where: { id: updated.source_id }, data: sourceData });
+        }
+      }
+
+      if (data.tagIds) {
+        await tx.problem_tag.deleteMany({ where: { problem_id: id } });
+        if (data.tagIds.length) {
+          await tx.problem_tag.createMany({ data: data.tagIds.map((tag_id) => ({ problem_id: id, tag_id })) });
+        }
+      }
+      if (data.chapterIds) {
+        await tx.problem_chapter.deleteMany({ where: { problem_id: id } });
+        if (data.chapterIds.length) {
+          await tx.problem_chapter.createMany({
+            data: data.chapterIds.map((chapter_id) => ({ problem_id: id, chapter_id })),
+          });
+        }
+      }
+
+      if (data.parentId === null) {
+        await tx.problem_part.deleteMany({ where: { child_id: id } });
+      } else if (data.parentId !== undefined) {
+        const existing = await tx.problem_part.findUnique({ where: { child_id: id } });
+        // Same parent keeps its position; a new parent (or none given) gets the placeholder.
+        const position =
+          data.position ?? (existing?.parent_id === data.parentId ? existing.position : placeholderPosition(id));
+        await tx.problem_part.upsert({
+          where: { child_id: id },
+          create: { parent_id: data.parentId, child_id: id, position },
+          update: { parent_id: data.parentId, position },
+        });
+      } else if (typeof data.position === 'string') {
+        await tx.problem_part.updateMany({ where: { child_id: id }, data: { position: data.position } });
+      }
+
+      return toProblemRow(await tx.problem.findUniqueOrThrow({ where: { id }, include: PROBLEM_INCLUDE }));
+    });
+  }
+
+  /** Soft delete: deleted_at = now() on every given id in one updateMany. Unknown or deleted ids are ignored. */
+  async softDelete(ids: number[]): Promise<void> {
+    await this.prisma.problem.updateMany({
+      where: { id: { in: ids }, deleted_at: null },
+      data: { deleted_at: new Date() },
+    });
   }
 
   /**
-   * TODO. Must do, in ONE transaction ($transaction; all or nothing):
-   *  1. create the content_source row (origin_type, source_citation_text, license_id, license_note,
-   *     citation_audience, show_in_web, show_in_pdf);
-   *  2. create the problem with source_id = that row (language via code → language_id; author_id; publish_status;
-   *     version, lock_version, original_problem_id/version);
-   *  3. create the join rows: problem_tag, problem_chapter, and problem_part when parentId is set
-   *     (parent_id, child_id = new id, position);
-   * - return the stored problem mapped to ProblemRow (id and timestamps come from the DB).
-   * Copies of sets are inserted child by child by ProblemCopiesService, each call being its own transaction.
+   * positionAt(0..n-1) in the given order. (parent_id, position) is UNIQUE and not deferrable, so writing the
+   * final keys one by one can collide with a sibling that still holds the key (e.g. inserting at index 0).
+   * Two phases in one transaction: first every child gets its unique placeholder, then the final key.
    */
-  async insert(_data: NewProblem): Promise<ProblemRow> {
-    throw new NotImplementedException('TODO');
-  }
-
-  /**
-   * TODO. Must do (one transaction when several tables change):
-   * - patch only the keys present in `data` (Partial<ProblemRow>); `updatedAt` is NOT sent, @updatedAt sets it;
-   * - `tagIds` / `chapterIds` present → REPLACE the join rows (delete + createMany), absent → leave untouched;
-   * - `parentId` / `position` present → upsert or delete the problem_part row (null parentId = delete the row);
-   * - `source` present → update the content_source row (licenseId is how publishing stores the chosen licence);
-   * - `publishStatus` → publish_status, `languageCode` → language_id via language.code;
-   * - lockVersion / version are written as given (the service has already checked the lock and computed them);
-   * - return the updated problem mapped to ProblemRow.
-   */
-  async update(_id: number, _data: Partial<ProblemRow>): Promise<ProblemRow> {
-    throw new NotImplementedException('TODO');
-  }
-
-  /**
-   * TODO. Must do:
-   * - set deleted_at = now() on every given id (soft delete, rows stay; join rows stay too);
-   * - already-deleted or unknown ids are ignored (idempotent);
-   * - the service passes a set together with its children in one call, so do it in one updateMany.
-   */
-  async softDelete(_ids: number[]): Promise<void> {
-    throw new NotImplementedException('TODO');
+  async renumberChildren(parentId: number, orderedChildIds: number[]): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      for (const id of orderedChildIds) {
+        await tx.problem_part.updateMany({
+          where: { parent_id: parentId, child_id: id },
+          data: { position: placeholderPosition(id) },
+        });
+      }
+      for (const [i, id] of orderedChildIds.entries()) {
+        await tx.problem_part.updateMany({
+          where: { parent_id: parentId, child_id: id },
+          data: { position: positionAt(i) },
+        });
+      }
+    });
   }
 }

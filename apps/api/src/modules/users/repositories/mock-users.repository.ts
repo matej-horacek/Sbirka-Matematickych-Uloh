@@ -8,7 +8,7 @@ import {
 } from './users.repository.js';
 
 /** Languages of the mock (the Prisma seed has the same one). */
-const LANGUAGES = ['cs'];
+const LANGUAGES = ['cs', 'sk', 'en'];
 
 @Injectable()
 export class MockUsersRepository implements UsersRepository {
