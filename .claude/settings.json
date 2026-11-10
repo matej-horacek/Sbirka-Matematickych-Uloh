@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(git remote *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset --hard*)",
+      "Edit(./packages/shared/contracts/openapi.yaml)",
+      "Edit(./packages/shared/contracts/**/*.yaml)",
+      "Edit(./packages/shared/contracts/**/*.yml)",
+      "Edit(./apps/web/**)"
+    ]
+  },
+  "attribution": {"commit": "", "pr": ""}
+}

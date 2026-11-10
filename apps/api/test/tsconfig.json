@@ -1,0 +1,11 @@
+{
+  // Type-checks the tests together with the source they import. Not used by `nest build`.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true,
+    "isolatedModules": true,
+    "types": ["vitest/globals", "node"]
+  },
+  "include": ["../src", "./**/*.ts"]
+}

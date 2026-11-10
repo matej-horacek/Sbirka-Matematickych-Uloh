@@ -1,2 +1,44 @@
 {
+  "name": "matematika",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "@swc/core",
+      "prisma",
+      "@prisma/engines"
+    ]
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "typecheck": "pnpm -r typecheck",
+    "baseline:build": "node scripts/build-baseline.mjs",
+    "spec:lint": "redocly lint packages/shared/contracts/openapi.yaml",
+    "spec:examples": "node scripts/check-spec-examples.mjs",
+    "spec:drift": "node scripts/spec-drift.mjs",
+    "spec:version": "node scripts/check-spec-version.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write \"**/*.{ts,mjs,js,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,mjs,js,json}\"",
+    "verify": "node scripts/verify.mjs",
+    "verify:quick": "node scripts/verify.mjs --quick",
+    "test": "pnpm --filter @matematika/api test",
+    "test:unit": "pnpm --filter @matematika/api test:unit",
+    "test:e2e": "pnpm --filter @matematika/api test:e2e",
+    "test:unskipped": "pnpm --filter @matematika/api test:unskipped",
+    "test:prisma": "node scripts/test-prisma.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@redocly/cli": "^2.76.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "prettier": "3.9.6",
+    "typescript-eslint": "^8.72.1",
+    "yaml": "^2.9.1"
+  }
 }

@@ -1,0 +1,572 @@
+//// ------------------------------------------------------
+//// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+//// ------------------------------------------------------
+
+Table asset {
+  id Int [pk, increment]
+  storage_key String [unique, not null]
+  type asset_type [not null]
+  mime_type String [not null]
+  size_bytes Int [not null]
+  sha256 String [not null]
+  status asset_status [not null, default: 'PENDING']
+  uploaded_by Int [not null]
+  source_id Int [unique]
+  created_at DateTime [default: `now()`, not null]
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table attachment {
+  problem_id Int [not null]
+  asset_id Int [not null]
+  position String [not null]
+  placement attachment_placement [not null, default: 'BELOW']
+  size attachment_size [not null, default: 'M']
+
+  indexes {
+    (problem_id, asset_id) [pk]
+    (problem_id, position) [unique]
+  }
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table chapter {
+  id Int [pk, increment]
+  name String [not null]
+  parent_id Int
+  is_global Boolean [not null]
+  author_id Int
+  created_at DateTime [default: `now()`, not null]
+  updated_at DateTime [default: `now()`, not null]
+  deleted_at DateTime
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table content_source {
+  id Int [pk, increment]
+  origin_type content_origin [not null]
+  source_citation_text String
+  license_id Int
+  license_note String
+  citation_audience citation_audience [not null, default: 'PUBLIC']
+  show_in_web Boolean [not null, default: true]
+  show_in_pdf Boolean [not null, default: true]
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table language {
+  id Int [pk, increment]
+  name String [not null]
+  code String [unique, not null]
+}
+
+Table license {
+  id Int [pk, increment]
+  name String [not null]
+  description String
+  url String
+  requires_attribution Boolean [not null]
+  allows_modification Boolean [not null]
+  requires_share_alike Boolean [not null]
+  allows_publication Boolean [not null]
+}
+
+Table moderation_log {
+  id Int [pk, increment]
+  actor_id Int [not null]
+  actor_role user_role [not null]
+  action moderation_action [not null]
+  target_type audit_target_type [not null]
+  target_id Int [not null]
+  reason String
+  snapshot Json
+  created_at DateTime [default: `now()`, not null]
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table notification {
+  id Int [pk, increment]
+  recipient_id Int [not null]
+  type notification_type [not null]
+  target_type audit_target_type [not null]
+  target_id Int [not null]
+  moderation_log_id Int
+  read_at DateTime
+  created_at DateTime [default: `now()`, not null]
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table problem {
+  id Int [pk, increment]
+  name String [not null]
+  assignment String [not null]
+  solution String
+  result String
+  content_schema_version Int [not null, default: 1]
+  difficulty Int
+  author_id Int [not null]
+  publish_status publish_status [not null, default: 'PRIVATE']
+  language_id Int
+  source_id Int [unique, not null]
+  created_at DateTime [default: `now()`, not null]
+  updated_at DateTime [default: `now()`, not null]
+  deleted_at DateTime
+  lock_version Int [not null, default: 1]
+  version Int [not null, default: 1]
+  minor_version Int [not null, default: 0]
+  original_problem_id Int
+  original_problem_version Int
+  dismissed_update_version Int
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table problem_chapter {
+  problem_id Int [not null]
+  chapter_id Int [not null]
+
+  indexes {
+    (problem_id, chapter_id) [pk]
+  }
+
+  Note: 'This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table problem_part {
+  parent_id Int [not null]
+  child_id Int [unique, not null]
+  position String [not null]
+
+  indexes {
+    (parent_id, child_id) [pk]
+    (parent_id, position) [unique]
+  }
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table problem_revision {
+  id Int [pk, increment]
+  problem_id Int [not null]
+  content Json [not null]
+  content_schema_version Int [not null]
+  status revision_status [not null, default: 'REVIEWING']
+  reason String
+  reviewed_by Int
+  created_at DateTime [default: `now()`, not null]
+  reviewed_at DateTime
+  auto_approved Boolean [not null, default: false]
+  minor Boolean [not null, default: false]
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table problem_share {
+  problem_id Int [not null]
+  recipient_id Int [not null]
+  created_at DateTime [default: `now()`, not null]
+
+  indexes {
+    (problem_id, recipient_id) [pk]
+  }
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table problem_tag {
+  problem_id Int [not null]
+  tag_id Int [not null]
+
+  indexes {
+    (problem_id, tag_id) [pk]
+  }
+
+  Note: 'This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table refresh_token {
+  id Int [pk, increment]
+  user_id Int [not null]
+  token_hash String [unique, not null]
+  family_id String [not null, note: 'All tokens of one login chain; reuse of a rotated token revokes the whole family.']
+  expires_at DateTime [not null]
+  revoked_at DateTime
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table report {
+  id Int [pk, increment]
+  target_id Int [not null]
+  reporter_id Int
+  category report_category [not null]
+  text String
+  status report_status [not null, default: 'OPEN']
+  resolved_by Int
+  created_at DateTime [default: `now()`, not null]
+  resolved_at DateTime
+  target_type report_target_type [not null]
+  moderation_log_id Int
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table share_link {
+  id Int [pk, increment]
+  code String [unique, not null]
+  worksheet_id Int
+  problem_id Int
+  created_by Int [not null]
+  include_solutions Boolean [not null, default: false]
+  expires_at DateTime
+  revoked_at DateTime
+  created_at DateTime [default: `now()`, not null]
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table system_event {
+  id Int [pk, increment]
+  rule String [not null]
+  target_type audit_target_type [not null]
+  target_id Int [not null]
+  snapshot Json
+  created_at DateTime [default: `now()`, not null]
+}
+
+Table tag {
+  id Int [pk, increment]
+  name String [not null]
+  is_global Boolean [not null]
+  author_id Int
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table user {
+  id Int [pk, increment]
+  username String [unique, not null]
+  display_name String
+  role user_role [not null, default: 'REGISTERED_TEACHER']
+  status user_status [not null, default: 'ACTIVE']
+  language_id Int [not null]
+  created_at DateTime [default: `now()`, not null]
+  anonymized_at DateTime
+  email String [unique, not null]
+  password_hash String [not null]
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table verification_request {
+  id Int [pk, increment]
+  user_id Int [not null]
+  status request_status [not null, default: 'PENDING']
+  note String
+  resolved_by Int
+  created_at DateTime [default: `now()`, not null]
+  resolved_at DateTime
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table worksheet {
+  id Int [pk, increment]
+  name String [not null]
+  difficulty Int
+  author_id Int [not null]
+  publish_status publish_status [not null, default: 'PRIVATE']
+  language_id Int
+  license_id Int
+  citation_display worksheet_citation_display [not null, default: 'INLINE']
+  created_at DateTime [default: `now()`, not null]
+  updated_at DateTime [default: `now()`, not null]
+  deleted_at DateTime
+  version Int [not null, default: 1]
+  original_worksheet_id Int
+  original_worksheet_version Int
+  dismissed_update_version Int
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table worksheet_chapter {
+  worksheet_id Int [not null]
+  chapter_id Int [not null]
+
+  indexes {
+    (worksheet_id, chapter_id) [pk]
+  }
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table worksheet_problem {
+  worksheet_id Int [not null]
+  problem_id Int [not null]
+  position String [not null]
+
+  indexes {
+    (worksheet_id, problem_id) [pk]
+    (worksheet_id, position) [unique]
+  }
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table worksheet_share {
+  worksheet_id Int [not null]
+  recipient_id Int [not null]
+  created_at DateTime [default: `now()`, not null]
+
+  indexes {
+    (worksheet_id, recipient_id) [pk]
+  }
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Table worksheet_tag {
+  worksheet_id Int [not null]
+  tag_id Int [not null]
+
+  indexes {
+    (worksheet_id, tag_id) [pk]
+  }
+
+  Note: 'This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.'
+}
+
+Enum asset_status {
+  PENDING
+  READY
+}
+
+Enum asset_type {
+  IMAGE
+}
+
+Enum attachment_placement {
+  BELOW
+  RIGHT
+}
+
+Enum attachment_size {
+  S
+  M
+  L
+}
+
+Enum audit_target_type {
+  PROBLEM
+  WORKSHEET
+  USER
+  CHAPTER
+  TAG
+  REPORT
+  LICENSE
+  LANGUAGE
+}
+
+Enum citation_audience {
+  PUBLIC
+  TEACHER_ONLY
+}
+
+Enum content_origin {
+  OWN
+  LICENSED_USE
+  FREE_USE
+}
+
+Enum moderation_action {
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  BLOCKED
+  UNBLOCKED
+  TEACHER_VERIFIED
+  TRUST_GRANTED
+  TRUST_REVOKED
+  ROLE_CHANGED
+  ACCOUNT_BLOCKED
+  ACCOUNT_UNBLOCKED
+  ACCOUNT_DELETED
+  REPORT_DISMISSED
+  CHAPTER_EDITED
+  TAG_MERGED
+  TAG_RENAMED
+  CODELIST_EDITED
+}
+
+Enum notification_type {
+  CONTENT_APPROVED
+  CONTENT_REJECTED
+  CONTENT_WITHDRAWN
+  CONTENT_BLOCKED
+  CONTENT_UNBLOCKED
+  SET_CHILD_REMOVED
+  WORKSHEET_ITEM_REMOVED
+  ACCOUNT_VERIFIED
+  ROLE_CHANGED
+}
+
+Enum publish_status {
+  PRIVATE
+  REVIEWING
+  PUBLISHED
+  WITHDRAWN
+  BLOCKED
+}
+
+Enum report_category {
+  COPYRIGHT
+  INAPPROPRIATE
+  ILLEGAL
+  OTHER
+}
+
+Enum report_status {
+  OPEN
+  DISMISSED
+  RESOLVED
+}
+
+Enum report_target_type {
+  PROBLEM
+  WORKSHEET
+  USER
+}
+
+Enum request_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+Enum revision_status {
+  REVIEWING
+  APPROVED
+  REJECTED
+}
+
+Enum user_role {
+  SUPERADMIN
+  ADMIN
+  TRUSTED_TEACHER
+  VERIFIED_TEACHER
+  REGISTERED_TEACHER
+}
+
+Enum user_status {
+  ACTIVE
+  BLOCKED
+}
+
+Enum worksheet_citation_display {
+  INLINE
+  HIDDEN
+  SUMMARY_AT_END
+}
+
+Ref: asset.source_id - content_source.id [delete: No Action]
+
+Ref: asset.uploaded_by > user.id [delete: No Action]
+
+Ref: attachment.asset_id > asset.id [delete: No Action]
+
+Ref: attachment.problem_id > problem.id [delete: No Action]
+
+Ref: chapter.author_id > user.id [delete: No Action]
+
+Ref: chapter.parent_id - chapter.id [delete: No Action]
+
+Ref: content_source.license_id > license.id [delete: No Action]
+
+Ref: moderation_log.actor_id > user.id [delete: No Action]
+
+Ref: notification.moderation_log_id > moderation_log.id [delete: No Action]
+
+Ref: notification.recipient_id > user.id [delete: No Action]
+
+Ref: problem.author_id > user.id [delete: No Action]
+
+Ref: problem.language_id > language.id [delete: No Action]
+
+Ref: problem.original_problem_id - problem.id [delete: No Action]
+
+Ref: problem.source_id - content_source.id [delete: No Action]
+
+Ref: problem_chapter.chapter_id > chapter.id [delete: No Action]
+
+Ref: problem_chapter.problem_id > problem.id [delete: No Action]
+
+Ref: problem_part.child_id - problem.id [delete: No Action]
+
+Ref: problem_part.parent_id - problem.id [delete: No Action]
+
+Ref: problem_revision.problem_id > problem.id [delete: No Action]
+
+Ref: problem_revision.reviewed_by > user.id [delete: No Action]
+
+Ref: problem_share.problem_id > problem.id [delete: No Action]
+
+Ref: problem_share.recipient_id > user.id [delete: No Action]
+
+Ref: problem_tag.problem_id > problem.id [delete: No Action]
+
+Ref: problem_tag.tag_id > tag.id [delete: No Action]
+
+Ref: refresh_token.user_id > user.id [delete: No Action]
+
+Ref: report.moderation_log_id > moderation_log.id [delete: No Action]
+
+Ref: report.reporter_id > user.id [delete: No Action]
+
+Ref: report.resolved_by > user.id [delete: No Action]
+
+Ref: share_link.created_by > user.id [delete: No Action]
+
+Ref: share_link.problem_id > problem.id [delete: No Action]
+
+Ref: share_link.worksheet_id > worksheet.id [delete: No Action]
+
+Ref: tag.author_id > user.id [delete: No Action]
+
+Ref: user.language_id > language.id [delete: No Action]
+
+Ref: verification_request.resolved_by > user.id [delete: No Action]
+
+Ref: verification_request.user_id > user.id [delete: No Action]
+
+Ref: worksheet.author_id > user.id [delete: No Action]
+
+Ref: worksheet.language_id > language.id [delete: No Action]
+
+Ref: worksheet.license_id > license.id [delete: No Action]
+
+Ref: worksheet.original_worksheet_id - worksheet.id [delete: No Action]
+
+Ref: worksheet_chapter.chapter_id > chapter.id [delete: No Action]
+
+Ref: worksheet_chapter.worksheet_id > worksheet.id [delete: No Action]
+
+Ref: worksheet_problem.problem_id > problem.id [delete: No Action]
+
+Ref: worksheet_problem.worksheet_id > worksheet.id [delete: No Action]
+
+Ref: worksheet_share.recipient_id > user.id [delete: No Action]
+
+Ref: worksheet_share.worksheet_id > worksheet.id [delete: No Action]
+
+Ref: worksheet_tag.tag_id > tag.id [delete: No Action]
+
+Ref: worksheet_tag.worksheet_id > worksheet.id [delete: No Action]
