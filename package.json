@@ -12,6 +12,8 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "pnpm -r --parallel dev",
+    "dev:api": "pnpm --filter @matematika/api dev",
+    "dev:web": "pnpm --filter @matematika/web dev",
     "typecheck": "pnpm -r typecheck",
     "baseline:build": "node scripts/build-baseline.mjs",
     "spec:lint": "redocly lint packages/shared/contracts/openapi.yaml",
