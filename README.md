@@ -15,41 +15,68 @@ Monorepo (pnpm workspaces):
 - pnpm (přes Corepack: `corepack enable`)
 - Docker Desktop (databáze v kontejneru)
 
-## Rychlý start (API s databází)
+## Rychlý start (po naklonování)
 
-Všechno z kořene repa.
+Všechno z kořene repa, v tomto pořadí. Docker Desktop musí běžet.
 
 ```powershell
+# 1) závislosti – celé monorepo včetně webu
 corepack enable
-pnpm install                                         # po každém git pull, když se změnil lockfile
-pnpm --filter @matematika/contracts build            # sdílené typy (kontrakt)
-pnpm --filter @matematika/api db:generate            # Prisma klient (po změně schématu)
+pnpm install
 
-copy apps\api\.env.example apps\api\.env             # jen poprvé; zkontrolujte DATABASE_URL
+# 2) generovaný kód – kontrakt (typy + Zod schémata) a Prisma klient
+pnpm --filter @matematika/contracts build
+pnpm --filter @matematika/api db:generate
 
-docker compose -f docker-compose.dev.yml up -d       # databáze, host port 5434
-docker ps                                            # musí ukázat 0.0.0.0:5434->5432/tcp
+# 3) lokální konfigurace (jen poprvé; .env nejsou v gitu)
+copy apps\api\.env.example apps\api\.env
+copy apps\web\.env.example apps\web\.env
 
-pnpm --filter @matematika/api exec prisma migrate deploy   # schéma, jen poprvé / po nové migraci
-pnpm --filter @matematika/api db:seed                      # ukázková data, jen do prázdné DB
+# 4) databáze (host port 5434)
+docker compose -f docker-compose.dev.yml up -d
+pnpm --filter @matematika/api exec prisma migrate deploy
+pnpm --filter @matematika/api db:seed                # volitelné, ukázková data jen do prázdné DB
 
-pnpm --filter @matematika/api dev                    # API s automatickým restartem
+# 5) spuštění – každé v samostatném terminálu
+pnpm dev:api                                         # http://localhost:3000/api/v1
+pnpm dev:web                                         # http://localhost:5173
 ```
 
-- API: `http://localhost:3000/api/v1`
-- Dokumentace (Scalar): `http://localhost:3000/docs`
+**Po `git pull`:** zopakujte kroky 1 a 2. Pokud přibyla migrace, i `prisma migrate deploy`.
+
+`pnpm dev` spustí API, web i sledování kontraktu najednou v jednom terminálu.
+
+- Dokumentace API (Scalar): `http://localhost:3000/docs`
 - Ukázkové požadavky: `apps/api/requests.http` (JetBrains HTTP klient, nebo stejné URL v Postmanu)
 - Prohlížeč databáze: `pnpm --filter @matematika/api exec prisma studio`
 
-`apps/api/.env`:
+`apps/api/.env` (vzor `apps/api/.env.example`):
 
 ```
 PORT=3000
-DATA_SOURCE=prisma / mock (prisma runs against the db)
+CORS_ORIGIN=http://localhost:5173
+DATA_SOURCE=prisma
 DATABASE_URL=postgresql://app:app@localhost:5434/sbirka
 ```
 
+Volitelné proměnné jsou v `.env.example` zakomentované a mají výchozí hodnoty:
+
+| Proměnná | Výchozí | Význam |
+|---|---|---|
+| `JWT_SECRET` | vestavěný dev klíč | podpis access tokenu; **povinný** při `NODE_ENV=production` |
+| `ACCESS_TOKEN_TTL_SECONDS` | `900` (15 min) | platnost access tokenu |
+| `REFRESH_TOKEN_TTL_DAYS` | `7` | platnost refresh tokenu |
+| `COOKIE_SECURE` | `true` jen v produkci | `Secure` cookie (vyžaduje https) |
+| `SQIDS_ALPHABET` | výchozí abeceda Sqids | v produkci nastavit; změna změní všechna ID |
+
+Nenechávejte klíč s prázdnou hodnotou (`JWT_SECRET=`). Prázdný `JWT_SECRET` se bere jako chybějící
+a API nenaběhne. Buď hodnotu vyplňte, nebo řádek zakomentujte.
+
+`apps/web/.env` obsahuje jen adresu API: `VITE_API_URL=http://localhost:3000/api/v1`.
+CORS API povoluje `http://localhost:5173` (změna: `CORS_ORIGIN` v `apps/api/.env`).
+
 Databáze běží na portu **5434**, protože 5432 často obsazuje lokálně nainstalovaný PostgreSQL.
+Kontrola: `docker ps` musí ukázat `0.0.0.0:5434->5432/tcp`.
 
 **Vyprázdnit databázi a nasadit seed znovu** (smaže všechna data v dev databázi):
 
@@ -63,13 +90,15 @@ Data jsou jen v paměti a po restartu se vrátí do výchozího stavu. Docker ne
 
 ```powershell
 # v apps/api/.env: DATA_SOURCE=mock (nebo řádek smazat)
-pnpm --filter @matematika/api dev
+pnpm dev:api
 ```
 
 ### Přihlášení a ID
 
-Zatím mockované přihlášení: hlavička `Authorization: Bearer jan` (důvěryhodný učitel),
-`eva` (ověřený) nebo `petr` (registrovaný). Bez hlavičky API vrací `401`.
+Přihlášení přes cookie (JWT) na přihlašovací stránce webu nebo `POST /auth/login`.
+Uživatelé ze seedu, heslo `password123`: `jan@example.test` (důvěryhodný učitel),
+`eva@example.test` (ověřený), `petr@example.test` (registrovaný). Registrace vytvoří nového.
+Bez přihlášení API vrací `401` (kromě `register`, `login`, `refresh`, `logout`).
 
 API vystavuje ID jako Sqids, ne jako čísla (`/problems/1` nefunguje). Seed (a mock) mají tyto úlohy:
 
@@ -83,20 +112,7 @@ API vystavuje ID jako Sqids, ne jako čísla (`/problems/1` nefunguje). Seed (a 
 
 ## Frontend
 
-```powershell
-cd apps\web
-pnpm dev                                             # http://localhost:5173
-```
-
-API musí běžet (viz výše). Adresa API a demo uživatel jsou v `apps/web/.env`
-(vzor `apps/web/.env.example`):
-
-```
-VITE_API_URL=http://localhost:3000/api/v1
-VITE_DEMO_USER=jan
-```
-
-CORS API povoluje `http://localhost:5173` (změna: `CORS_ORIGIN` v `apps/api/.env`).
+Spouští se z kořene (`pnpm dev:web`, viz výše), API musí běžet.
 
 Další příkazy ve `apps/web`: `pnpm type-check`, `pnpm lint`, `pnpm test:unit`, `pnpm build`, `pnpm format`.
 
@@ -121,8 +137,8 @@ Formátování: Prettier v kořeni (`.prettierrc.json`) platí pro API a sdílen
 | `packages/shared/contracts/openapi.yaml` | **API kontrakt – jediný zdroj pravdy** |
 | `packages/shared/contracts/src/generated/` | typy a Zod schémata generovaná ze specifikace (`pnpm generate`, needitovat ručně) |
 | `packages/shared/contracts/src/error-codes.ts` | kódy chyb (ručně, musí odpovídat popisu v `openapi.yaml`) |
-| `apps/api/src/modules/` | moduly: `problems`, `publication`, `chapters`, `tags`, `licenses`, `users` |
-| `apps/api/src/common/` | chyby (RFC 9457), filtr, Sqids, validace, mock přihlášení |
+| `apps/api/src/modules/` | moduly: `auth`, `problems`, `publication`, `chapters`, `tags`, `licenses`, `users` |
+| `apps/api/src/common/` | chyby (RFC 9457), filtr, Sqids, validace, guardy (JWT, CSRF) |
 | `apps/api/src/database/` | `MockDatabase` (data v paměti) a `PrismaService` |
 | `apps/api/prisma/` | `schema.prisma`, migrace a `seed.ts` |
 | `tooling/typescript/` | sdílené tsconfig presety |
@@ -140,8 +156,6 @@ Služby o tom nevědí, takže pravidla se píšou jen jednou.
 
 ## Stav
 
-- Hotové Prisma repozitáře: licence, štítky, kapitoly, uživatelé a čtení úlohy (`findById`).
-- Zbývá dopsat v `prisma-problems.repository.ts`: `findChildren`, `countChildren`, `findMany`,
-  `insert`, `update`, `softDelete`. Dokud nejsou, vrací odpovídající endpointy `501`.
-  Mock režim funguje celý. Podrobnosti: `docs/DB_SLICE.md`.
-- Přihlášení je zatím mockované (`MockAuthGuard`); nahradí ho JWT.
+- Hotové Prisma repozitáře: licence, štítky, kapitoly, uživatelé a úlohy. Mock režim funguje celý.
+  Podrobnosti: `docs/DB_SLICE.md`.
+- Přihlášení: JWT v cookie s rotací refresh tokenů a CSRF hlavičkou.
