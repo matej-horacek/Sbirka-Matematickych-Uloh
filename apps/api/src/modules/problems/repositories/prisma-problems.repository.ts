@@ -254,65 +254,93 @@ export class PrismaProblemsRepository implements ProblemsRepository {
    * `source` patches the content_source row. updated_at is bumped on every call, like the mock does.
    */
   async update(id: number, data: Partial<ProblemRow>): Promise<ProblemRow> {
+    return this.prisma.$transaction((tx) => this.applyPatch(tx, id, data));
+  }
+
+  /**
+   * The guarded UPDATE (WHERE lock_version = expected) runs first and row-locks the problem until commit: a
+   * concurrent transaction with the same expected value waits, re-checks the WHERE on the committed row and gets
+   * count 0. Only then is the rest of the patch applied, in the same transaction.
+   */
+  async updateIfLockVersion(
+    id: number,
+    expectedLockVersion: number,
+    data: Partial<ProblemRow>,
+  ): Promise<ProblemRow | null> {
+    const { lockVersion: _ignored, ...rest } = data;
     return this.prisma.$transaction(async (tx) => {
-      const updated = await tx.problem.update({
-        where: { id },
-        data: {
-          ...(data.name !== undefined && { name: data.name }),
-          ...(data.assignment !== undefined && { assignment: data.assignment }),
-          ...(data.result !== undefined && { result: data.result }),
-          ...(data.difficulty !== undefined && { difficulty: data.difficulty }),
-          ...(data.authorId !== undefined && { author_id: data.authorId }),
-          ...(data.publishStatus !== undefined && { publish_status: data.publishStatus }),
-          ...(data.version !== undefined && { version: data.version }),
-          ...(data.lockVersion !== undefined && { lock_version: data.lockVersion }),
-          ...(data.originalProblemId !== undefined && { original_problem_id: data.originalProblemId }),
-          ...(data.originalProblemVersion !== undefined && { original_problem_version: data.originalProblemVersion }),
-          ...(data.deletedAt !== undefined && { deleted_at: data.deletedAt }),
-          ...(data.languageCode !== undefined && { language_id: await this.languageId(tx, data.languageCode) }),
-        },
+      const { count } = await tx.problem.updateMany({
+        where: { id, lock_version: expectedLockVersion, deleted_at: null },
+        data: { lock_version: expectedLockVersion + 1 },
       });
-
-      if (data.source) {
-        const sourceData = toSourceData(data.source);
-        if (Object.keys(sourceData).length) {
-          await tx.content_source.update({ where: { id: updated.source_id }, data: sourceData });
-        }
-      }
-
-      if (data.tagIds) {
-        await tx.problem_tag.deleteMany({ where: { problem_id: id } });
-        if (data.tagIds.length) {
-          await tx.problem_tag.createMany({ data: data.tagIds.map((tag_id) => ({ problem_id: id, tag_id })) });
-        }
-      }
-      if (data.chapterIds) {
-        await tx.problem_chapter.deleteMany({ where: { problem_id: id } });
-        if (data.chapterIds.length) {
-          await tx.problem_chapter.createMany({
-            data: data.chapterIds.map((chapter_id) => ({ problem_id: id, chapter_id })),
-          });
-        }
-      }
-
-      if (data.parentId === null) {
-        await tx.problem_part.deleteMany({ where: { child_id: id } });
-      } else if (data.parentId !== undefined) {
-        const existing = await tx.problem_part.findUnique({ where: { child_id: id } });
-        // Same parent keeps its position; a new parent (or none given) gets the placeholder.
-        const position =
-          data.position ?? (existing?.parent_id === data.parentId ? existing.position : placeholderPosition(id));
-        await tx.problem_part.upsert({
-          where: { child_id: id },
-          create: { parent_id: data.parentId, child_id: id, position },
-          update: { parent_id: data.parentId, position },
-        });
-      } else if (typeof data.position === 'string') {
-        await tx.problem_part.updateMany({ where: { child_id: id }, data: { position: data.position } });
-      }
-
-      return toProblemRow(await tx.problem.findUniqueOrThrow({ where: { id }, include: PROBLEM_INCLUDE }));
+      if (count === 0) return null;
+      return this.applyPatch(tx, id, rest);
     });
+  }
+
+  async incrementVersion(id: number): Promise<void> {
+    await this.prisma.problem.update({ where: { id }, data: { version: { increment: 1 } } });
+  }
+
+  /** The body of update(), shared with updateIfLockVersion so both patch exactly the same way. */
+  private async applyPatch(tx: Prisma.TransactionClient, id: number, data: Partial<ProblemRow>): Promise<ProblemRow> {
+    const updated = await tx.problem.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.assignment !== undefined && { assignment: data.assignment }),
+        ...(data.result !== undefined && { result: data.result }),
+        ...(data.difficulty !== undefined && { difficulty: data.difficulty }),
+        ...(data.authorId !== undefined && { author_id: data.authorId }),
+        ...(data.publishStatus !== undefined && { publish_status: data.publishStatus }),
+        ...(data.version !== undefined && { version: data.version }),
+        ...(data.lockVersion !== undefined && { lock_version: data.lockVersion }),
+        ...(data.originalProblemId !== undefined && { original_problem_id: data.originalProblemId }),
+        ...(data.originalProblemVersion !== undefined && { original_problem_version: data.originalProblemVersion }),
+        ...(data.deletedAt !== undefined && { deleted_at: data.deletedAt }),
+        ...(data.languageCode !== undefined && { language_id: await this.languageId(tx, data.languageCode) }),
+      },
+    });
+
+    if (data.source) {
+      const sourceData = toSourceData(data.source);
+      if (Object.keys(sourceData).length) {
+        await tx.content_source.update({ where: { id: updated.source_id }, data: sourceData });
+      }
+    }
+
+    if (data.tagIds) {
+      await tx.problem_tag.deleteMany({ where: { problem_id: id } });
+      if (data.tagIds.length) {
+        await tx.problem_tag.createMany({ data: data.tagIds.map((tag_id) => ({ problem_id: id, tag_id })) });
+      }
+    }
+    if (data.chapterIds) {
+      await tx.problem_chapter.deleteMany({ where: { problem_id: id } });
+      if (data.chapterIds.length) {
+        await tx.problem_chapter.createMany({
+          data: data.chapterIds.map((chapter_id) => ({ problem_id: id, chapter_id })),
+        });
+      }
+    }
+
+    if (data.parentId === null) {
+      await tx.problem_part.deleteMany({ where: { child_id: id } });
+    } else if (data.parentId !== undefined) {
+      const existing = await tx.problem_part.findUnique({ where: { child_id: id } });
+      // Same parent keeps its position; a new parent (or none given) gets the placeholder.
+      const position =
+        data.position ?? (existing?.parent_id === data.parentId ? existing.position : placeholderPosition(id));
+      await tx.problem_part.upsert({
+        where: { child_id: id },
+        create: { parent_id: data.parentId, child_id: id, position },
+        update: { parent_id: data.parentId, position },
+      });
+    } else if (typeof data.position === 'string') {
+      await tx.problem_part.updateMany({ where: { child_id: id }, data: { position: data.position } });
+    }
+
+    return toProblemRow(await tx.problem.findUniqueOrThrow({ where: { id }, include: PROBLEM_INCLUDE }));
   }
 
   /** Soft delete: deleted_at = now() on every given id in one updateMany. Unknown or deleted ids are ignored. */

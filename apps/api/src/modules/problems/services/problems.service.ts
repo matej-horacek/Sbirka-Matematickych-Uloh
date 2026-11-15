@@ -108,19 +108,19 @@ export class ProblemsService {
     return this.detail(row, user);
   }
 
-  /** Returns `accepted: true` when the change must wait for review (HTTP 202). */
+  /**
+   * Any own problem, a set child included (spec 2.0.0, R-009), with the problem's own lockVersion.
+   * A child edit also raises its set's version, but not the set's lockVersion.
+   * Returns `accepted: true` when the change must wait for review (HTTP 202).
+   */
   async update(
     user: CurrentUserData,
     id: number,
     body: ProblemPatch,
   ): Promise<{ accepted: boolean; problem: ProblemDetail }> {
     const row = await this.findOwn(user, id);
-    if (row.parentId !== null) {
-      throw ApiError.conflict(ErrorCode.IS_SET_CHILD, 'Edit a set child through its parent.');
-    }
-    if (body.lockVersion !== row.lockVersion) {
-      throw ApiError.conflict(ErrorCode.LOCK_MISMATCH, 'Someone saved this problem in between. Reload and try again.');
-    }
+    // Fast fail on a stale lock; the real guard is the atomic write below.
+    if (body.lockVersion !== row.lockVersion) throw this.lockMismatch();
 
     const childCount = (await this.repo.findChildren(row.id)).length;
     const result = body.result !== undefined ? body.result : row.result;
@@ -130,19 +130,25 @@ export class ProblemsService {
     const tagIds = await this.relations.tagIds(user.id, body.tagIds);
     const chapterIds = await this.relations.chapterIds(user.id, body.chapterIds);
 
-    if (row.publishStatus === 'PUBLISHED' && user.trust !== 'TRUSTED' && user.role !== 'ADMIN') {
+    // The problem, or the set it belongs to, is published and the author is not trusted.
+    const parent = row.parentId === null ? undefined : await this.repo.findById(row.parentId);
+    const published = row.publishStatus === 'PUBLISHED' || parent?.publishStatus === 'PUBLISHED';
+    if (published && user.trust !== 'TRUSTED' && user.role !== 'ADMIN') {
       // TODO: store the change as a problem_revision waiting for review.
       return { accepted: true, problem: await this.detail(row, user) };
     }
 
     // TODO: a trusted user's minor edit bumps minor_version instead of version.
-    const updated = await this.repo.update(row.id, {
+    const updated = await this.repo.updateIfLockVersion(row.id, body.lockVersion, {
       ...contentFields(body),
       ...(tagIds && { tagIds }),
       ...(chapterIds && { chapterIds }),
       version: row.version + 1,
-      lockVersion: row.lockVersion + 1,
     });
+    if (!updated) throw this.lockMismatch();
+
+    // The set as it is after the write, so a child moved in meanwhile still bumps the right set.
+    if (updated.parentId !== null) await this.repo.incrementVersion(updated.parentId);
     return { accepted: false, problem: await this.detail(updated, user) };
   }
 
@@ -234,6 +240,10 @@ export class ProblemsService {
   }
 
   // ---------- helpers ----------
+
+  private lockMismatch(): ApiError {
+    return ApiError.conflict(ErrorCode.LOCK_MISMATCH, 'Someone saved this problem in between. Reload and try again.');
+  }
 
   /** 404 when the problem doesn't exist or the caller can't see it. */
   private async findVisible(user: CurrentUserData, id: number): Promise<ProblemRow> {
