@@ -534,7 +534,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
               example: *id014
-        '202': &id015
+        '202': 
           description: 'The set is published and you are not trusted: the change waits for review; the returned set is unchanged.'
           content:
             application/json:

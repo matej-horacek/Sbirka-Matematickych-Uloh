@@ -1,10 +1,43 @@
-
 import { defineStore } from 'pinia'
-import type { Block, WorksheetProblemDraft } from '../types'
+import { cloneDraft } from '../lib/cloneDraft'
+import { createEmptySubproblemDraft } from '../lib/createEmptyProblemDraft'
+import { subproblemLabel } from '../lib/subproblemLabel'
+import type { Block, ChapterRef, ProblemDraft, TagRef } from '../types'
+
+function validateBlocks(blocks: Block[], prefix = ''): string[] {
+  const errors: string[] = []
+
+  if (blocks.length === 0) {
+    errors.push(`${prefix}Zadání musí mít alespoň jeden blok.`)
+  }
+
+  for (const block of blocks) {
+    if (block.type === 'text' && !block.markdown.trim()) {
+      errors.push(`${prefix}Textový blok nesmí být prázdný.`)
+    }
+
+    if (block.type === 'math' && !block.latex.trim()) {
+      errors.push(`${prefix}Matematický výraz nesmí být prázdný.`)
+    }
+
+    if (block.type === 'image' && block.assetId <= 0) {
+      errors.push(`${prefix}Vyberte obrázek.`)
+    }
+
+    if (
+      block.type === 'geogebra' &&
+      (block.assetId <= 0 || block.previewAssetId <= 0)
+    ) {
+      errors.push(`${prefix}GeoGebra blok nemá platný obsah nebo náhled.`)
+    }
+  }
+
+  return errors
+}
 
 export const useEditorStore = defineStore('editor', {
   state: () => ({
-    problem: null as WorksheetProblemDraft | null,
+    problem: null as ProblemDraft | null,
     isSaved: true,
   }),
 
@@ -13,106 +46,125 @@ export const useEditorStore = defineStore('editor', {
       const draft = state.problem
       if (!draft) return []
 
-      const errors: string[] = []
+      const errors = validateBlocks(draft.assignment)
 
-      if (draft.assignment.length === 0) {
-        errors.push('Zadání musí mít alespoň jeden blok.')
-      }
+      draft.subproblems.forEach((sub, index) => {
+        errors.push(
+          ...validateBlocks(sub.assignment, `Podúloha ${subproblemLabel(index)} `),
+        )
+      })
 
-      for (const block of draft.assignment) {
-        if (block.type === 'text' && !block.markdown.trim()) {
-          errors.push('Textový blok nesmí být prázdný.')
-        }
-
-        if (block.type === 'math' && !block.latex.trim()) {
-          errors.push('Matematický výraz nesmí být prázdný.')
-        }
-
-        if (block.type === 'image' && block.assetId <= 0) {
-          errors.push('Vyberte obrázek.')
-        }
-
-        if (
-          block.type === 'geogebra' &&
-          (block.assetId <= 0 || block.previewAssetId <= 0)
-        ) {
-          errors.push('GeoGebra blok nemá platný obsah nebo náhled.')
-        }
-      }
-
-      return errors
+      // The same message can appear for several blocks.
+      return [...new Set(errors)]
     },
   },
 
   actions: {
-    newProblem() {
-      this.problem = {
-        assignment: [
-          {
-            id: crypto.randomUUID(),
-            type: 'text',
-            markdown: '',
-          },
-        ],
+    loadProblem(problem: ProblemDraft) {
+      this.problem = cloneDraft(problem)
+      this.isSaved = true
+    },
+
+    setAssignment(blocks: Block[]) {
+      if (!this.problem) return
+
+      // Plain copy: the blocks come from props and may be reactive proxies.
+      this.problem.assignment = cloneDraft(blocks)
+      this.isSaved = false
+    },
+
+    /**
+     * Tags and chapters belong to the main problem. Subproblems inherit them,
+     * so their copies are kept equal here (and enforced again on save).
+     */
+    setTags(tags: TagRef[]) {
+      if (!this.problem) return
+
+      // Plain copies: the list comes from props and may hold reactive proxies.
+      const plain = cloneDraft(tags)
+      this.problem.tags = plain
+
+      for (const sub of this.problem.subproblems) {
+        sub.tags = cloneDraft(plain)
       }
 
-      this.isSaved = true
-    },
-
-    loadProblem(problem: WorksheetProblemDraft) {
-      this.problem = structuredClone(problem)
-      this.isSaved = true
-    },
-
-    addBlock(block: Block) {
-      if (!this.problem) return
-
-      this.problem.assignment.push(block)
       this.isSaved = false
     },
 
-    updateBlock(id: string, patch: Partial<Block>) {
+    setChapters(chapters: ChapterRef[]) {
       if (!this.problem) return
 
-      const index = this.problem.assignment.findIndex(
-        (block) => block.id === id,
+      const plain = cloneDraft(chapters)
+      this.problem.chapters = plain
+
+      for (const sub of this.problem.subproblems) {
+        sub.chapters = cloneDraft(plain)
+      }
+
+      this.isSaved = false
+    },
+
+    addSubproblem() {
+      if (!this.problem) return
+
+      const sub = createEmptySubproblemDraft()
+      sub.tags = this.problem.tags.map((tag) => ({ ...tag }))
+      sub.chapters = this.problem.chapters.map((chapter) => ({ ...chapter }))
+
+      this.problem.subproblems.push(sub)
+      this.isSaved = false
+    },
+
+    setSubproblemAssignment(key: string, blocks: Block[]) {
+      const sub = this.problem?.subproblems.find((item) => item.key === key)
+      if (!sub) return
+
+      sub.assignment = cloneDraft(blocks)
+      this.isSaved = false
+    },
+
+    removeSubproblem(key: string) {
+      if (!this.problem) return
+
+      this.problem.subproblems = this.problem.subproblems.filter(
+        (sub) => sub.key !== key,
       )
-
-      if (index === -1) return
-
-      this.problem.assignment[index] = {
-        ...this.problem.assignment[index]!,
-        ...patch,
-      } as Block
-
       this.isSaved = false
     },
 
-    removeBlock(id: string) {
+    moveSubproblem(key: string, direction: -1 | 1) {
       if (!this.problem) return
 
-      if (this.problem.assignment.length <= 1) return
-
-      this.problem.assignment = this.problem.assignment.filter(
-        (block) => block.id !== id,
-      )
-
-      this.isSaved = false
-    },
-
-    moveBlock(id: string, direction: -1 | 1) {
-      if (!this.problem) return
-
-      const blocks = this.problem.assignment
-      const index = blocks.findIndex((block) => block.id === id)
+      const subs = this.problem.subproblems
+      const index = subs.findIndex((sub) => sub.key === key)
       const target = index + direction
 
-      if (index === -1 || target < 0 || target >= blocks.length) return
+      if (index === -1 || target < 0 || target >= subs.length) return
 
-      const [block] = blocks.splice(index, 1)
-      if (block) blocks.splice(target, 0, block)
+      const [sub] = subs.splice(index, 1)
+      if (sub) subs.splice(target, 0, sub)
 
       this.isSaved = false
+    },
+
+    /**
+     * After a save that failed half way: take over the ids and lockVersions
+     * that the backend already handed out (see saveProblemSet), so that the
+     * next attempt continues instead of creating everything again.
+     */
+    applySavedIds(saved: ProblemDraft) {
+      if (!this.problem) return
+
+      this.problem.id = saved.id
+      this.problem.lockVersion = saved.lockVersion
+
+      for (const savedSub of saved.subproblems) {
+        const sub = this.problem.subproblems.find((item) => item.key === savedSub.key)
+        if (!sub) continue
+
+        sub.id = savedSub.id
+        sub.lockVersion = savedSub.lockVersion
+      }
     },
 
     markSaved() {

@@ -1,292 +1,122 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-
+import { subproblemLabel } from '../../lib/subproblemLabel'
 import { useEditorStore } from '../../stores/editorStore'
-import type { MathInputMode } from '../../types'
 
-import MathLiveInput from './MathLiveInput.vue'
-import KaTeXInput from './KaTeXInput.vue'
+import BlockListEditor from './BlockListEditor.vue'
+import CategoryPicker from './CategoryPicker.vue'
 
 const editorStore = useEditorStore()
 
-const isMathPickerOpen = ref(false)
-const mathMenuRef = ref<HTMLElement | null>(null)
+function removeSubproblem(key: string, isSaved: boolean) {
+  // A saved subproblem is a problem of its own: it is deleted when the main
+  // problem is saved.
+  if (
+    isSaved &&
+    !window.confirm('Podúloha bude po uložení příkladu trvale smazána. Pokračovat?')
+  ) {
+    return
+  }
 
-function toggleMathPicker() {
-  isMathPickerOpen.value = !isMathPickerOpen.value
-}
-
-function closeMathPicker() {
-  isMathPickerOpen.value = false
-}
-
-function onDocumentPointerDown(event: PointerEvent) {
-  if (!isMathPickerOpen.value) return
-  if (mathMenuRef.value?.contains(event.target as Node)) return
-  closeMathPicker()
-}
-
-function onDocumentKeydown(event: KeyboardEvent) {
-  if (event.key !== 'Escape' || !isMathPickerOpen.value) return
-  event.stopPropagation()
-  closeMathPicker()
-}
-
-onMounted(() => {
-  document.addEventListener('pointerdown', onDocumentPointerDown)
-  document.addEventListener('keydown', onDocumentKeydown, true)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', onDocumentPointerDown)
-  document.removeEventListener('keydown', onDocumentKeydown, true)
-})
-
-function addTextBlock() {
-  editorStore.addBlock({
-    id: crypto.randomUUID(),
-    type: 'text',
-    markdown: '',
-  })
-}
-
-function addMathBlock(inputMode: MathInputMode) {
-  editorStore.addBlock({
-    id: crypto.randomUUID(),
-    type: 'math',
-    latex: '',
-    inputMode,
-  })
-
-  closeMathPicker()
-}
-
-function addImageBlock() {
-  editorStore.addBlock({
-    id: crypto.randomUUID(),
-    type: 'image',
-    assetId: 0,
-  })
-}
-
-function addGeoGebraBlock() {
-  editorStore.addBlock({
-    id: crypto.randomUUID(),
-    type: 'geogebra',
-    assetId: 0,
-    previewAssetId: 0,
-  })
-}
-
-function updateText(id: string, event: Event) {
-  const value = (event.target as HTMLTextAreaElement).value
-  editorStore.updateBlock(id, { markdown: value })
-}
-
-function updateLatexValue(id: string, latex: string) {
-  editorStore.updateBlock(id, { latex })
-}
-
-function updateAssetId(id: string, event: Event) {
-  const value = Number((event.target as HTMLInputElement).value)
-  editorStore.updateBlock(id, { assetId: value })
-}
-
-function updatePreviewAssetId(id: string, event: Event) {
-  const value = Number((event.target as HTMLInputElement).value)
-  editorStore.updateBlock(id, { previewAssetId: value })
-}
-
-function moveBlock(id: string, direction: -1 | 1) {
-  editorStore.moveBlock(id, direction)
-}
-
-function removeBlock(id: string) {
-  editorStore.removeBlock(id)
+  editorStore.removeSubproblem(key)
 }
 </script>
 
 <template>
-  <div class="problem-edit-form">
+  <div v-if="editorStore.problem" class="problem-edit-form">
+    <section class="categories-section">
+      <h3 class="section-title">Zařazení</h3>
+
+      <CategoryPicker
+        :chapters="editorStore.problem.chapters"
+        :tags="editorStore.problem.tags"
+        :has-subproblems="editorStore.problem.subproblems.length > 0"
+        @update:chapters="editorStore.setChapters($event)"
+        @update:tags="editorStore.setTags($event)"
+      />
+    </section>
+
     <section class="assignment-section">
-      <div class="section-heading"></div>
+      <h3 class="section-title">Zadání</h3>
 
-      <div class="block-toolbar">
-        <button type="button" @click="addTextBlock">
-          + Text
-        </button>
-
-        <div ref="mathMenuRef" class="math-menu">
-          <button
-            type="button"
-            :class="{ active: isMathPickerOpen }"
-            aria-haspopup="menu"
-            :aria-expanded="isMathPickerOpen"
-            @click="toggleMathPicker"
-          >
-            + vzorec
-          </button>
-
-          <Transition name="math-menu-pop">
-            <div
-              v-if="isMathPickerOpen"
-              class="math-menu__panel"
-              role="menu"
-            >
-              <button
-                type="button"
-                role="menuitem"
-                class="math-menu__item"
-                @click="addMathBlock('mathlive')"
-              >
-                MathLive
-              </button>
-
-              <button
-                type="button"
-                role="menuitem"
-                class="math-menu__item"
-                @click="addMathBlock('katex')"
-              >
-                KaTeX
-              </button>
-            </div>
-          </Transition>
-        </div>
-
-        <button type="button" @click="addImageBlock">
-          + Obrázek
-        </button>
-
-        <button type="button" @click="addGeoGebraBlock">
-          + GeoGebra
-        </button>
-      </div>
-
-      <div
-        v-if="editorStore.problem"
-        class="block-list"
+      <BlockListEditor
+        :model-value="editorStore.problem.assignment"
+        @update:model-value="editorStore.setAssignment($event)"
       >
-        <article
-          v-for="(block, index) in editorStore.problem.assignment"
-          :key="block.id"
-          class="block-card"
-        >
-          <header class="block-header">
-            <div class="block-label">
-              <span class="block-number">{{ index + 1 }}</span>
+        <template #toolbar>
+          <button type="button" @click="editorStore.addSubproblem()">
+            + Přidat podúlohu
+          </button>
+        </template>
+      </BlockListEditor>
+    </section>
 
-              <strong>
-                {{
-                  block.type === 'text'
-                    ? 'Text'
-                    : block.type === 'math'
-                      ? 'Matematický výraz'
-                      : block.type === 'image'
-                        ? 'Obrázek'
-                        : 'GeoGebra'
-                }}
-              </strong>
-            </div>
+    <section
+      v-if="editorStore.problem.subproblems.length > 0"
+      class="subproblems"
+    >
+      <h3 class="section-title">Podúlohy</h3>
 
-            <div class="block-actions">
-              <button
-                type="button"
-                aria-label="Posunout blok nahoru"
-                title="Posunout nahoru"
-                :disabled="index === 0"
-                @click="moveBlock(block.id, -1)"
-              >
-                ↑
-              </button>
+      <p class="muted">
+        Každá podúloha se uloží jako samostatný příklad navázaný na tento příklad.
+      </p>
 
-              <button
-                type="button"
-                aria-label="Posunout blok dolů"
-                title="Posunout dolů"
-                :disabled="index === editorStore.problem!.assignment.length - 1"
-                @click="moveBlock(block.id, 1)"
-              >
-                ↓
-              </button>
+      <article
+        v-for="(sub, index) in editorStore.problem.subproblems"
+        :key="sub.key"
+        class="subproblem-card"
+      >
+        <header class="subproblem-header">
+          <strong class="subproblem-label">
+            {{ subproblemLabel(index) }}
+          </strong>
 
-              <button
-                type="button"
-                class="remove-button"
-                aria-label="Odstranit blok"
-                title="Odstranit blok"
-                :disabled="editorStore.problem!.assignment.length <= 1"
-                @click="removeBlock(block.id)"
-              >
-                Odstranit
-              </button>
-            </div>
-          </header>
+          <div class="subproblem-actions">
+            <button
+              type="button"
+              aria-label="Posunout podúlohu nahoru"
+              title="Posunout nahoru"
+              :disabled="index === 0"
+              @click="editorStore.moveSubproblem(sub.key, -1)"
+            >
+              ↑
+            </button>
 
-          <div v-if="block.type === 'text'">
-            <label :for="`text-${block.id}`">
-              Text v Markdownu
-            </label>
+            <button
+              type="button"
+              aria-label="Posunout podúlohu dolů"
+              title="Posunout dolů"
+              :disabled="index === editorStore.problem.subproblems.length - 1"
+              @click="editorStore.moveSubproblem(sub.key, 1)"
+            >
+              ↓
+            </button>
 
-            <textarea
-              :id="`text-${block.id}`"
-              :value="block.markdown"
-              rows="5"
-              placeholder="Napište zadání příkladu..."
-              @input="updateText(block.id, $event)"
-            />
+            <button
+              type="button"
+              class="remove-button"
+              aria-label="Odstranit podúlohu"
+              title="Odstranit podúlohu"
+              @click="removeSubproblem(sub.key, sub.id !== null)"
+            >
+              Odstranit
+            </button>
           </div>
+        </header>
 
-          <div v-else-if="block.type === 'math'">
-            <span class="field-label">
-              {{ block.inputMode === 'katex' ? 'LaTeX (KaTeX)' : 'Vzorec (MathLive)' }}
-            </span>
+        <!-- Sets cannot be nested: no "Přidat podúlohu" inside a subproblem. -->
+        <BlockListEditor
+          :model-value="sub.assignment"
+          @update:model-value="editorStore.setSubproblemAssignment(sub.key, $event)"
+        />
+      </article>
 
-            <KaTeXInput
-              v-if="block.inputMode === 'katex'"
-              :model-value="block.latex"
-              @update:model-value="updateLatexValue(block.id, $event)"
-            />
-
-            <MathLiveInput
-              v-else
-              :model-value="block.latex"
-              @update:model-value="updateLatexValue(block.id, $event)"
-            />
-          </div>
-
-          <div v-else-if="block.type === 'image'">
-            <label :for="`image-${block.id}`">
-              Vložit obrázek
-            </label>
-
-            <input
-              :id="`image-${block.id}`"
-              type="file"
-              @input="updateAssetId(block.id, $event)"
-            />
-          </div>
-
-          <div v-else-if="block.type === 'geogebra'">
-            <label :for="`geogebra-${block.id}`">
-              Vložit Graf
-            </label>
-
-            <input
-              :id="`geogebra-${block.id}`"
-              type="file"
-              @input="updateAssetId(block.id, $event)"
-            />
-          </div>
-        </article>
-
-        <p
-          v-if="editorStore.problem.assignment.length === 0"
-          class="empty-state"
-        >
-          Zatím zde nejsou žádné bloky.
-        </p>
-      </div>
+      <button
+        type="button"
+        class="add-subproblem"
+        @click="editorStore.addSubproblem()"
+      >
+        + Přidat podúlohu
+      </button>
     </section>
   </div>
 </template>
@@ -298,26 +128,50 @@ function removeBlock(id: string) {
   gap: 24px;
 }
 
-.section-heading h3 {
-  margin: 0;
+.section-title {
+  margin: 0 0 12px;
   font-size: 1.2rem;
 }
 
 .muted {
+  margin: 4px 0 16px;
   color: var(--color-muted);
   font-size: 0.9rem;
 }
 
-.block-toolbar {
+.subproblems {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 20px 0;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.block-toolbar > button,
-.math-menu > button,
-.block-actions button {
+.subproblem-card {
+  padding: 16px;
+  border: 1px solid var(--color-border-strong);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-tint);
+}
+
+.subproblem-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.subproblem-label {
+  font-size: 1.1rem;
+}
+
+.subproblem-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.subproblem-actions button,
+.add-subproblem {
   padding: 8px 14px;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
@@ -326,116 +180,13 @@ function removeBlock(id: string) {
   cursor: pointer;
 }
 
-.block-toolbar > button:hover,
-.math-menu > button:hover,
-.block-actions button:hover:not(:disabled) {
+.subproblem-actions button:hover:not(:disabled),
+.add-subproblem:hover {
   background: var(--color-tint);
 }
 
-.math-menu > button.active {
-  background: var(--color-tint);
-  border-color: var(--color-primary);
-}
-
-.math-menu {
-  position: relative;
-}
-
-.math-menu__panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: 20;
-
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
-  min-width: 11rem;
-  padding: 8px;
-
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-pop);
-  transform-origin: top left;
-}
-
-.math-menu__item {
-  padding: 10px 18px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-ink);
-  font: inherit;
-  font-size: 1rem;
-  text-align: center;
-  cursor: pointer;
-}
-
-.math-menu__item:hover,
-.math-menu__item:focus-visible {
-  background: var(--color-tint);
-}
-
-.math-menu-pop-enter-active,
-.math-menu-pop-leave-active {
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease;
-}
-
-.math-menu-pop-enter-from,
-.math-menu-pop-leave-to {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.97);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .math-menu-pop-enter-active,
-  .math-menu-pop-leave-active {
-    transition: none;
-  }
-}
-
-.block-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.block-card {
-  padding: 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
-
-.block-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.block-label,
-.block-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.block-number {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--color-primary-soft);
-  color: var(--color-on-primary);
-  font-weight: 700;
+.add-subproblem {
+  align-self: flex-start;
 }
 
 .remove-button {
@@ -445,42 +196,5 @@ function removeBlock(id: string) {
 button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-label,
-.field-label {
-  display: block;
-  margin: 12px 0 6px;
-  font-weight: 600;
-}
-
-textarea,
-input {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font: inherit;
-}
-
-textarea:focus,
-input:focus {
-  border-color: var(--color-primary);
-  outline: 3px solid var(--color-tint);
-}
-
-textarea {
-  resize: vertical;
-}
-
-.empty-state {
-  padding: 24px;
-  border: 1px dashed var(--color-border-strong);
-  border-radius: var(--radius-md);
-  color: var(--color-muted);
-  text-align: center;
 }
 </style>
