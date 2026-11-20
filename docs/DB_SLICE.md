@@ -58,7 +58,7 @@ pnpm test:prisma -t "name"  # extra arguments go to Vitest
 ```
 
 It recreates the throwaway Postgres of `docker-compose.test.yml` (port **5433**, tmpfs, never touches the dev database),
-creates the schema (`prisma db push` on the empty database), seeds it, and runs the create, get, list and picker e2e files with
+applies the migrations (`prisma migrate deploy` on the empty database), seeds it, and runs the create, get, list and picker e2e files with
 `DATA_SOURCE=prisma`, one file at a time (they share one database). The tests use `PrismaStoreProbe`
 (`apps/api/test/support/prisma-store.ts`), which reads the tables directly, not through the repositories.
 
@@ -70,9 +70,8 @@ Things to know:
   seven problems (sets, published ones, an `LICENSED_USE` one), Jan's personal tag *opakování 2.A*, and a fourth licence
   *Všechna práva vyhrazena*. The Prisma seed has none of them, so those tests cannot go green on this seed alone.
   Either extend `prisma/seed.ts` to match the mock, or make the tests create what they need through the API.
-- **The first migration exists** (`prisma/migrations/20261101204328_init`, includes the CHECK constraints). The dev database uses
-  `prisma migrate deploy`, but `scripts/test-prisma.mjs` still runs `prisma db push`, so the test database does not get the CHECKs.
-  Switch the script to `migrate deploy` to test against the same schema.
+- **The first migration exists** (`prisma/migrations/20261101204328_init`, includes the CHECK constraints). The dev database and
+  `scripts/test-prisma.mjs` both use `prisma migrate deploy`, so the test database has the same CHECKs (D-14).
 - **No reset between tests.** A fresh app per test file does not reset the database. Rows from one test stay for the next.
 - `prisma db push --force-reset` is blocked by Prisma's safety guard (it wants explicit consent), so the script recreates the container instead.
 
