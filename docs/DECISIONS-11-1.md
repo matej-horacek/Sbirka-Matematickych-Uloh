@@ -228,3 +228,11 @@ This round makes sets correct and builds private worksheets. Publishing, sharing
 | D-48 | Q-008 | Someone else's private problem in `addSetChild` → 400 "not found", which hides that it exists. `copyFromId` pointing at a child of another set is allowed and gives a standalone copy, as `copyProblem` does. | Q-008 |
 | D-49 | A removed or freed child | It is PRIVATE, also when the set was published. Under D-25 this is the working row, which is always private anyway. | Step 1.3 of the old resume file |
 | D-50 | The 202 path until D-25 | It stays exactly as it is. Removing it before the working row and public copy exist would let a non-trusted author change published content directly (G-1). It goes away with D-25 in spec 4.0.0. Worksheets are private, so they never answer 202. | D-19's direct removal waits for D-25 |
+
+# Decisions — 2026-11-21
+
+## Review has no exceptions
+
+| ID | Topic | Proposal | Settles / replaces |
+|---|---|---|---|
+| D-51 | What goes through review | Under D-25 every edit changes the author's **working row** and is applied right away, with no review and never a 202. **Every** difference that would reach the public copy needs an approved publish: content, tags, chapters, set structure (add, reorder, remove a child, dissolve) and worksheet items. There is no "harmless change" list. The one exception is **taking content down** (pull D-46, delete D-39): it only removes something from the public, so it cannot be used to slip content past review, and an author must be able to do it at once (e.g. a licence problem). Reason: one path for everything public keeps the code simple and leaves no route around review. A tags-only change still raises `minorVersion` rather than `version` (D-15), which only decides whether copy holders see `updateAvailable`. Open: whether a trusted author's publish is approved automatically. | Replaces **D-19** (direct structural removal of published content) and **D-23** (the "except a pure removal" rule). Applies to problems, sets and worksheets (D-28). |
