@@ -56,6 +56,8 @@ tags:
     description: Read-only lists for the editor (tags, chapters, licences).
   - name: Authorization
     description: Register, Login, Logout, Refresh.
+  - name: Worksheets
+    description: Create, read, update, delete.
 paths:
   /problems:
     get:
@@ -1237,6 +1239,78 @@ paths:
           headers:
             Set-Cookie:
               $ref: '#/components/headers/ClearAuthCookies'
+  /worksheets:
+    get:
+      summary: |
+        Any logged-in teacher. scope=mine returns the callers own worksheets,
+        scope=public returns all published worksheets from the browser.
+      operationId: listWorksheets
+      parameters:
+        - $ref: '#/components/parameters/Scope'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/TagIdFilter'
+        - $ref: '#/components/parameters/ChapterIdFilter'
+        - $ref: '#/components/parameters/LanguageFilter'
+        - $ref: '#/components/parameters/IdsFilter'
+        - $ref: '#/components/parameters/UpdateAvailableFilter'
+      responses:
+        '200':
+          description: Worksheets received successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemPage'
+              example:
+                items:
+                  - id: k3Xa9
+                    name: Pracovní list
+                    assignment: 'Řešte příklady'
+                    result:
+                    language: cs
+                    difficulty: 3
+                    author: &id001
+                      id: u7Hn2
+                      displayName: Jan Novák
+                    tags: &id007
+                      - &id009
+                        id: t1Ab3
+                        name: lineární rovnice
+                        scope: global
+                      - &id012
+                        id: t2Cd4
+                        name: kvadratické rovnice
+                        scope: global
+                    chapters: &id008
+                      - &id010
+                        id: c9Kd1
+                        name: Rovnice
+                        scope: global
+                    childCount: 2
+                  - id: p5Qw8
+                    name: Obsah kruhu
+                    assignment: Vypočítejte obsah kruhu o poloměru \( r = 5\,\text{cm} \).
+                    result: \( S = 25\pi\,\text{cm}^2 \)
+                    language: cs
+                    difficulty: 2
+                    author: *id001
+                    tags: &id016
+                      - id: t5Gh6
+                        name: geometrie
+                        scope: global
+                    chapters: &id017
+                      - id: c2Xy5
+                        name: Planimetrie
+                        scope: global
+                    childCount: 0
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 2
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
 components:
   securitySchemes:
@@ -1805,6 +1879,14 @@ components:
         items:
           type: array
           items: {$ref: '#/components/schemas/ProblemListItem'}
+        meta: {$ref: '#/components/schemas/PageMeta'}
+    WorksheetPage:
+      type: object
+      required: [items, meta]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ProblemDetail'}
         meta: {$ref: '#/components/schemas/PageMeta'}
 
     # --- errors (RFC 9457) ---
