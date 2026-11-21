@@ -14,6 +14,7 @@ import type {
   PublishRequest,
   ReorderChildRequest,
   Sqid,
+  SubproblemDraft,
 } from '../types'
 
 function problemPath(id: Sqid): string {
@@ -22,9 +23,12 @@ function problemPath(id: Sqid): string {
 
 function toContentPayload(draft: ProblemDraft) {
   const assignment = blocksToMarkdown(draft.assignment)
-  const result = draft.solution?.length
-    ? blocksToMarkdown(draft.solution) || null
-    : null
+  // A set parent must not have a result (409 SET_PARENT_HAS_RESULT):
+  // the results belong to the subproblems.
+  const result =
+    !draft.subproblems?.length && draft.solution?.length
+      ? blocksToMarkdown(draft.solution) || null
+      : null
 
   return {
     name: draft.name,
@@ -32,8 +36,8 @@ function toContentPayload(draft: ProblemDraft) {
     result,
     language: draft.language,
     difficulty: draft.difficulty,
-    tagIds: [...(draft.tagIds ?? [])],
-    chapterIds: [...(draft.chapterIds ?? [])],
+    tagIds: (draft.tags ?? []).map((tag) => tag.id),
+    chapterIds: (draft.chapters ?? []).map((chapter) => chapter.id),
   }
 }
 
@@ -55,7 +59,7 @@ function markdownToEditorBlock(markdown: string): Block {
  * adapter restores each field as one editable text block without changing the
  * stored Markdown/LaTeX content.
  */
-export function toEditorDraft(problem: ProblemDetail | ProblemDetailCore): ProblemDraft {
+function toContentDraft(problem: ProblemDetail | ProblemDetailCore) {
   return {
     id: problem.id,
     lockVersion: problem.lockVersion ?? null,
@@ -64,8 +68,22 @@ export function toEditorDraft(problem: ProblemDetail | ProblemDetailCore): Probl
     solution: problem.result ? [markdownToEditorBlock(problem.result)] : null,
     difficulty: problem.difficulty ?? null,
     language: problem.language ?? null,
-    chapterIds: problem.chapters.map((chapter) => chapter.id),
-    tagIds: problem.tags.map((tag) => tag.id),
+    chapters: problem.chapters.map((chapter) => ({ ...chapter })),
+    tags: problem.tags.map((tag) => ({ ...tag })),
+  }
+}
+
+function toSubproblemDraft(child: ProblemDetailCore): SubproblemDraft {
+  return { key: createBlockId(), ...toContentDraft(child) }
+}
+
+/** A set's children become the draft's subproblems, in the server's order. */
+export function toEditorDraft(problem: ProblemDetail | ProblemDetailCore): ProblemDraft {
+  const children = 'children' in problem ? problem.children : []
+
+  return {
+    ...toContentDraft(problem),
+    subproblems: children.map(toSubproblemDraft),
   }
 }
 

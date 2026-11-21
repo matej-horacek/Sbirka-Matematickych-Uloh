@@ -37,9 +37,8 @@ export interface GeoGebraBlock {
 
 export type Block = TextBlock | MathBlock | ImageBlock | GeoGebraBlock
 
-// The editor's working copy. `problemsApi` serializes block arrays into the
-// backend's string fields before sending them.
-export interface ProblemEditorDraft {
+// Fields shared by a main problem and by each subproblem.
+export interface ProblemContentDraft {
   id: Sqid | null
   lockVersion: number | null
   name: string
@@ -48,8 +47,27 @@ export interface ProblemEditorDraft {
   difficulty: number | null
   /** ISO language code, e.g. "cs". The backend does not use a numeric languageId. */
   language: string | null
-  chapterIds: Sqid[]
-  tagIds: Sqid[]
+  /** Chosen chapters (okruhy). Whole refs, so the names are known without a lookup. */
+  chapters: ChapterRef[]
+  /** Chosen tags (štítky). */
+  tags: TagRef[]
+}
+
+/**
+ * A subproblem is a problem of its own on the backend (a child of the main
+ * problem's set), not a part of the main assignment. Sets cannot be nested, so
+ * a subproblem never has subproblems itself.
+ */
+export interface SubproblemDraft extends ProblemContentDraft {
+  /** Local key for v-for and for matching after a save. Never sent to the backend. */
+  key: string
+}
+
+// The editor's working copy. `problemsApi` serializes block arrays into the
+// backend's string fields before sending them.
+export interface ProblemEditorDraft extends ProblemContentDraft {
+  /** Ordered children of the set. Empty = a standalone problem. */
+  subproblems: SubproblemDraft[]
 }
 
 /** Backwards-compatible name for the editor working copy. */

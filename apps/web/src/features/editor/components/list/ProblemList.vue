@@ -53,6 +53,9 @@ function editProblem(id: Sqid | null) {
       :key="problem.id ?? problem.name"
       :title="problem.name || 'Bez názvu'"
       :blocks="problem.assignment"
+      :subproblems="problem.subproblems"
+      :chapters="problem.chapters"
+      :tags="problem.tags"
       :selected="problem.id === selectedId"
     >
       <template #actions>
