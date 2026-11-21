@@ -536,7 +536,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
               example: *id014
-        '202': 
+        '202':
           description: 'The set is published and you are not trusted: the change waits for review; the returned set is unchanged.'
           content:
             application/json:
@@ -1241,68 +1241,55 @@ paths:
               $ref: '#/components/headers/ClearAuthCookies'
   /worksheets:
     get:
-      summary: |
-        Any logged-in teacher. scope=mine returns the callers own worksheets,
-        scope=public returns all published worksheets from the browser.
+      summary: List your own worksheets
       operationId: listWorksheets
+      tags:
+        - Worksheets
+      description: |
+        Who: any logged-in teacher. Returns only the caller's own worksheets, which are private
+        until publishing is built (D-40). Deleted worksheets are left out.
+        Codes: 400 VALIDATION_FAILED; 401 UNAUTHORIZED.
       parameters:
-        - $ref: '#/components/parameters/Scope'
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/TagIdFilter'
         - $ref: '#/components/parameters/ChapterIdFilter'
         - $ref: '#/components/parameters/LanguageFilter'
-        - $ref: '#/components/parameters/IdsFilter'
-        - $ref: '#/components/parameters/UpdateAvailableFilter'
       responses:
         '200':
           description: Worksheets received successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemPage'
+                $ref: '#/components/schemas/WorksheetPage'
               example:
                 items:
-                  - id: k3Xa9
-                    name: Pracovní list
-                    assignment: 'Řešte příklady'
-                    result:
+                  - id: w4Rt7
+                    name: Lineární rovnice – opakování
                     language: cs
                     difficulty: 3
-                    author: &id001
+                    author:
                       id: u7Hn2
                       displayName: Jan Novák
-                    tags: &id007
-                      - &id009
-                        id: t1Ab3
+                    tags:
+                      - id: t1Ab3
                         name: lineární rovnice
                         scope: global
-                      - &id012
-                        id: t2Cd4
-                        name: kvadratické rovnice
-                        scope: global
-                    chapters: &id008
-                      - &id010
-                        id: c9Kd1
+                    chapters:
+                      - id: c9Kd1
                         name: Rovnice
                         scope: global
-                    childCount: 2
-                  - id: p5Qw8
-                    name: Obsah kruhu
-                    assignment: Vypočítejte obsah kruhu o poloměru \( r = 5\,\text{cm} \).
-                    result: \( S = 25\pi\,\text{cm}^2 \)
+                    itemCount: 5
+                  - id: w8Zp2
+                    name: Planimetrie – test
                     language: cs
-                    difficulty: 2
-                    author: *id001
-                    tags: &id016
-                      - id: t5Gh6
-                        name: geometrie
-                        scope: global
-                    chapters: &id017
-                      - id: c2Xy5
-                        name: Planimetrie
-                        scope: global
-                    childCount: 0
+                    difficulty:
+                    author:
+                      id: u7Hn2
+                      displayName: Jan Novák
+                    tags: [ ]
+                    chapters: [ ]
+                    itemCount: 0
                 meta:
                   page: 1
                   limit: 20
@@ -1593,6 +1580,7 @@ components:
               description: For the UI only (which buttons to show). The server checks permissions itself.
 
     ProblemName: { type: string, minLength: 1, maxLength: 255 }
+    WorksheetName: { type: string, minLength: 1, maxLength: 255 }
     ProblemAssignment: { type: string, minLength: 1 }
 
     TagRef:
@@ -1650,6 +1638,13 @@ components:
         result: {type: string, nullable: true}
         language: {type: string, nullable: true, example: cs}
         difficulty: {type: integer, nullable: true, minimum: 1, maximum: 10}
+
+    WorksheetBase:
+      type: object
+      properties:
+        name: {$ref: '#/components/schemas/WorksheetName'}
+        language: { type: string, nullable: true, example: cs }
+        difficulty: { type: integer, nullable: true, minimum: 1, maximum: 10 }
     ProblemCreate:
       allOf:
         - $ref: '#/components/schemas/ProblemBase'
@@ -1702,7 +1697,6 @@ components:
               type: integer
               minimum: 0
               description: 0 = standalone problem, more = set. Counted by the server, not stored.
-
             updateAvailable:
               type: boolean
               description: |
@@ -1753,6 +1747,66 @@ components:
               nullable: true
               example: VqXmZ
               description: Present only for the author. The problem this one was copied from (to look at a newer version before taking it over), or null.
+
+    WorksheetListItem:
+      allOf:
+        - $ref: '#/components/schemas/WorksheetBase'
+        - type: object
+          required: [ id, name, author, tags, chapters, itemCount ]
+          properties:
+            id: { $ref: '#/components/schemas/Sqid' }
+            author: { $ref: '#/components/schemas/UserRef' }
+            name: { $ref: '#/components/schemas/WorksheetName' }
+            tags:
+              type: array
+              items: { $ref: '#/components/schemas/TagRef' }
+            chapters:
+              type: array
+              items: { $ref: '#/components/schemas/ChapterRef' }
+            itemCount:
+              type: integer
+              minimum: 0
+              description: 0 = empty worksheet. Is equal to the count of items in the worksheet.
+
+
+    WorksheetDetail:
+      allOf:
+        - $ref: '#/components/schemas/WorksheetListItem'
+        - type: object
+          required: [status, items]
+          properties:
+            status:
+              type: string
+              enum: [ PRIVATE, REVIEWING, PUBLISHED, WITHDRAWN, BLOCKED ]
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+            version:
+              type: integer
+              description: Raised on name, difficulty, language or any item added, moved or removed.
+            lockVersion:
+              type: integer
+              description: |
+                Optimistic locking on edit. Send it back with PATCH /worksheets/{id} and with the item
+                endpoints: in the body when adding or moving an item, in the If-Match header when removing one.
+                A mismatch gives 409 for a body and 412 for If-Match.
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/WorksheetItem'}
+              description: In worksheet order, deleted problems are left out.
+    WorksheetItem:
+      required: [kind, problem]
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ PROBLEM]
+          description: Set is treated as problem.
+        problem:
+          description: The problem itself. Its id is the item id in /worksheets/{id}/items/{itemId}.
+          allOf:
+          - { $ref: '#/components/schemas/ProblemDetail'}
+
+
 
     # --- pickers ---
     ChapterNode:
@@ -1886,8 +1940,10 @@ components:
       properties:
         items:
           type: array
-          items: {$ref: '#/components/schemas/ProblemDetail'}
+          items: {$ref: '#/components/schemas/WorksheetListItem'}
         meta: {$ref: '#/components/schemas/PageMeta'}
+
+
 
     # --- errors (RFC 9457) ---
     ErrorDetails:

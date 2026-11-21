@@ -12,3 +12,6 @@ Problems, Sets and Worksheets can all be published with review.
 
 ## Worksheets
 - worksheets can contain both problems and sets
+
+## Worksheets and Sets
+- Keep them separate or merge them together?

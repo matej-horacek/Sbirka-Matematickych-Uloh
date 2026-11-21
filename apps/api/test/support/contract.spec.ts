@@ -18,8 +18,8 @@ describe('Contract helper', () => {
     expect(c.findOperation('put', '/problems/abcde')).toBeUndefined();
   });
 
-  it('knows all 21 operations', () => {
-    expect(new Set(c.operationIds()).size).toBe(21);
+  it('knows all 22 operations', () => {
+    expect(new Set(c.operationIds()).size).toBe(22);
   });
 
   it('accepts a valid body', () => {
