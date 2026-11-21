@@ -3,9 +3,11 @@
 import { computed, onMounted, ref } from 'vue'
 
 import ProblemCard from '../components/list/ProblemCard.vue'
+import ProblemFilters from '../components/list/ProblemFilters.vue'
 import ProblemEditDialog from '../components/edit/ProblemEditDialog.vue'
 import ProblemEditForm from '../components/edit/ProblemEditForm.vue'
 
+import { useProblemFilters } from '../composables/useProblemFilters'
 import { useEditorStore } from '../stores/editorStore'
 import { useUserProblemsStore } from '../stores/userProblems'
 
@@ -28,13 +30,25 @@ onMounted(() => {
   void userProblems.fetchAll()
 })
 
-// Filter problems by name and assignment content.
+// Filtering by chapters and tags. The options are built from all problems.
+const {
+  state: filterState,
+  chapterOptions,
+  tagOptions,
+  filtered: filteredProblems,
+  toggleChapter,
+  toggleTag,
+  setTagMode,
+  clearFilters,
+} = useProblemFilters(computed(() => userProblems.problems))
+
+// Chapter/tag filters first, then the text search by name and assignment content.
 const problems = computed(() => {
   const query = search.value.trim().toLowerCase()
 
-  if (!query) return userProblems.problems
+  if (!query) return filteredProblems.value
 
-  return userProblems.problems.filter((problem) => {
+  return filteredProblems.value.filter((problem) => {
     const name = problem.name?.toLowerCase() ?? ''
     const assignment = [
       blocksToMarkdown(problem.assignment),
@@ -213,6 +227,19 @@ async function deleteProblem(id: Sqid) {
           aria-label="Hledat v příkladech"
         />
       </div>
+
+      <ProblemFilters
+        v-if="userProblems.items.length > 0"
+        :chapters="chapterOptions"
+        :tags="tagOptions"
+        :selected-chapter-ids="filterState.chapterIds"
+        :selected-tag-ids="filterState.tagIds"
+        :tag-mode="filterState.tagMode"
+        @toggle-chapter="toggleChapter"
+        @toggle-tag="toggleTag"
+        @update:tag-mode="setTagMode"
+        @clear="clearFilters"
+      />
 
       <div class="card-list">
         <p
