@@ -9,6 +9,7 @@
     "start": "node dist/main",
     "db:generate": "prisma generate",
     "db:seed": "prisma db seed",
+    "db:studio": "prisma studio",
     "typecheck": "tsc --noEmit -p .",
     "typecheck:test": "tsc --noEmit -p test/tsconfig.json",
     "test": "node ../../scripts/test-capped.mjs",
