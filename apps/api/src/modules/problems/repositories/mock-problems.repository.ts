@@ -59,6 +59,24 @@ export class MockProblemsRepository implements ProblemsRepository {
     return this.db.sortRelations(row);
   }
 
+  /** No await between the check and the write, so it is atomic on the event loop. */
+  async updateIfLockVersion(
+    id: number,
+    expectedLockVersion: number,
+    data: Partial<ProblemRow>,
+  ): Promise<ProblemRow | null> {
+    const row = this.alive.find((p) => p.id === id);
+    if (!row || row.lockVersion !== expectedLockVersion) return null;
+    Object.assign(row, data, { lockVersion: expectedLockVersion + 1, updatedAt: new Date() });
+    return this.db.sortRelations(row);
+  }
+
+  async incrementVersion(id: number): Promise<void> {
+    const row = this.db.problems.find((p) => p.id === id)!;
+    row.version += 1;
+    row.updatedAt = new Date();
+  }
+
   async softDelete(ids: number[]): Promise<void> {
     const now = new Date();
     for (const p of this.db.problems) if (ids.includes(p.id)) p.deletedAt = now;

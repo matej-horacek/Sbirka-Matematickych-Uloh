@@ -26,17 +26,13 @@ defineProps<{
         :source="`$$\n${block.latex}\n$$`"
       />
 
-      <ImagePreview
-        v-else-if="block.type === 'image'"
-        :asset-id="block.assetId"
-        :alt="block.alt ?? ''"
-      />
-
-      <ImagePreview
-        v-else-if="block.type === 'geogebra'"
-        :asset-id="block.previewAssetId"
-        alt="GeoGebra preview"
-      />
+      <!-- Images have no renderer yet (ImageRenderer.vue is empty). -->
+      <p
+        v-else-if="block.type === 'image' || block.type === 'geogebra'"
+        class="problem-preview__asset"
+      >
+        {{ block.type === 'image' ? 'Obrázek' : 'GeoGebra' }} – náhled zatím není k dispozici
+      </p>
     </div>
   </div>
 </template>
@@ -59,5 +55,10 @@ defineProps<{
 .problem-preview__block--image,
 .problem-preview__block--geogebra {
   max-width: 100%;
+}
+.problem-preview__asset {
+  margin: 0;
+  color: var(--color-muted);
+  font-style: italic;
 }
 </style>

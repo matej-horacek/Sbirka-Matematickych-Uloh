@@ -1,6 +1,7 @@
 
 import { defineStore } from 'pinia'
 import { problemsApi, toEditorDraft } from '../api/problemsApi'
+import { saveProblemSet } from '../api/saveProblemSet'
 import type { ProblemEditorDraft, Sqid } from '../types'
 
 type Status = 'idle' | 'loading' | 'ready' | 'error'
@@ -80,59 +81,37 @@ export const useUserProblemsStore = defineStore('userProblems', {
     },
 
     /**
-     * Create a new problem.
+     * Create a new problem (with its subproblems).
      */
     async add(draft: ProblemEditorDraft): Promise<ProblemEditorDraft> {
-      const response = await problemsApi.create(draft)
-
-      const created = toEditorDraft(response)
-
-      this.items.push(created)
-
-      return created
+      return this.save(draft)
     },
 
     /**
-     * Save an existing problem.
+     * Save a new or existing problem together with its subproblems.
+     *
+     * `draft` is updated in place with the ids / lockVersions the backend
+     * returned, so that a failed save can be repeated (see saveProblemSet).
      */
-    
-async save(draft: ProblemEditorDraft): Promise<ProblemEditorDraft> {
-  // New problem: create it instead of updating it.
-  if (draft.id === null || draft.id === undefined) {
-    const response = await problemsApi.create(draft)
-    const created = toEditorDraft(response)
+    async save(draft: ProblemEditorDraft): Promise<ProblemEditorDraft> {
+      // Existing problem: lockVersion is mandatory.
+      if (draft.id != null && draft.lockVersion == null) {
+        throw new Error('Chybí lockVersion. Načtěte příklad znovu před uložením.')
+      }
 
-    this.items.push(created)
+      const detail = await saveProblemSet(draft)
+      const saved = toEditorDraft(detail)
 
-    return created
-  }
+      const index = this.items.findIndex((problem) => problem.id === saved.id)
 
-  // Existing problem: lockVersion is mandatory.
-  if (
-    draft.lockVersion === null ||
-    draft.lockVersion === undefined
-  ) {
-    throw new Error(
-      'Chybí lockVersion. Načtěte příklad znovu před uložením.',
-    )
-  }
+      if (index === -1) {
+        this.items.push(saved)
+      } else {
+        this.items[index] = saved
+      }
 
-  const response = await problemsApi.update(draft.id, draft)
-  const updated = toEditorDraft(response)
-
-  const index = this.items.findIndex(
-    (problem) => problem.id === draft.id,
-  )
-
-  if (index === -1) {
-    this.items.push(updated)
-  } else {
-    this.items[index] = updated
-  }
-
-  return updated
-},
-
+      return saved
+    },
 
     /**
      * Delete a problem.

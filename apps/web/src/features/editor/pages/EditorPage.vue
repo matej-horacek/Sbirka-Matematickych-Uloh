@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { computed, onMounted, ref, toRaw } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import ProblemCard from '../components/list/ProblemCard.vue'
 import ProblemEditDialog from '../components/edit/ProblemEditDialog.vue'
@@ -10,6 +10,7 @@ import { useEditorStore } from '../stores/editorStore'
 import { useUserProblemsStore } from '../stores/userProblems'
 
 import { blocksToMarkdown } from '../lib/blocksToMarkdown'
+import { cloneDraft } from '../lib/cloneDraft'
 import { createEmptyProblemDraft } from '../lib/createEmptyProblemDraft'
 
 import type { Sqid } from '../types'
@@ -20,6 +21,7 @@ const userProblems = useUserProblemsStore()
 const isProblemEditorOpen = ref(false)
 const triedToSave = ref(false)
 const saveError = ref<string | null>(null)
+const isSaving = ref(false)
 const search = ref('')
 
 onMounted(() => {
@@ -34,9 +36,23 @@ const problems = computed(() => {
 
   return userProblems.problems.filter((problem) => {
     const name = problem.name?.toLowerCase() ?? ''
-    const assignment = blocksToMarkdown(problem.assignment).toLowerCase()
+    const assignment = [
+      blocksToMarkdown(problem.assignment),
+      ...problem.subproblems.map((sub) => blocksToMarkdown(sub.assignment)),
+    ]
+      .join('\n')
+      .toLowerCase()
 
-    return name.includes(query) || assignment.includes(query)
+    const categories = [...problem.chapters, ...problem.tags]
+      .map((item) => item.name)
+      .join('\n')
+      .toLowerCase()
+
+    return (
+      name.includes(query) ||
+      assignment.includes(query) ||
+      categories.includes(query)
+    )
   })
 })
 
@@ -67,7 +83,7 @@ function editProblem(id: Sqid) {
   if (!item) return
 
   editorStore.loadProblem(
-    structuredClone(toRaw(item)),
+    cloneDraft(item),
   )
 
   triedToSave.value = false
@@ -78,6 +94,8 @@ function editProblem(id: Sqid) {
 
 // Save a new or existing problem.
 async function saveProblem() {
+  if (isSaving.value) return
+
   triedToSave.value = true
   saveError.value = null
 
@@ -96,29 +114,33 @@ async function saveProblem() {
   // Check the remaining editor validation.
   if (editorStore.errors.length > 0) return
 
-  const problemToSave = structuredClone(toRaw(draft))
+  const problemToSave = cloneDraft(draft)
 
-  // Normalize the name and collections.
+  // Normalize the name.
   problemToSave.name = name
-  problemToSave.tagIds ??= []
-  problemToSave.chapterIds ??= []
+
+  isSaving.value = true
 
   try {
-    // A new problem has no ID yet.
-    // It must use POST /problems.
-    if (problemToSave.id == null) {
-      await userProblems.add(problemToSave)
-    } else {
-      // Existing problems use PATCH /problems/:id.
-      await userProblems.save(problemToSave)
-    }
+    // Main problem + subproblems. Every subproblem is a problem of its own,
+    // linked to the main problem through the /children endpoints
+    // (see saveProblemSet).
+    await userProblems.save(problemToSave)
 
     closeEditor()
   } catch (error) {
+    // A save can fail half way (the main problem exists, a subproblem does
+    // not). Keep what the backend already created, so a retry continues
+    // instead of creating everything again.
+    editorStore.applySavedIds(problemToSave)
+    void userProblems.fetchAll()
+
     saveError.value =
       error instanceof Error
         ? error.message
         : 'Příklad se nepodařilo uložit.'
+  } finally {
+    isSaving.value = false
   }
 }
 
@@ -136,7 +158,13 @@ function closeEditor() {
 
 // Delete an existing problem.
 async function deleteProblem(id: Sqid) {
-  if (!window.confirm('Opravdu chcete příklad smazat?')) {
+  const subCount = userProblems.problemById(id)?.subproblems.length ?? 0
+
+  const message = subCount > 0
+    ? `Opravdu chcete příklad smazat? Smažou se i jeho podúlohy (${subCount}).`
+    : 'Opravdu chcete příklad smazat?'
+
+  if (!window.confirm(message)) {
     return
   }
 
@@ -221,6 +249,9 @@ async function deleteProblem(id: Sqid) {
           :key="problem.id ?? problem.name"
           :title="problem.name || 'Bez názvu'"
           :blocks="problem.assignment"
+          :subproblems="problem.subproblems"
+          :chapters="problem.chapters"
+          :tags="problem.tags"
         >
           <template #actions>
             <button
@@ -315,9 +346,10 @@ async function deleteProblem(id: Sqid) {
         <button
           type="button"
           class="primary-button"
+          :disabled="isSaving"
           @click="saveProblem"
         >
-          Uložit příklad
+          {{ isSaving ? 'Ukládám…' : 'Uložit příklad' }}
         </button>
       </footer>
     </ProblemEditDialog>

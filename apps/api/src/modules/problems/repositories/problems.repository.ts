@@ -31,6 +31,14 @@ export interface ProblemsRepository {
   findMany(filter: ProblemFilter, page: number, limit: number): Promise<{ rows: ProblemRow[]; total: number }>;
   insert(data: NewProblem): Promise<ProblemRow>;
   update(id: number, data: Partial<ProblemRow>): Promise<ProblemRow>;
+  /**
+   * Optimistic lock as one atomic step: patches `data` and sets lockVersion = expectedLockVersion + 1, but only
+   * when the live row still has expectedLockVersion. Returns null (and changes nothing) otherwise.
+   * A `lockVersion` key in `data` is ignored.
+   */
+  updateIfLockVersion(id: number, expectedLockVersion: number, data: Partial<ProblemRow>): Promise<ProblemRow | null>;
+  /** version = version + 1 as an atomic increment (no read-modify-write); lockVersion is not touched. */
+  incrementVersion(id: number): Promise<void>;
   softDelete(ids: number[]): Promise<void>;
   /**
    * Gives the children of a set the positions positionAt(0), positionAt(1), … in the given order.

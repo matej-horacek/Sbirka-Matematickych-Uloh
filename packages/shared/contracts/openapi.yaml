@@ -52,10 +52,13 @@ tags:
     description: 'Build a set from blocks: add (move or copy), reorder and take out children.'
   - name: Problem actions
     description: Copy, publish, dissolve and copy updates.
+  - name: Worksheets
+    description: Create, read, update, delete.
   - name: Pickers
     description: Read-only lists for the editor (tags, chapters, licences).
   - name: Authorization
     description: Register, Login, Logout, Refresh.
+
 paths:
   /problems:
     get:
@@ -534,7 +537,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProblemDetail'
               example: *id014
-        '202': &id015
+        '202':
           description: 'The set is published and you are not trusted: the change waits for review; the returned set is unchanged.'
           content:
             application/json:
@@ -957,7 +960,365 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /worksheets:
+    get:
+      summary: List your own worksheets
+      operationId: listWorksheets
+      tags:
+        - Worksheets
+      description: |
+        Who: any logged-in teacher. Returns only the caller's own worksheets, which are private
+        until publishing is built (D-40). Deleted worksheets are left out.
+        Codes: 400 VALIDATION_FAILED; 401 UNAUTHORIZED.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/TagIdFilter'
+        - $ref: '#/components/parameters/ChapterIdFilter'
+        - $ref: '#/components/parameters/LanguageFilter'
+      responses:
+        '200':
+          description: Worksheets received successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetPage'
+              example:
+                items:
+                  - id: w4Rt7
+                    name: Lineární rovnice – opakování
+                    language: cs
+                    difficulty: 3
+                    author: &janNovak
+                      id: u7Hn2
+                      displayName: Jan Novák
+                    tags:
+                      - &tagLinear
+                        id: t1Ab3
+                        name: lineární rovnice
+                        scope: global
+                    chapters:
+                      - &chapterEquations
+                        id: c9Kd1
+                        name: Rovnice
+                        scope: global
+                    itemCount: 5
+                  - id: w8Zp2
+                    name: Planimetrie – test
+                    language: cs
+                    difficulty:
+                    author: *janNovak
+                    tags: [ ]
+                    chapters: [ ]
+                    itemCount: 0
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 2
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Create a worksheet
+      operationId: createWorksheet
+      tags:
+        - Worksheets
+      description: |
+        Who: any logged-in teacher (registered teachers too; creating is private).
+        Creates one empty worksheet. The new worksheet is PRIVATE, owned by the caller,
+        with no licence (the licence is chosen when publishing).
+        Add problems with POST /worksheets/{id}/items.
+        Codes: 400 VALIDATION_FAILED.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorksheetCreate'
+            examples:
+              single:
+                summary: Create a worksheet
+                value:
+                  name: Řešte rovnice
+                  language: cs
+                  difficulty: 3
+                  tagIds:
+                    - t1Ab3
+                  chapterIds:
+                    - c4Lm7
+      responses:
+        '201':
+          description: Created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetDetail'
+              example: &worksheetDetail
+                id: k3Xa9
+                name: Řešte rovnice
+                language: cs
+                difficulty: 3
+                author: *janNovak
+                tags:
+                  - *tagLinear
+                  - &tagQuadratic
+                    id: t2Cd4
+                    name: kvadratické rovnice
+                    scope: global
+                chapters:
+                  - *chapterEquations
+                itemCount: 0
+                createdAt: '2026-10-25T14:02:00Z'
+                updatedAt: '2026-10-25T14:02:00Z'
+                status: PRIVATE
+                version: 1
+                lockVersion: 1
+                items: []
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /worksheets/{id}:
+    get:
+      summary: Get the details of a single worksheet.
+      operationId: getWorksheet
+      tags:
+        - Worksheets
+      description: |
+        Who: the author, or any logged-in teacher when the worksheet is published.
+        Otherwise 404 (the worksheet's existence is not revealed).
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetDetail'
+              example: *worksheetDetail
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
+    patch:
+      summary: Update a worksheet
+      operationId: updateWorksheet
+      tags:
+        - Worksheets
+      description: |
+        Who: the author only. 403 on someone else's published worksheet, 404 on a private one.
+        Send the worksheet's lockVersion; every successful PATCH raises it.
+        version goes up on a name, difficulty or language change, not on tags or chapters alone.
+        Codes: 400 VALIDATION_FAILED; 403 FORBIDDEN; 404 NOT_FOUND; 409 LOCK_MISMATCH.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorksheetPatch'
+            examples:
+              edit:
+                summary: Edit the worksheet
+                value:
+                  lockVersion: 3
+                  name: 'Vyřešte rovnice v oboru reálných čísel a proveďte zkoušku:'
+      responses:
+        '200':
+          description: Updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetDetail'
+              example: *worksheetDetail
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      summary: Soft delete a worksheet
+      operationId: deleteWorksheet
+      tags:
+        - Worksheets
+      description: |
+        Who: the author only.
+        Soft delete (hidden). Deleting a worksheet keeps its problems.
+        Codes: 403 FORBIDDEN; 404 NOT_FOUND.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted successfully.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worksheets/{id}/items:
+    post:
+      summary: Add a problem to a worksheet
+      operationId: addWorksheetItem
+      tags:
+        - Worksheets
+      description: |
+        Who: the author only. 403 on someone else's published worksheet, 404 on a private one.
+        Adds one problem. Your own top-level problem is added as a reference (later edits show up);
+        anyone else's visible problem is copied first and the copy is added.
+        Position with `afterId`: missing = at the end, null = first, an item id = right after it.
+        Raises lockVersion and version. Returns the whole worksheet.
+        Codes: 400 VALIDATION_FAILED (unknown afterId); 403 FORBIDDEN; 404 NOT_FOUND (the worksheet,
+        or a problem you cannot see); 409 LOCK_MISMATCH, IS_SET_CHILD, ALREADY_IN_WORKSHEET.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddItemRequest'
+            examples:
+              toEnd:
+                summary: Add at the end
+                value: { lockVersion: 3, problemId: k3Xa9 }
+              afterItem:
+                summary: Add right after an item
+                value: { lockVersion: 3, problemId: k3Xa9, afterId: p5Qw8 }
+              first:
+                summary: Add as the first item
+                value: { lockVersion: 3, problemId: k3Xa9, afterId: null }
+      responses:
+        '200':
+          description: Added. Returns the whole worksheet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetDetail'
+              example: &worksheetWithItem
+                id: w4Rt7
+                name: Řešte rovnice
+                language: cs
+                difficulty: 3
+                author: *janNovak
+                tags: [ *tagLinear ]
+                chapters: [ *chapterEquations ]
+                itemCount: 1
+                createdAt: '2026-10-25T14:02:00Z'
+                updatedAt: '2026-10-26T09:10:00Z'
+                status: PRIVATE
+                version: 2
+                lockVersion: 4
+                items:
+                  - kind: PROBLEM
+                    problem: *id014
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /worksheets/{id}/items/{itemId}:
+    patch:
+      summary: Move an item within the worksheet
+      operationId: reorderWorksheetItem
+      tags:
+        - Worksheets
+      description: |
+        Who: the author only. 403 on someone else's published worksheet, 404 on a private one.
+        `afterId` is required: null = first, an item id = right after that item.
+        Raises lockVersion and version. Returns the whole worksheet.
+        Codes: 400 VALIDATION_FAILED (missing afterId, afterId not in the worksheet or the item itself);
+        403 FORBIDDEN; 404 NOT_FOUND (the worksheet, or itemId not in it); 409 LOCK_MISMATCH.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderItemRequest'
+            examples:
+              toFirst:
+                summary: Move to first
+                value:
+                  lockVersion: 4
+                  afterId:
+              afterOther:
+                summary: Move right after item d4E5f
+                value:
+                  lockVersion: 4
+                  afterId: d4E5f
+      responses:
+        '200':
+          description: Item moved. Returns the whole worksheet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetDetail'
+              example: *worksheetWithItem
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Remove an item from the worksheet
+      operationId: removeWorksheetItem
+      tags:
+        - Worksheets
+      description: |
+        Who: the author only. 403 on someone else's published worksheet, 404 on a private one.
+        Only unlinks the item: the problem stays in your collection (a copy made for the worksheet too).
+        The worksheet's lockVersion goes in the If-Match header, because DELETE has no body.
+        Raises lockVersion and version. Returns 200 with the whole worksheet instead of 204,
+        so the editor gets the new lockVersion (RFC 9110 allows a body).
+        Codes: 400 VALIDATION_FAILED (missing or malformed If-Match); 403 FORBIDDEN;
+        404 NOT_FOUND (the worksheet, or itemId not in it); 412 LOCK_MISMATCH.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: Item removed. Returns the whole worksheet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetDetail'
+              example: *worksheetWithItem
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
   /tags:
     get:
       summary: List tags (for pickers and autocomplete)
@@ -1316,12 +1677,19 @@ components:
       description: A child of the set given by `id`.
       schema:
         $ref: '#/components/schemas/Sqid'
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      description: An item of the worksheet given by `id` (the id of the problem in it).
+      schema:
+        $ref: '#/components/schemas/Sqid'
     IfMatch:
       name: If-Match
       in: header
       required: true
       description: |
-        The set's lockVersion in quotes, e.g. `"4"` (an ETag).
+        The lockVersion of the set or worksheet in quotes, e.g. `"4"` (an ETag).
         DELETE has no body, so the optimistic lock travels in this header.
         Missing or malformed → 400; does not match → 412 LOCK_MISMATCH.
       schema:
@@ -1519,6 +1887,7 @@ components:
               description: For the UI only (which buttons to show). The server checks permissions itself.
 
     ProblemName: { type: string, minLength: 1, maxLength: 255 }
+    WorksheetName: { type: string, minLength: 1, maxLength: 255 }
     ProblemAssignment: { type: string, minLength: 1 }
 
     TagRef:
@@ -1576,6 +1945,13 @@ components:
         result: {type: string, nullable: true}
         language: {type: string, nullable: true, example: cs}
         difficulty: {type: integer, nullable: true, minimum: 1, maximum: 10}
+
+    WorksheetBase:
+      type: object
+      properties:
+        name: {$ref: '#/components/schemas/WorksheetName'}
+        language: { type: string, nullable: true, example: cs }
+        difficulty: { type: integer, nullable: true, minimum: 1, maximum: 10 }
     ProblemCreate:
       allOf:
         - $ref: '#/components/schemas/ProblemBase'
@@ -1590,7 +1966,19 @@ components:
             chapterIds:
               type: array
               items: {$ref: '#/components/schemas/Sqid'}
-
+    WorksheetCreate:
+      allOf:
+        - $ref: '#/components/schemas/WorksheetBase'
+        - type: object
+          required: [name]
+          properties:
+            name: { $ref: '#/components/schemas/WorksheetName'}
+            tagIds:
+              type: array
+              items: { $ref: '#/components/schemas/Sqid' }
+            chapterIds:
+              type: array
+              items: { $ref: '#/components/schemas/Sqid' }
     ProblemPatch:
       allOf:
         - $ref: '#/components/schemas/ProblemBase'
@@ -1606,6 +1994,21 @@ components:
               type: array
               description: Missing = unchanged. Sent = replaces the whole list.
               items: {$ref: '#/components/schemas/Sqid'}
+    WorksheetPatch:
+      allOf:
+        - $ref: '#/components/schemas/WorksheetBase'
+        - type: object
+          required: [ lockVersion ]
+          properties:
+            lockVersion: { type: integer }
+            tagIds:
+              type: array
+              description: Missing = unchanged. Sent = replaces the whole list.
+              items: { $ref: '#/components/schemas/Sqid' }
+            chapterIds:
+              type: array
+              description: Missing = unchanged. Sent = replaces the whole list.
+              items: { $ref: '#/components/schemas/Sqid' }
 
     # --- problem: output ---
     ProblemListItem:
@@ -1628,7 +2031,6 @@ components:
               type: integer
               minimum: 0
               description: 0 = standalone problem, more = set. Counted by the server, not stored.
-
             updateAvailable:
               type: boolean
               description: |
@@ -1679,6 +2081,66 @@ components:
               nullable: true
               example: VqXmZ
               description: Present only for the author. The problem this one was copied from (to look at a newer version before taking it over), or null.
+
+    WorksheetListItem:
+      allOf:
+        - $ref: '#/components/schemas/WorksheetBase'
+        - type: object
+          required: [ id, name, author, tags, chapters, itemCount ]
+          properties:
+            id: { $ref: '#/components/schemas/Sqid' }
+            author: { $ref: '#/components/schemas/UserRef' }
+            name: { $ref: '#/components/schemas/WorksheetName' }
+            tags:
+              type: array
+              items: { $ref: '#/components/schemas/TagRef' }
+            chapters:
+              type: array
+              items: { $ref: '#/components/schemas/ChapterRef' }
+            itemCount:
+              type: integer
+              minimum: 0
+              description: 0 = empty worksheet. Is equal to the count of items in the worksheet.
+
+
+    WorksheetDetail:
+      allOf:
+        - $ref: '#/components/schemas/WorksheetListItem'
+        - type: object
+          required: [status, items]
+          properties:
+            status:
+              type: string
+              enum: [ PRIVATE, REVIEWING, PUBLISHED, WITHDRAWN, BLOCKED ]
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+            version:
+              type: integer
+              description: Raised on name, difficulty, language or any item added, moved or removed.
+            lockVersion:
+              type: integer
+              description: |
+                Optimistic locking on edit. Send it back with PATCH /worksheets/{id} and with the item
+                endpoints: in the body when adding or moving an item, in the If-Match header when removing one.
+                A mismatch gives 409 for a body and 412 for If-Match.
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/WorksheetItem'}
+              description: In worksheet order, deleted problems are left out.
+    WorksheetItem:
+      required: [kind, problem]
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [ PROBLEM]
+          description: Set is treated as problem.
+        problem:
+          description: The problem itself. Its id is the item id in /worksheets/{id}/items/{itemId}.
+          allOf:
+          - { $ref: '#/components/schemas/ProblemDetail'}
+
+
 
     # --- pickers ---
     ChapterNode:
@@ -1760,6 +2222,26 @@ components:
           example: gbHJd
           description: |
             Where to put it. Missing = at the end. null = first. A child id = right after that child.
+    AddItemRequest:
+      type: object
+      required: [lockVersion, problemId]
+      properties:
+        lockVersion:
+          type: integer
+          description: The worksheet's lockVersion.
+        problemId:
+          allOf:
+            - $ref: '#/components/schemas/Sqid'
+          description: |
+            Your own top-level problem (standalone or a set) is added as a reference.
+            Anyone else's visible problem is copied first, and the copy is added.
+        afterId:
+          type: string
+          nullable: true
+          example: gbHJd
+          description: |
+            Where to put it. Missing = at the end. null = first. An item id = right after that item.
+
     ReorderChildRequest:
       type: object
       required:
@@ -1774,6 +2256,21 @@ components:
           nullable: true
           example: gbHJd
           description: Required. null = move to first. A child id = right after that child (to move last, use the current last child).
+    ReorderItemRequest:
+      type: object
+      required:
+        - lockVersion
+        - afterId
+      properties:
+        lockVersion:
+          type: integer
+          description: The worksheet's lockVersion.
+        afterId:
+          type: string
+          nullable: true
+          example: gbHJd
+          description: Required. null = move to first. An item id = right after that item (to move last, use the current last item).
+
     TakeOverRequest:
       type: object
       required:
@@ -1806,6 +2303,16 @@ components:
           type: array
           items: {$ref: '#/components/schemas/ProblemListItem'}
         meta: {$ref: '#/components/schemas/PageMeta'}
+    WorksheetPage:
+      type: object
+      required: [items, meta]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/WorksheetListItem'}
+        meta: {$ref: '#/components/schemas/PageMeta'}
+
+
 
     # --- errors (RFC 9457) ---
     ErrorDetails:
@@ -1828,14 +2335,16 @@ components:
             403 ACCOUNT_BLOCKED - the user is blocked by moderation
             403 TRUST_TOO_LOW - registered user trying to publish
             403 CSRF_CHECK_FAILED - POST/PATCH/DELETE without the X-Requested-With header
-            404 NOT_FOUND - problem does not exist or is hidden
+            404 NOT_FOUND - problem or worksheet does not exist or is hidden
             409 LOCK_MISMATCH - lockVersion does not match
             412 LOCK_MISMATCH - If-Match version does not match (DELETE …/children/{childId})
             409 SET_PARENT_HAS_RESULT - a set (or a problem getting its first child) still has a result
             409 LICENSE_REQUIRED - publishing (or adding to a published set) without a licence that allows publication
             409 NOT_A_SET - dissolving something that is not a set
             409 SET_CHILD_NOT_PUBLISHABLE - publishing a child on its own
-            409 IS_SET_CHILD - delete, dissolve or add-children sent to a set child (take it out of the set first)
+            409 IS_SET_CHILD - delete, dissolve or add-children sent to a set child, or a set child added to
+                a worksheet (take it out of the set first, or add the whole set)
+            409 ALREADY_IN_WORKSHEET - the problem is already in this worksheet
             409 CANNOT_ADD_TO_SET - the problem cannot go into this set (already in a set, is a set, is the set itself,
                 or for a move: not yours or not private); `detail` says which
             409 NO_UPDATE_AVAILABLE - take-over or dismiss when the copy has no update (or is not a copy)

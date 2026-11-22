@@ -143,6 +143,19 @@ describe('updateProblem PATCH /problems/{id}', () => {
       await store.expectRecord('problems', p.id, { name: 'First save', lockVersion: 2, version: 2 });
     });
 
+    it('LOCK_MISMATCH for one of two concurrent saves with the same lockVersion; no lost update', async () => {
+      const { api, store } = ctx();
+      const p = await createProblem(api, 'jan');
+      const [a, b] = await Promise.all([
+        api.as('jan').patch(`/problems/${p.id}`, { lockVersion: 1, name: 'Save A' }),
+        api.as('jan').patch(`/problems/${p.id}`, { lockVersion: 1, name: 'Save B' }),
+      ]);
+      expect([a.status, b.status].sort()).toEqual([200, 409]);
+      const [winner, loser] = a.status === 200 ? [a, b] : [b, a];
+      expectError(loser, 409, 'LOCK_MISMATCH');
+      await store.expectRecord('problems', p.id, { name: winner.body.name, lockVersion: 2, version: 2 });
+    });
+
     it('SET_PARENT_HAS_RESULT when a result is put on a set; nothing changes', async () => {
       const { api, store } = ctx();
       expectError(
@@ -231,7 +244,7 @@ describe('updateProblem PATCH /problems/{id}', () => {
     // A pristine store: these tests change the seed set.
     const fresh = useTestApp();
 
-    it.skip('the author edits a child with the child’s own lockVersion → 200, child updated [R-009]', async () => {
+    it('the author edits a child with the child’s own lockVersion → 200, child updated [R-009]', async () => {
       const { api, store } = fresh();
       const res = await api
         .as('jan')
@@ -250,7 +263,7 @@ describe('updateProblem PATCH /problems/{id}', () => {
       });
     });
 
-    it.skip('a child edit raises the set’s version but not the set’s lockVersion [R-009]', async () => {
+    it('a child edit raises the set’s version but not the set’s lockVersion [R-009]', async () => {
       const { api, store } = fresh();
       const setBefore = await getProblem(api, 'jan', P.set);
       const child = setBefore.children.find((c: { id: string }) => c.id === P.childB);
@@ -267,7 +280,7 @@ describe('updateProblem PATCH /problems/{id}', () => {
       });
     });
 
-    it.skip('the set’s lockVersion is NOT accepted for a child (each has its own) [R-009]', async () => {
+    it('the set’s lockVersion is NOT accepted for a child (each has its own) [R-009]', async () => {
       // Set lockVersion is 3, the child's is 1.
       expectError(
         await fresh().api.as('jan').patch(`/problems/${P.childA}`, { lockVersion: 3, name: 'x' }),
@@ -276,7 +289,7 @@ describe('updateProblem PATCH /problems/{id}', () => {
       );
     });
 
-    it.skip('a result on a child is fine (only the set parent must not have one) [R-009]', async () => {
+    it('a result on a child is fine (only the set parent must not have one) [R-009]', async () => {
       const { api } = fresh();
       const set = await getProblem(api, 'jan', P.set);
       const child = set.children.find((c: { id: string }) => c.id === P.childA);
@@ -286,7 +299,7 @@ describe('updateProblem PATCH /problems/{id}', () => {
         .expect(200);
     });
 
-    it.skip('a new child moved into a set is editable with its own lockVersion [R-009, needs R-002]', async () => {
+    it('a new child moved into a set is editable with its own lockVersion [R-009, needs R-002]', async () => {
       const { api, store } = fresh();
       const { set, children } = await buildSet(api, 'eva', 1);
       const res = await api
