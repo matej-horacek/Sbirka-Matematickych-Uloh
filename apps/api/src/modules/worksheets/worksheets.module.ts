@@ -6,11 +6,12 @@ import { WORKSHEETS_REPOSITORY} from "./repositories/worksheets.repository.js";
 import { MockWorksheetsRepository} from "./repositories/mock-worksheets.repository.js";
 import { PrismaWorksheetsRepository } from "./repositories/prisma-worksheets.repository.js";
 import { ChaptersModule } from '../chapters/chapters.module.js';
+import { ProblemsModule } from '../problems/problems.module.js';
 import { TagsModule } from '../tags/tags.module.js';
 import { UsersModule } from '../users/users.module.js';
 
 @Module({
-  imports: [UsersModule, TagsModule, ChaptersModule],
+  imports: [UsersModule, TagsModule, ChaptersModule, ProblemsModule],
   controllers: [WorksheetsController],
   providers: [
     repositoryProvider(WORKSHEETS_REPOSITORY, MockWorksheetsRepository, PrismaWorksheetsRepository),

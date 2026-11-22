@@ -1,4 +1,14 @@
-import type { ChapterRow, ContentSourceRow, LicenseRow, ProblemRow, TagRow, UserRow, WorksheetRow } from './mock-database.js';
+import { positionAt } from '../common/utils/position.js';
+import type {
+  ChapterRow,
+  ContentSourceRow,
+  LicenseRow,
+  ProblemRow,
+  TagRow,
+  UserRow,
+  WorksheetProblemRow,
+  WorksheetRow,
+} from './mock-database.js';
 
 // Same content as the examples in openapi.yaml, so the real backend and the
 // Prism mock return the same kind of data (ids differ: here they are real Sqids).
@@ -224,5 +234,12 @@ export function seed() {
     worksheet({ id: 3, name: 'Kvadratické rovnice', difficulty: 5, authorId: 2, tagIds: [2], chapterIds: [1] }),
   ];
 
-  return { users, licenses, tags, chapters, problems, worksheets };
+  // Jan's first worksheet holds two of his own problems: the set (1) first, then "Obsah kruhu" (4).
+  // The second worksheet stays empty.
+  const worksheetProblems: WorksheetProblemRow[] = [
+    { worksheetId: 1, problemId: 1, position: positionAt(0) },
+    { worksheetId: 1, problemId: 4, position: positionAt(1) },
+  ];
+
+  return { users, licenses, tags, chapters, problems, worksheets, worksheetProblems };
 }

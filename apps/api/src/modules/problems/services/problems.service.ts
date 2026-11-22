@@ -13,6 +13,7 @@ import type { ProblemRow, PublishStatus } from '../../../database/mock-database.
 import type { CurrentUserData } from '../../../common/decorators/current-user.decorator.js';
 import { ApiError } from '../../../common/errors/api-error.js';
 import { decodeId } from '../../../common/utils/ids.js';
+import { parseIfMatch } from '../../../common/utils/if-match.js';
 import { ChaptersService } from '../../chapters/services/chapters.service.js';
 import { LicensesService } from '../../licenses/services/licenses.service.js';
 import { TagsService } from '../../tags/services/tags.service.js';
@@ -27,12 +28,6 @@ import { ProblemCopiesService } from './problem-copies.service.js';
 import { ProblemRelationsService } from './problem-relations.service.js';
 import { ProblemSetsService } from './problem-sets.service.js';
 
-/** If-Match carries the set's lockVersion as an ETag: "4". Missing or malformed → 400. */
-function parseIfMatch(header: string | undefined): number {
-  const match = /^"(\d+)"$/.exec(header ?? '');
-  if (!match) throw ApiError.badRequest('If-Match must carry the set lockVersion in quotes, e.g. "4".');
-  return Number(match[1]);
-}
 
 /**
  * Facade of the problems module: the only service other modules may use.
@@ -237,6 +232,43 @@ export class ProblemsService {
 
   async detailFor(user: CurrentUserData, id: number): Promise<ProblemDetail> {
     return this.get(user, id);
+  }
+
+  // ---------- facade for other modules (worksheets) ----------
+
+  /** A live problem the caller can see; 404 otherwise (same rule as getProblem). */
+  async findVisibleRow(user: CurrentUserData, id: number): Promise<ProblemRow> {
+    return this.findVisible(user, id);
+  }
+
+  /**
+   * D-27: someone else's problem goes into a worksheet as the caller's own copy (a set with its children).
+   * Returns the copy's id.
+   * TODO (D-25): copy the original's public copy once public copies exist; until then the visible row itself.
+   */
+  async copyForWorksheet(user: CurrentUserData, original: ProblemRow): Promise<number> {
+    return (await this.copies.copy(user.id, original)).id;
+  }
+
+  /**
+   * Details of the live problems among `ids`, by id; deleted or unknown ids are simply missing.
+   * No visibility check: the worksheet decides who may see its items.
+   * TODO (D-28): when worksheets can be published, decide what others see of the author's private items.
+   */
+  async detailsByIds(user: CurrentUserData, ids: number[]): Promise<Map<number, ProblemDetail>> {
+    const out = new Map<number, ProblemDetail>();
+    for (const id of ids) {
+      const row = await this.repo.findById(id);
+      if (row) out.set(id, await this.detail(row, user));
+    }
+    return out;
+  }
+
+  /** Which of these ids are live problems (for worksheet item counts). */
+  async liveIds(ids: number[]): Promise<Set<number>> {
+    const live = new Set<number>();
+    for (const id of ids) if (await this.repo.findById(id)) live.add(id);
+    return live;
   }
 
   // ---------- helpers ----------

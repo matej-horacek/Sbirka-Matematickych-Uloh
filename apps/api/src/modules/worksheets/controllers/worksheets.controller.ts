@@ -1,7 +1,11 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   zCreateWorksheetBody,
   zUpdateWorksheetBody,
+  zAddWorksheetItemBody,
+  zReorderWorksheetItemBody,
+  type AddItemRequest,
+  type ReorderItemRequest,
   type WorksheetCreate,
   type WorksheetDetail,
   type WorksheetPage,
@@ -57,5 +61,39 @@ export class WorksheetsController {
   @HttpCode(204)
   async remove(@CurrentUser() user: CurrentUserData, @Param('id', ParseIdPipe) id: number): Promise<void> {
     await this.worksheets.remove(user, id);
+  }
+
+  /** addWorksheetItem – author only. 200 (not 201) with the whole worksheet. */
+  @Post(':id/items')
+  @HttpCode(200)
+  async addItem(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id', ParseIdPipe) id: number,
+    @Body(new ZodValidationPipe(zAddWorksheetItemBody)) body: AddItemRequest,
+  ): Promise<WorksheetDetail> {
+    return this.worksheets.addItem(user, id, body);
+  }
+
+  /** reorderWorksheetItem – author only. */
+  @Patch(':id/items/:itemId')
+  async reorderItem(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id', ParseIdPipe) id: number,
+    @Param('itemId', ParseIdPipe) itemId: number,
+    @Body(new ZodValidationPipe(zReorderWorksheetItemBody)) body: ReorderItemRequest,
+  ): Promise<WorksheetDetail> {
+    return this.worksheets.reorderItem(user, id, itemId, body);
+  }
+
+  /** removeWorksheetItem – author only; the lock travels in If-Match. 200 with the whole worksheet. */
+  @Delete(':id/items/:itemId')
+  @HttpCode(200)
+  async removeItem(
+    @CurrentUser() user: CurrentUserData,
+    @Param('id', ParseIdPipe) id: number,
+    @Param('itemId', ParseIdPipe) itemId: number,
+    @Headers('if-match') ifMatch: string | undefined,
+  ): Promise<WorksheetDetail> {
+    return this.worksheets.removeItem(user, id, itemId, ifMatch);
   }
 }
