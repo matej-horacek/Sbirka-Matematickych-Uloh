@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { authRoutes } from '@/features/auth/routes'
 import { useAuthStore } from '@/features/auth/stores/authStore'
+import { catalogRoutes } from '@/features/catalog/routes'
 import { editorRoutes } from '@/features/editor/routes'
+import { worksheetRoutes } from '@/features/worksheets/routes'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,6 +14,8 @@ const router = createRouter({
     },
     ...authRoutes,
     ...editorRoutes,
+    ...catalogRoutes,
+    ...worksheetRoutes,
   ],
 })
 

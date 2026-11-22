@@ -76,7 +76,7 @@ const isEditing = computed(
 )
 
 const dialogTitle = computed(() =>
-  isEditing.value ? 'Upravit příklad' : 'Nový příklad',
+  isEditing.value ? 'Upravit úlohu' : 'Nová úloha',
 )
 
 // Initialize a completely new editor draft.
@@ -121,7 +121,7 @@ async function saveProblem() {
   const name = draft.name?.trim()
 
   if (!name) {
-    saveError.value = 'Zadejte název příkladu.'
+    saveError.value = 'Zadejte název úlohy.'
     return
   }
 
@@ -152,7 +152,7 @@ async function saveProblem() {
     saveError.value =
       error instanceof Error
         ? error.message
-        : 'Příklad se nepodařilo uložit.'
+        : 'Úlohu se nepodařilo uložit.'
   } finally {
     isSaving.value = false
   }
@@ -175,8 +175,8 @@ async function deleteProblem(id: Sqid) {
   const subCount = userProblems.problemById(id)?.subproblems.length ?? 0
 
   const message = subCount > 0
-    ? `Opravdu chcete příklad smazat? Smažou se i jeho podúlohy (${subCount}).`
-    : 'Opravdu chcete příklad smazat?'
+    ? `Opravdu chcete úlohu smazat? Smažou se i jeho podúlohy (${subCount}).`
+    : 'Opravdu chcete úlohu smazat?'
 
   if (!window.confirm(message)) {
     return
@@ -188,7 +188,7 @@ async function deleteProblem(id: Sqid) {
     window.alert(
       error instanceof Error
         ? error.message
-        : 'Příklad se nepodařilo smazat.',
+        : 'Úlohu se nepodařilo smazat.',
     )
   }
 }
@@ -199,7 +199,7 @@ async function deleteProblem(id: Sqid) {
     <header class="page-header">
       <div>
         <p class="eyebrow">Editor</p>
-        <h1>Moje příklady</h1>
+        <h1>Moje úlohy</h1>
       </div>
 
       <button
@@ -207,13 +207,13 @@ async function deleteProblem(id: Sqid) {
         class="primary-button"
         @click="createProblem"
       >
-        + Příklad
+        + Úloha
       </button>
     </header>
 
     <section>
       <div class="section-heading">
-        <h2>Příklady</h2>
+        <h2>Úlohy</h2>
 
         <span class="count-chip">
           {{ problems.length }}
@@ -223,8 +223,8 @@ async function deleteProblem(id: Sqid) {
           v-model="search"
           type="search"
           class="text-input search"
-          placeholder="Hledat v příkladech…"
-          aria-label="Hledat v příkladech"
+          placeholder="Hledat v úlohách"
+          aria-label="Hledat v úlohách"
         />
       </div>
 
@@ -246,7 +246,7 @@ async function deleteProblem(id: Sqid) {
           v-if="userProblems.status === 'loading'"
           class="empty-hint"
         >
-          Načítám příklady…
+          Načítám úlohy...
         </p>
 
         <p
@@ -261,7 +261,7 @@ async function deleteProblem(id: Sqid) {
           v-else-if="userProblems.items.length === 0"
           class="empty-hint"
         >
-          Zatím tu nemáte žádný příklad. Přidejte první.
+          Zatím tu nemáte žádnou Úlohu. Přidejte první.
         </p>
 
         <p
@@ -285,8 +285,8 @@ async function deleteProblem(id: Sqid) {
               v-if="problem.id != null"
               type="button"
               class="icon-btn"
-              aria-label="Upravit příklad"
-              title="Upravit příklad"
+              aria-label="Upravit úlohu"
+              title="Upravit úlohu"
               @click="editProblem(problem.id)"
             >
               ✎
@@ -296,8 +296,8 @@ async function deleteProblem(id: Sqid) {
               v-if="problem.id != null"
               type="button"
               class="icon-btn icon-btn--danger"
-              aria-label="Smazat příklad"
-              title="Smazat příklad"
+              aria-label="Smazat úlohu"
+              title="Smazat úlohu"
               @click="deleteProblem(problem.id)"
             >
               🗑
@@ -318,7 +318,7 @@ async function deleteProblem(id: Sqid) {
         class="form-field"
       >
         <label for="problem-name">
-          Název příkladu
+          Název úlohy
         </label>
 
         <input
@@ -376,7 +376,7 @@ async function deleteProblem(id: Sqid) {
           :disabled="isSaving"
           @click="saveProblem"
         >
-          {{ isSaving ? 'Ukládám…' : 'Uložit příklad' }}
+          {{ isSaving ? 'Ukládám…' : 'Uložit úlohu' }}
         </button>
       </footer>
     </ProblemEditDialog>

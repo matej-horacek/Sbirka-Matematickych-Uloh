@@ -49,7 +49,7 @@ const hasOptions = computed(() => props.chapters.length > 0 || props.tags.length
 </script>
 
 <template>
-  <section class="problem-filters" aria-label="Filtrování příkladů">
+  <section class="problem-filters" aria-label="Filtrování úloh">
     <div class="problem-filters__bar">
       <button
         type="button"
@@ -81,7 +81,7 @@ const hasOptions = computed(() => props.chapters.length > 0 || props.tags.length
 
     <div v-show="open" id="problem-filters-panel" class="problem-filters__panel">
       <p v-if="!hasOptions" class="problem-filters__hint">
-        Vaše příklady zatím nemají žádné okruhy ani štítky.
+        Vaše úlohy zatím nemají žádné okruhy ani štítky.
       </p>
 
       <div v-else class="problem-filters__grid">

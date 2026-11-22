@@ -25,27 +25,27 @@ function editProblem(id: Sqid | null) {
 </script>
 
 <template>
-  <section class="problem-list" aria-label="Seznam příkladů">
+  <section class="problem-list" aria-label="Seznam Úloh">
 
     <p
       v-if="problemStore.status === 'loading'"
       class="problem-list__empty"
     >
-      Načítání příkladů...
+      Načítání úloh...
     </p>
 
     <p
       v-else-if="problemStore.status === 'error'"
       class="problem-list__empty"
     >
-      {{ problemStore.error ?? 'Příklady se nepodařilo načíst.' }}
+      {{ problemStore.error ?? 'Úlohy se nepodařilo načíst.' }}
     </p>
 
     <p
       v-else-if="problems.length === 0"
       class="problem-list__empty"
     >
-      Zatím nemáte žádné příklady.
+      Zatím nemáte žádné úlohy.
     </p>
 
     <ProblemCard

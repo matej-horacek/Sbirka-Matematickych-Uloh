@@ -12,7 +12,7 @@ function removeSubproblem(key: string, isSaved: boolean) {
   // problem is saved.
   if (
     isSaved &&
-    !window.confirm('Podúloha bude po uložení příkladu trvale smazána. Pokračovat?')
+    !window.confirm('Podúloha bude po uložení úlohy trvale smazána. Pokračovat?')
   ) {
     return
   }
@@ -57,7 +57,7 @@ function removeSubproblem(key: string, isSaved: boolean) {
       <h3 class="section-title">Podúlohy</h3>
 
       <p class="muted">
-        Každá podúloha se uloží jako samostatný příklad navázaný na tento příklad.
+        Každá podúloha se uloží jako samostatná úloha navázaná na tuto úlohu.
       </p>
 
       <article
