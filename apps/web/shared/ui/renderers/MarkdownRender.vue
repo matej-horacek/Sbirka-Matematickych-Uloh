@@ -8,7 +8,7 @@ a b c d \( \sum_{k=1}^{n} \frac{1}{k^2 }\)
 
 # Pracovní list
 
-## Příklad 1
+## Úloha 1
 
 # Řeště rovnice: #
 $542\int_0^{\infty}\!x\,\mathrm{d}x=y$
@@ -24,15 +24,12 @@ test test
 
 ---
 
-## Příklad 2
+## Úloha 2
 
 ## **Vyjmenuj vyjmenovaná slova po B**
 
 ---
 
-## Příklad 3
-
-adwa
 
 
 */

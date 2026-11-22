@@ -27,7 +27,7 @@ export function worksheetToMarkdown(
   const body = problems
     .map(
       (problem, index) =>
-        `## Příklad ${index + 1}\n\n${blocksToMarkdown(problem.assignment)}`,
+        `## Úloha ${index + 1}\n\n${blocksToMarkdown(problem.assignment)}`,
     )
     .join('\n\n---\n\n')
 

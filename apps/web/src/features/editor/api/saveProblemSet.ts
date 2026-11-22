@@ -67,7 +67,7 @@ function sameIds(a: { id: Sqid }[], b: { id: Sqid }[]): boolean {
 
 function requireLock(set: ProblemDetail): number {
   if (set.lockVersion === undefined) {
-    throw new Error('Chybí lockVersion. Načtěte příklad znovu před uložením.')
+    throw new Error('Chybí lockVersion. Načtěte úlohu znovu před uložením.')
   }
   return set.lockVersion
 }

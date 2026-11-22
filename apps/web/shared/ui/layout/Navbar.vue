@@ -20,7 +20,7 @@ const browseLinks: NavItem[] = [
   { label: 'Předměty', to: '/subjects' },
   { label: 'Okruhy', to: '/topics' },
   { label: 'Listy', to: '/catalog/worksheets' },
-  { label: 'Příklady', to: '/catalog/problems' },
+  { label: 'Úlohy', to: '/catalog/problems' },
 ]
 
 const router = useRouter()

@@ -140,7 +140,7 @@ export const problemsApi = {
       if (error instanceof ApiError && error.code === 'LOCK_MISMATCH') {
         throw new ApiError(
           error.status,
-          'Příklad mezitím někdo změnil. Načtěte stránku znovu a zkuste to znovu.',
+          'Úlohu mezitím někdo změnil. Načtěte stránku znovu a zkuste to znovu.',
           error.body,
         )
       }

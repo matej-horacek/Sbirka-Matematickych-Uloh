@@ -54,7 +54,7 @@ defineProps<{
     <ul
       v-if="chapters?.length || tags?.length"
       class="problem-card__labels"
-      aria-label="Zařazení příkladu"
+      aria-label="Zařazení úlohy"
     >
       <li
         v-for="chapter in chapters"

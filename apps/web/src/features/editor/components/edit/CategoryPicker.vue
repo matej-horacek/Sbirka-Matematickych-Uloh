@@ -108,7 +108,7 @@ function removeChapter(id: string) {
 </script>
 
 <template>
-  <section class="category-picker" aria-label="Zařazení příkladu">
+  <section class="category-picker" aria-label="Zařazení úloh">
     <p
       v-if="categories.status === 'error'"
       class="category-error"
@@ -219,7 +219,7 @@ function removeChapter(id: string) {
     </div>
 
     <p v-if="hasSubproblems" class="category-hint">
-      Podúlohy mají stejné okruhy a štítky jako hlavní příklad.
+      Podúlohy mají stejné okruhy a štítky jako hlavní úloh.
     </p>
   </section>
 </template>

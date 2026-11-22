@@ -76,7 +76,7 @@ export const useUserProblemsStore = defineStore('userProblems', {
         this.error =
           error instanceof Error
             ? error.message
-            : 'Příklady se nepodařilo načíst.'
+            : 'Úlohy se nepodařilo načíst.'
       }
     },
 
@@ -96,7 +96,7 @@ export const useUserProblemsStore = defineStore('userProblems', {
     async save(draft: ProblemEditorDraft): Promise<ProblemEditorDraft> {
       // Existing problem: lockVersion is mandatory.
       if (draft.id != null && draft.lockVersion == null) {
-        throw new Error('Chybí lockVersion. Načtěte příklad znovu před uložením.')
+        throw new Error('Chybí lockVersion. Načtěte úlohy znovu před uložením.')
       }
 
       const detail = await saveProblemSet(draft)
