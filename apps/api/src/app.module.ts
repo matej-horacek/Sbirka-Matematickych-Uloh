@@ -10,9 +10,10 @@ import { ProblemsModule } from './modules/problems/problems.module.js';
 import { PublicationModule } from './modules/publication/publication.module.js';
 import { TagsModule } from './modules/tags/tags.module.js';
 import { UsersModule } from './modules/users/users.module.js';
+import { WorksheetsModule } from './modules/worksheets/worksheets.module.js';
 
 @Module({
-  imports: [DatabaseModule, UsersModule, AuthModule, LicensesModule, TagsModule, ChaptersModule, ProblemsModule, PublicationModule],
+  imports: [DatabaseModule, UsersModule, AuthModule, LicensesModule, TagsModule, ChaptersModule, ProblemsModule, PublicationModule, WorksheetsModule],
   // Guards run in this order: CSRF header first (also for login/register), then the access-cookie login.
   // Every route needs a login except those marked @Public() (the spec's global cookieAuth).
   providers: [

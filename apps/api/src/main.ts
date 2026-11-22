@@ -26,6 +26,7 @@ async function bootstrap() {
   // maxAliasCount -1: the 2.0.0 spec file has YAML anchors (R-001, Q-003); the default limit of 100 crashes startup.
   const spec = parse(
     readFileSync(createRequire(import.meta.url).resolve('@matematika/contracts/openapi.yaml'), 'utf8'),
+    { maxAliasCount: -1 }
   );
   spec.servers = [{ url: '/api/v1', description: 'This server' }];
   const specText = stringify(spec);

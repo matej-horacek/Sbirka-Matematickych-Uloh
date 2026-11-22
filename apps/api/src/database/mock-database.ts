@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { seed } from './mock-seed.js';
+import {worksheet_citation_display} from "../generated/prisma/enums.js";
 
 // In-memory stand-in for PrismaService (Phase B replaces it with PrismaService
 // and real migrations). Rows are shaped like Prisma models: camelCase fields,
@@ -101,6 +102,26 @@ export interface ProblemRow {
   deletedAt: Date | null;
 }
 
+export interface WorksheetRow {
+  id: number;
+  name: string;
+  languageCode: string | null;
+  difficulty: number | null;
+  authorId: number;
+  publishStatus: PublishStatus;
+  citationDisplay: worksheet_citation_display; // 'INLINE' | 'HIDDEN' | 'SUMMARY_AT_END'
+  version: number;
+  lockVersion: number;
+  originalWorksheetId: number | null;
+  originalWorksheetVersion: number | null;
+  tagIds: number[];
+  chapterIds: number[];
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+
+}
+
 @Injectable()
 export class MockDatabase {
   users: UserRow[] = [];
@@ -108,8 +129,10 @@ export class MockDatabase {
   tags: TagRow[] = [];
   chapters: ChapterRow[] = [];
   problems: ProblemRow[] = [];
+  worksheets: WorksheetRow[] = [];
   refreshTokens: RefreshTokenRow[] = [];
   private nextProblemId = 1;
+  private nextWorksheetId = 1;
   private nextUserId = 1;
   private nextRefreshTokenId = 1;
 
@@ -120,16 +143,19 @@ export class MockDatabase {
     this.tags = data.tags;
     this.chapters = data.chapters;
     this.problems = data.problems;
+    this.worksheets = data.worksheets;
     this.nextProblemId = Math.max(0, ...this.problems.map((p) => p.id)) + 1;
+    this.nextWorksheetId = Math.max(0, ...this.worksheets.map((w) => w.id)) + 1;
     this.nextUserId = Math.max(0, ...this.users.map((u) => u.id)) + 1;
     for (const p of this.problems) this.sortRelations(p);
+    for (const w of this.worksheets) this.sortRelations(w);
   }
 
   /**
-   * D-04: a problem's tags and chapters are ordered by name (there is no position column, so the Prisma
+   * D-04: a problem's or worksheet's tags and chapters are ordered by name (there is no position column, so the Prisma
    * repository cannot return any other order). The mock keeps the same order so both behave alike.
    */
-  sortRelations(row: ProblemRow): ProblemRow {
+  sortRelations<T extends {tagIds: number[]; chapterIds: number[] }>(row: T): T {
     const byName = (items: { id: number; name: string }[]) => (a: number, b: number) =>
       (items.find((i) => i.id === a)?.name ?? '').localeCompare(items.find((i) => i.id === b)?.name ?? '', 'cs');
     row.tagIds = [...row.tagIds].sort(byName(this.tags));
@@ -147,5 +173,9 @@ export class MockDatabase {
 
   newProblemId(): number {
     return this.nextProblemId++;
+  }
+
+  newWorksheetId(): number{
+    return this.nextWorksheetId++;
   }
 }

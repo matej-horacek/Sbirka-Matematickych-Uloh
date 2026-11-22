@@ -1,4 +1,4 @@
-import type { ChapterRow, ContentSourceRow, LicenseRow, ProblemRow, TagRow, UserRow } from './mock-database.js';
+import type { ChapterRow, ContentSourceRow, LicenseRow, ProblemRow, TagRow, UserRow, WorksheetRow } from './mock-database.js';
 
 // Same content as the examples in openapi.yaml, so the real backend and the
 // Prism mock return the same kind of data (ids differ: here they are real Sqids).
@@ -34,6 +34,25 @@ function problem(p: Partial<ProblemRow> & Pick<ProblemRow, 'id' | 'name' | 'assi
     updatedAt: t0,
     deletedAt: null,
     ...p,
+  };
+}
+
+function worksheet(w: Partial<WorksheetRow> & Pick<WorksheetRow, 'id' | 'name' | 'authorId'>): WorksheetRow {
+  return {
+    languageCode: 'cs',
+    difficulty: null,
+    publishStatus: 'PRIVATE',
+    citationDisplay: 'INLINE',
+    version: 1,
+    lockVersion: 1,
+    originalWorksheetId: null,
+    originalWorksheetVersion: null,
+    tagIds: [],
+    chapterIds: [],
+    createdAt: t0,
+    updatedAt: t0,
+    deletedAt: null,
+    ...w,
   };
 }
 
@@ -197,5 +216,13 @@ export function seed() {
     }),
   ];
 
-  return { users, licenses, tags, chapters, problems };
+  const worksheets: WorksheetRow[] = [
+    // Jan's two worksheets, as in the listWorksheets example.
+    worksheet({ id: 1, name: 'Lineární rovnice – opakování', difficulty: 3, authorId: 1, tagIds: [1], chapterIds: [1] }),
+    worksheet({ id: 2, name: 'Planimetrie – test', authorId: 1 }),
+    // Eva's private worksheet: Jan must get 404 on it.
+    worksheet({ id: 3, name: 'Kvadratické rovnice', difficulty: 5, authorId: 2, tagIds: [2], chapterIds: [1] }),
+  ];
+
+  return { users, licenses, tags, chapters, problems, worksheets };
 }
