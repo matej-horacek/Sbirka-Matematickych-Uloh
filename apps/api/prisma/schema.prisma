@@ -1,14 +1,14 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "esm"
 }
 
 // DBML for dbdiagram.io, generated into docs/db/schema.dbml (D-01: never edited by hand).
 generator dbml {
-  provider   = "prisma-dbml-generator"
-  output     = "../../../docs/db"
-  outputName = "schema.dbml"
+  provider              = "prisma-dbml-generator"
+  output                = "../../../docs/db"
+  outputName            = "schema.dbml"
   includeRelationFields = false
 }
 
@@ -390,6 +390,7 @@ model worksheet {
   updated_at                 DateTime                   @default(now()) @updatedAt @db.Timestamptz(6)
   deleted_at                 DateTime?                  @db.Timestamptz(6)
   version                    Int                        @default(1)
+  lock_version               Int                        @default(1)
   original_worksheet_id      Int?
   original_worksheet_version Int?
   dismissed_update_version   Int?
