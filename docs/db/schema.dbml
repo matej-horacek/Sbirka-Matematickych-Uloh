@@ -291,6 +291,7 @@ Table worksheet {
   updated_at DateTime [default: `now()`, not null]
   deleted_at DateTime
   version Int [not null, default: 1]
+  lock_version Int [not null, default: 1]
   original_worksheet_id Int
   original_worksheet_version Int
   dismissed_update_version Int
