@@ -119,7 +119,16 @@ export interface WorksheetRow {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+}
 
+/**
+ * worksheet_problem: one problem in a worksheet. The (worksheetId, problemId) pair is the key, and
+ * `position` orders the items (positionAt, renumbered on every save like set children).
+ */
+export interface WorksheetProblemRow {
+  worksheetId: number;
+  problemId: number;
+  position: string;
 }
 
 @Injectable()
@@ -131,6 +140,7 @@ export class MockDatabase {
   problems: ProblemRow[] = [];
   worksheets: WorksheetRow[] = [];
   refreshTokens: RefreshTokenRow[] = [];
+  worksheetProblems: WorksheetProblemRow[] = [];
   private nextProblemId = 1;
   private nextWorksheetId = 1;
   private nextUserId = 1;
@@ -144,6 +154,7 @@ export class MockDatabase {
     this.chapters = data.chapters;
     this.problems = data.problems;
     this.worksheets = data.worksheets;
+    this.worksheetProblems = data.worksheetProblems;
     this.nextProblemId = Math.max(0, ...this.problems.map((p) => p.id)) + 1;
     this.nextWorksheetId = Math.max(0, ...this.worksheets.map((w) => w.id)) + 1;
     this.nextUserId = Math.max(0, ...this.users.map((u) => u.id)) + 1;

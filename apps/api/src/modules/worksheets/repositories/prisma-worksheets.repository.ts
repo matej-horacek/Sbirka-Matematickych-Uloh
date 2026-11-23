@@ -1,7 +1,7 @@
 import {Injectable} from "@nestjs/common";
 import {PrismaService} from "../../../database/prisma.service.js";
 import {type NewWorksheet, type WorksheetFilter, WorksheetsRepository} from "./worksheets.repository.js";
-import type {WorksheetRow} from "../../../database/mock-database.js";
+import type {WorksheetProblemRow, WorksheetRow} from "../../../database/mock-database.js";
 import type {Prisma} from "../../../generated/prisma/client.js";
 import {toChapterIds, toTagIds} from "../../../common/utils/relation-ids.js";
 
@@ -91,5 +91,13 @@ export class PrismaWorksheetsRepository implements WorksheetsRepository {
 
   async incrementVersion(id: number): Promise<void> {
     throw new Error("Not implemented");
+  }
+
+  async findItems(_worksheetIds: number[]): Promise<WorksheetProblemRow[]> {
+    throw new Error('Not implemented');
+  }
+
+  async replaceItems(_worksheetId: number, _problemIds: number[]): Promise<void> {
+    throw new Error('Not implemented');
   }
 }

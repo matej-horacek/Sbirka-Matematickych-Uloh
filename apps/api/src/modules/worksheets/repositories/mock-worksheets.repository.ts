@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import {MockDatabase, type WorksheetRow} from '../../../database/mock-database.js';
-import type {NewWorksheet, WorksheetFilter, WorksheetsRepository} from './worksheets.repository.js';
+import { comparePositions, positionAt } from '../../../common/utils/position.js';
+import { MockDatabase, type WorksheetProblemRow, type WorksheetRow } from '../../../database/mock-database.js';
+import type { NewWorksheet, WorksheetFilter, WorksheetsRepository } from './worksheets.repository.js';
 
 
 @Injectable()
@@ -63,5 +64,19 @@ export class MockWorksheetsRepository implements WorksheetsRepository {
     const row = this.db.worksheets.find((p) => p.id === id)!;
     row.version += 1;
     row.updatedAt = new Date();
+  }
+
+  async findItems(worksheetIds: number[]): Promise<WorksheetProblemRow[]> {
+    return this.db.worksheetProblems
+      .filter((i) => worksheetIds.includes(i.worksheetId))
+      .sort((a, b) => a.worksheetId - b.worksheetId || comparePositions(a.position, b.position))
+      .map((i) => ({ ...i })); // copies, so a caller can't change the store by accident
+  }
+
+  async replaceItems(worksheetId: number, problemIds: number[]): Promise<void> {
+    this.db.worksheetProblems = [
+      ...this.db.worksheetProblems.filter((i) => i.worksheetId !== worksheetId),
+      ...problemIds.map((problemId, index) => ({ worksheetId, problemId, position: positionAt(index) })),
+    ];
   }
 }

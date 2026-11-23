@@ -2,10 +2,8 @@ import type { ProblemRow } from '../../../database/mock-database.js';
 
 export const PROBLEMS_REPOSITORY = Symbol('PROBLEMS_REPOSITORY');
 
-/** Byte order, not localeCompare: fractional-indexing keys are case- and locale-sensitive (R-020). */
-export function comparePositions(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
-}
+// Moved to common/utils/position.ts (worksheet items use it too); re-exported so imports here keep working.
+export { comparePositions } from '../../../common/utils/position.js';
 
 export type NewProblem = Omit<ProblemRow, 'id' | 'createdAt' | 'updatedAt' | 'deletedAt'>;
 

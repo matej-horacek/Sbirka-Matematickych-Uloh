@@ -10,6 +10,7 @@ import {
   type ProblemsRepository,
 } from './problems.repository.js';
 import type { Prisma } from '../../../generated/prisma/client.js';
+import {toChapterIds, toTagIds} from "../../../common/utils/relation-ids.js";
 
 /*
  * Mapping every method below has to do between the DB and ProblemRow (see mock-database.ts):
@@ -41,8 +42,7 @@ export type ProblemWithRelations = Prisma.problemGetPayload<{ include: typeof PR
 /* Parts of ProblemWithRelations, named so the small mappers below stay readable. */
 type SourceRelation = ProblemWithRelations['content_source'];
 type PartRelation = ProblemWithRelations['problem_part_problem_part_child_idToproblem'];
-type TagRelations = ProblemWithRelations['problem_tag'];
-type ChapterRelations = ProblemWithRelations['problem_chapter'];
+
 
 /** content_source (snake_case) → ContentSourceRow (camelCase). The DB `id` is not part of the row. */
 export function toSourceRow(cs: SourceRelation): ContentSourceRow {
@@ -63,16 +63,6 @@ export function toPlacement(part: PartRelation): Pick<ProblemRow, 'parentId' | '
     parentId: part?.parent_id ?? null,
     position: part?.position ?? null,
   };
-}
-
-/** Tag ids sorted by tag name (D-04), Czech collation like the mock. */
-export function toTagIds(rows: TagRelations): number[] {
-  return [...rows].sort((a, b) => a.tag.name.localeCompare(b.tag.name, 'cs')).map((r) => r.tag_id);
-}
-
-/** Chapter ids sorted by chapter name (D-04), Czech collation like the mock. */
-export function toChapterIds(rows: ChapterRelations): number[] {
-  return [...rows].sort((a, b) => a.chapter.name.localeCompare(b.chapter.name, 'cs')).map((r) => r.chapter_id);
 }
 
 /** DB problem (with its relations) → ProblemRow. The relation parts are delegated to the mappers above. */

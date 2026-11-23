@@ -1,4 +1,11 @@
-import type { ChapterRef, TagRef, UserRef, WorksheetDetail, WorksheetListItem } from '@matematika/contracts';
+import type {
+  ChapterRef,
+  ProblemDetail,
+  TagRef,
+  UserRef,
+  WorksheetDetail,
+  WorksheetListItem,
+} from '@matematika/contracts';
 import type { WorksheetRow } from '../../../database/mock-database.js';
 import { encodeId } from '../../../common/utils/ids.js';
 
@@ -7,6 +14,8 @@ export interface WorksheetLookups {
   users: Map<number, UserRef>;
   tags: Map<number, TagRef>;
   chapters: Map<number, ChapterRef>;
+  /** Live items per worksheet id (deleted problems are not counted). */
+  itemCounts: Map<number, number>;
 }
 
 function pick<T>(ids: number[], map: Map<number, T>): T[] {
@@ -23,20 +32,27 @@ export function toListItem(row: WorksheetRow, lk: WorksheetLookups): WorksheetLi
     author: lk.users.get(row.authorId) ?? { id: encodeId(row.authorId), displayName: '?' },
     tags: pick(row.tagIds, lk.tags),
     chapters: pick(row.chapterIds, lk.chapters),
-    // TODO: count worksheet_problem rows once items are stored.
-    itemCount: 0,
+    itemCount: lk.itemCounts.get(row.id) ?? 0,
   };
 }
 
-/** version and lockVersion are for the author only, like on problems. */
-export function toDetail(row: WorksheetRow, lk: WorksheetLookups, viewerId: number): WorksheetDetail {
+/**
+ * `items` are the worksheet's live problems in worksheet order (the service leaves out deleted ones).
+ * version and lockVersion are for the author only, like on problems.
+ */
+export function toDetail(
+  row: WorksheetRow,
+  items: ProblemDetail[],
+  lk: WorksheetLookups,
+  viewerId: number,
+): WorksheetDetail {
   return {
     ...toListItem(row, lk),
+    itemCount: items.length,
     status: row.publishStatus,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     ...(row.authorId === viewerId && { version: row.version, lockVersion: row.lockVersion }),
-    // TODO: the worksheet's problems in order, once items are stored.
-    items: [],
+    items: items.map((problem) => ({ kind: 'PROBLEM' as const, problem })),
   };
 }
