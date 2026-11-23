@@ -115,6 +115,7 @@ export class PrismaProblemsRepository implements ProblemsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /** language.code → language.id. A problem's language is free text in the API, so an unknown code is a 400. */
+  // TODO: Move to shared helper
   private async languageId(tx: Prisma.TransactionClient, code: string | null): Promise<number | null> {
     if (code === null) return null;
     const language = await tx.language.findUnique({ where: { code } });
