@@ -15,11 +15,11 @@ const { open, draft, start, confirm, cancel } = useFormulaInsert(
   () => props.block.markdown,
   (markdown) => emit('update', { markdown }),
 )
+//  button z templatu na přidáni KaTex/MathLive bloku  <button type="button" @click="start">Přidat vzorec</button>
 </script>
 
 <template>
   <div>
-    <button type="button" @click="start">Přidat vzorec</button>
 
     <textarea
       ref="area"

@@ -292,7 +292,7 @@ function cancel() {
 
           <p v-else-if="userProblems.items.length === 0" class="ws-editor__hint">
             Zatím nemáte žádné úlohy.
-            <RouterLink to="/editor">Vytvořte první v Moje sbírka.</RouterLink>
+            <RouterLink to="/editor">Vytvořte první.</RouterLink>
           </p>
 
           <p v-else-if="pickable.length === 0" class="ws-editor__hint">Nic nenalezeno.</p>

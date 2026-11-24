@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
@@ -197,18 +196,7 @@ async function deleteProblem(id: Sqid) {
 <template>
   <main class="page">
     <header class="page-header">
-      <div>
-        <p class="eyebrow">Editor</p>
-        <h1>Moje úlohy</h1>
-      </div>
-
-      <button
-        type="button"
-        class="primary-button"
-        @click="createProblem"
-      >
-        + Úloha
-      </button>
+      <h1>Moje úlohy</h1>
     </header>
 
     <section>
@@ -242,6 +230,19 @@ async function deleteProblem(id: Sqid) {
       />
 
       <div class="card-list">
+        <button
+          type="button"
+          class="add-card"
+          @click="createProblem"
+        >
+          <span
+            class="add-card__plus"
+            aria-hidden="true"
+          />
+
+          Přidejte úlohu
+        </button>
+
         <p
           v-if="userProblems.status === 'loading'"
           class="empty-hint"
@@ -384,6 +385,25 @@ async function deleteProblem(id: Sqid) {
 </template>
 
 <style scoped>
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
 .section-heading {
   display: flex;
   align-items: center;
@@ -397,9 +417,144 @@ async function deleteProblem(id: Sqid) {
   font-size: 1.35rem;
 }
 
+.count-chip {
+  min-width: 28px;
+  padding: 2px 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--color-on-primary);
+  background: var(--color-primary-soft);
+  border-radius: 999px;
+}
+
+/* Search input: sits on the right, magnifier icon on the left. */
 .search {
-  margin-left: auto;
+  width: auto;
   min-width: 220px;
+  margin-left: auto;
+  padding-left: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%234f6b75' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+}
+
+.card-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+/* Full-width "add" button, same look as the "Nový list" tile in the catalog:
+   grey with a plus, turns blue and lifts on hover. The plus uses the
+   text color, so both always match. */
+.add-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  height: 64px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-ink);
+  background: #d9d9d9;
+  border: 0;
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 8px rgba(6, 48, 61, 0.06);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.add-card:hover,
+.add-card:focus-visible {
+  color: #fff;
+  background: var(--color-primary);
+  box-shadow: 0 10px 24px rgba(53, 208, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.add-card:active {
+  background: var(--color-primary-hover);
+  transform: translateY(0);
+}
+
+.add-card__plus {
+  position: relative;
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+
+.add-card__plus::before,
+.add-card__plus::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.add-card__plus::before {
+  top: 0;
+  left: 50%;
+  width: 5px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+.add-card__plus::after {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  transform: translateY(-50%);
+}
+
+.empty-hint {
+  margin: 0;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 1rem;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--color-tint);
+  border-color: var(--color-border-strong);
+}
+
+.icon-btn--danger {
+  color: var(--color-danger);
+}
+
+.icon-btn--danger:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
 }
 
 .form-field {
@@ -430,5 +585,25 @@ async function deleteProblem(id: Sqid) {
 .validation-errors ul {
   margin-bottom: 0;
   padding-left: 20px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 20px 16px 48px;
+  }
+
+  .search {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
 }
 </style>

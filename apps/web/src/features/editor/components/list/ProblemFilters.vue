@@ -151,7 +151,7 @@ const hasOptions = computed(() => props.chapters.length > 0 || props.tags.length
             role="group"
             aria-label="Způsob párování štítků"
           >
-            <span class="problem-filters__hint">Příklad má:</span>
+            <span class="problem-filters__hint">Úloha má:</span>
 
             <button
               type="button"
