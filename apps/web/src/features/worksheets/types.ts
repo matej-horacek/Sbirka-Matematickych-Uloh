@@ -87,10 +87,31 @@ export interface ReorderItemRequest {
 // Editor working copy
 // -----------------------------------------------------------------------------
 
+/** How the printed page looks. Editor-only for now: the API has no field for it. */
+export type PaperFont = 'serif' | 'sans'
+export type PaperSpacing = 'compact' | 'normal' | 'airy'
+
+export interface WorksheetLayout {
+  fontFamily: PaperFont
+  fontSizePt: number
+  /** Space between two problems. */
+  spacing: PaperSpacing
+  showTitle: boolean
+  /** The "Jméno / Třída / Datum" line under the title. */
+  showStudentLine: boolean
+  numberProblems: boolean
+}
+
 export interface WorksheetDraft {
   id: Sqid | null
   lockVersion: number | null
   name: string
+  difficulty: number | null
+  chapters: ChapterRef[]
+  tags: TagRef[]
+  /** Editor-only for now: WorksheetCreate / WorksheetPatch have no publicity field. */
+  isPublic: boolean
+  layout: WorksheetLayout
   /** The picked problems, in worksheet order. */
   problems: ProblemEditorDraft[]
 }

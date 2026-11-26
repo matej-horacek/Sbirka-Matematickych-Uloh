@@ -49,3 +49,13 @@ const html = computed(() => md.render(props.source))
 <template>
   <div class="markdown" v-html="html" />
 </template>
+<style scoped>
+.markdown {
+  font-family: var(--font-problem);
+}
+
+/* KaTeX defaults to 1.21em, which makes math larger than the surrounding text */
+.markdown :deep(.katex) {
+  font-size: 1em;
+}
+</style>

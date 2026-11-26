@@ -77,6 +77,7 @@ defineProps<{
 
 <style scoped>
 .problem-card {
+  font-family: var(--font-problem);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -174,7 +175,7 @@ defineProps<{
 
 .problem-card__sub-label {
   flex-shrink: 0;
-  font-weight: 700;
+  font-weight: 4  00;
 }
 
 .problem-card__empty {

@@ -12,7 +12,7 @@ interface NavItem {
 // simply open an empty view (the router logs a warning in dev).
 const personalLinks: NavItem[] = [
   { label: 'Moje sbírka', to: '/editor' },
-  { label: 'Moje třídy', to: '/classes' },
+  { label: 'Moje listy', to: '/worksheets' },
 ]
 
 const browseLinks: NavItem[] = [

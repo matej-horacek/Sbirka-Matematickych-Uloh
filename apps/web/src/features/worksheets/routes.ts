@@ -1,11 +1,16 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-// The editor lives under /catalog/worksheets, next to the list.
-// The static "editor" segment never collides with a future /catalog/worksheets/:id page.
+// The static "editor" segment never collides with a future /worksheets/:id page.
 export const worksheetRoutes: RouteRecordRaw[] = [
   {
+    // The list of the user's worksheets.
+    path: '/worksheets',
+    name: 'worksheets',
+    component: () => import('./pages/WorksheetsPage.vue'),
+  },
+  {
     // No id = a new worksheet, with id = edit that worksheet.
-    path: '/catalog/worksheets/editor/:id?',
+    path: '/worksheets/editor/:id?',
     name: 'worksheet-editor',
     component: () => import('./pages/WorksheetEditorPage.vue'),
     props: true,

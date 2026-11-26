@@ -28,7 +28,8 @@
 
   /* Layers: keep the MathLive keyboard above the modal */
   --keyboard-zindex: 10000;
-}
+  /* Font for problem content: matches the Computer Modern look of KaTeX */
+  --font-problem: KaTeX_Main, "Latin Modern Roman", "Times New Roman", serif;}
 
 body {
   margin: 0;

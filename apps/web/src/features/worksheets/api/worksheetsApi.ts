@@ -1,6 +1,7 @@
 import { ApiError, http } from '../../../../shared/api/http'
 import { toEditorDraft } from '@/features/editor/api/problemsApi'
 import type { Sqid } from '@/features/editor/types'
+import { DEFAULT_LAYOUT } from '../lib/worksheetOptions'
 import type {
   AddItemRequest,
   ListWorksheetsParams,
@@ -32,10 +33,16 @@ function toListQuery(params: ListWorksheetsParams): string {
   return query.toString()
 }
 
-// Only the name is edited for now. Tags, chapters, language and difficulty are
-// left out of PATCH, which the API reads as "unchanged".
+// Name, difficulty, chapters and tags are edited in the header. `language` is left
+// out, which the API reads as "unchanged". Publicity and the page layout have no
+// API field yet, so they stay in the editor.
 function toCreatePayload(draft: WorksheetDraft): WorksheetCreate {
-  return { name: draft.name.trim() }
+  return {
+    name: draft.name.trim(),
+    difficulty: draft.difficulty,
+    chapterIds: draft.chapters.map((chapter) => chapter.id),
+    tagIds: draft.tags.map((tag) => tag.id),
+  }
 }
 
 function toPatchPayload(draft: WorksheetDraft): WorksheetPatch {
@@ -69,6 +76,11 @@ export function toWorksheetDraft(detail: WorksheetDetail): WorksheetDraft {
     id: detail.id,
     lockVersion: detail.lockVersion ?? null,
     name: detail.name,
+    difficulty: detail.difficulty ?? null,
+    chapters: [...detail.chapters],
+    tags: [...detail.tags],
+    isPublic: false, // not stored by the API yet
+    layout: { ...DEFAULT_LAYOUT }, // not stored by the API yet
     problems: detail.items.map((item) => toEditorDraft(item.problem)),
   }
 }
