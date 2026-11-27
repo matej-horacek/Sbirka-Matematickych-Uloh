@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { StorageModule } from '@nestjs/storage';
 import { CsrfGuard } from './common/guards/csrf.guard.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
+import { createStorageOptions } from './config/storage-config.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { ChaptersModule } from './modules/chapters/chapters.module.js';
@@ -13,7 +15,19 @@ import { UsersModule } from './modules/users/users.module.js';
 import { WorksheetsModule } from './modules/worksheets/worksheets.module.js';
 
 @Module({
-  imports: [DatabaseModule, UsersModule, AuthModule, LicensesModule, TagsModule, ChaptersModule, ProblemsModule, PublicationModule, WorksheetsModule],
+  imports: [
+    // Global: StorageDisk / @InjectDisk() can be injected anywhere without importing it again.
+    StorageModule.forRootAsync({ useFactory: createStorageOptions }),
+    DatabaseModule,
+    UsersModule,
+    AuthModule,
+    LicensesModule,
+    TagsModule,
+    ChaptersModule,
+    ProblemsModule,
+    PublicationModule,
+    WorksheetsModule,
+  ],
   // Guards run in this order: CSRF header first (also for login/register), then the access-cookie login.
   // Every route needs a login except those marked @Public() (the spec's global cookieAuth).
   providers: [

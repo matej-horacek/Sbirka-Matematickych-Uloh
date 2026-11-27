@@ -23,6 +23,7 @@
     "@nestjs/common": "^12.4.0",
     "@nestjs/core": "^12.4.0",
     "@nestjs/platform-express": "^12.4.0",
+    "@nestjs/storage": "^0.0.5",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "^7.10.1",
     "@scalar/nestjs-api-reference": "^1.2.35",

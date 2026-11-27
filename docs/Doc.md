@@ -27,3 +27,6 @@ Less code and predictable usage across services.
 Implement worksheet services, controllers with frontend support.
 
 Rethink approving of content. Revise the schema and logic of the services.
+
+
+Removing

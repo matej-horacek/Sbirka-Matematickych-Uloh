@@ -17,7 +17,25 @@ info:
     Without it → 403 CSRF_CHECK_FAILED.
 
 
+    ## Planned endpoints
+    Operations marked `x-status: planned` (and "Planned, not implemented yet" in their description)
+    are designed but not built. Build against them; until then the server answers 404.
+
     ## Changelog
+    - 3.3.0 (2026-11-27): planned image endpoints, documented but not implemented. GET /assets
+      (your library), DELETE /assets/{id}, and POST/PATCH/DELETE /problems/{id}/attachments[/{assetId}]
+      and /worksheets/{id}/attachments[/{assetId}] (private problems and worksheets only until D-25).
+      Optional `attachments` on ProblemDetail and WorksheetDetail. New code ALREADY_ATTACHED.
+
+    - 3.2.0 (2026-11-27): image upload. New endpoints POST /assets (one multipart file),
+      GET /assets/{id} and GET /assets/{id}/content. New codes FILE_TOO_LARGE (413) and
+      UNSUPPORTED_MEDIA_TYPE (415). Attaching images to problems and worksheets comes later.
+
+    - 3.1.0 (2026-11-21): private worksheets. New endpoints GET/POST /worksheets,
+      GET/PATCH/DELETE /worksheets/{id}, and items with POST /worksheets/{id}/items and
+      PATCH/DELETE /worksheets/{id}/items/{itemId} (position with `afterId`, DELETE with If-Match).
+      New code ALREADY_IN_WORKSHEET; IS_SET_CHILD now also covers a set child added to a worksheet.
+
     - 3.0.0 (2026-11-08): authentication. Bearer header replaced by httpOnly cookies
       (access_token, refresh_token); POST/PATCH/DELETE must send X-Requested-With (CSRF).
       New endpoints /auth/register, /auth/login, /auth/me, /auth/refresh, /auth/logout.
@@ -36,7 +54,7 @@ info:
     - 1.0.0 (2026-10-25): frozen contract for the problem part. Problems CRUD with whole-set
       editing (`children`), copy, publish, dissolve; read-only pickers for tags, chapters
       and licences; RFC 9457 errors with `code` values; bearer (JWT) auth on all endpoints.
-  version: 3.0.0
+  version: 3.3.0
 
 servers:
   - url: https://main.server.com/api/v1
@@ -58,6 +76,10 @@ tags:
     description: Read-only lists for the editor (tags, chapters, licences).
   - name: Authorization
     description: Register, Login, Logout, Refresh.
+  - name: Assets
+    description: Upload images and read them back (details and the file itself).
+  - name: Attachments
+    description: 'Planned: put images from your library into problems and worksheets.'
 
 paths:
   /problems:
@@ -960,6 +982,138 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /problems/{id}/attachments:
+    post:
+      summary: Attach an image to a problem
+      operationId: addProblemAttachment
+      x-status: planned
+      tags:
+        - Attachments
+      description: |
+        **Planned, not implemented yet.**
+        Who: the author only, and only while the problem is PRIVATE (until D-25). 403 on a problem that
+        is not private (yours or someone else's published one), 404 on someone else's private one.
+        A set child gets images through its own id and its own lockVersion.
+        `assetId` must be an image from your own library. One image can be on a problem only once.
+        Position with `afterId`: missing = at the end, null = first, an assetId = right after that image.
+        `placement` defaults to BELOW, `size` to M.
+        Raises lockVersion and version. Returns the whole problem.
+        Codes: 400 VALIDATION_FAILED (unknown afterId); 403 FORBIDDEN; 404 NOT_FOUND (the problem,
+        or an image not in your library); 409 LOCK_MISMATCH, ALREADY_ATTACHED.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddAttachmentRequest'
+            examples:
+              toEnd:
+                summary: Attach at the end with the defaults (BELOW, M)
+                value: { lockVersion: 3, assetId: m4Pq7 }
+              rightSmallFirst:
+                summary: Attach as the first image, small, right of the text
+                value: { lockVersion: 3, assetId: m4Pq7, afterId: null, placement: RIGHT, size: S }
+      responses:
+        '200':
+          description: Attached. Returns the whole problem.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /problems/{id}/attachments/{assetId}:
+    patch:
+      summary: Move or resize an image in a problem
+      operationId: updateProblemAttachment
+      x-status: planned
+      tags:
+        - Attachments
+      description: |
+        **Planned, not implemented yet.**
+        Who: the author only, while the problem is PRIVATE (as for adding).
+        Send lockVersion and at least one of `afterId`, `placement`, `size`.
+        `afterId`: null = first, an assetId = right after that image.
+        Raises lockVersion and version. Returns the whole problem.
+        Codes: 400 VALIDATION_FAILED (nothing to change, unknown afterId or the image itself);
+        403 FORBIDDEN; 404 NOT_FOUND (the problem, or assetId not attached to it); 409 LOCK_MISMATCH.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/AssetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAttachmentRequest'
+            examples:
+              resize:
+                summary: Make it large
+                value: { lockVersion: 4, size: L }
+              moveFirst:
+                summary: Move to first
+                value: { lockVersion: 4, afterId: null }
+      responses:
+        '200':
+          description: Updated. Returns the whole problem.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Remove an image from a problem
+      operationId: removeProblemAttachment
+      x-status: planned
+      tags:
+        - Attachments
+      description: |
+        **Planned, not implemented yet.**
+        Who: the author only, while the problem is PRIVATE (as for adding).
+        Only unlinks the image: it stays in your library. The problem's lockVersion goes in If-Match.
+        Raises lockVersion and version. Returns 200 with the whole problem (the new lockVersion).
+        Codes: 400 VALIDATION_FAILED (missing or malformed If-Match); 403 FORBIDDEN;
+        404 NOT_FOUND (the problem, or assetId not attached to it); 412 LOCK_MISMATCH.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: Removed. Returns the whole problem.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
   /worksheets:
     get:
       summary: List your own worksheets
@@ -1319,6 +1473,285 @@ paths:
           $ref: '#/components/responses/NotFound'
         '412':
           $ref: '#/components/responses/PreconditionFailed'
+  /worksheets/{id}/attachments:
+    post:
+      summary: Attach an image to a worksheet
+      operationId: addWorksheetAttachment
+      x-status: planned
+      tags:
+        - Attachments
+      description: |
+        **Planned, not implemented yet.**
+        Same rules as POST /problems/{id}/attachments: the author only, while the worksheet is PRIVATE;
+        `assetId` from your own library, once per worksheet; position with `afterId`.
+        Raises lockVersion and version. Returns the whole worksheet.
+        Codes: 400 VALIDATION_FAILED (unknown afterId); 403 FORBIDDEN; 404 NOT_FOUND (the worksheet,
+        or an image not in your library); 409 LOCK_MISMATCH, ALREADY_ATTACHED.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddAttachmentRequest'
+            example: { lockVersion: 3, assetId: m4Pq7 }
+      responses:
+        '200':
+          description: Attached. Returns the whole worksheet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /worksheets/{id}/attachments/{assetId}:
+    patch:
+      summary: Move or resize an image in a worksheet
+      operationId: updateWorksheetAttachment
+      x-status: planned
+      tags:
+        - Attachments
+      description: |
+        **Planned, not implemented yet.**
+        Same rules as PATCH /problems/{id}/attachments/{assetId}. Returns the whole worksheet.
+        Codes: 400 VALIDATION_FAILED; 403 FORBIDDEN; 404 NOT_FOUND (the worksheet, or assetId not
+        attached to it); 409 LOCK_MISMATCH.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/AssetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAttachmentRequest'
+            example: { lockVersion: 4, placement: RIGHT }
+      responses:
+        '200':
+          description: Updated. Returns the whole worksheet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      summary: Remove an image from a worksheet
+      operationId: removeWorksheetAttachment
+      x-status: planned
+      tags:
+        - Attachments
+      description: |
+        **Planned, not implemented yet.**
+        Same rules as DELETE /problems/{id}/attachments/{assetId}: unlinks only, lockVersion in If-Match.
+        Returns 200 with the whole worksheet.
+        Codes: 400 VALIDATION_FAILED; 403 FORBIDDEN; 404 NOT_FOUND; 412 LOCK_MISMATCH.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: Removed. Returns the whole worksheet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorksheetDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+  /assets:
+    get:
+      summary: List your images
+      operationId: listAssets
+      x-status: planned
+      tags:
+        - Assets
+      description: |
+        **Planned, not implemented yet.**
+        Who: any logged-in teacher. Returns only your own library, newest first. Deleted images are left out.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      summary: Upload an image
+      operationId: uploadAsset
+      tags:
+        - Assets
+      description: |
+        Who: any logged-in teacher. The image goes into the uploader's own library.
+        Exactly one file per request, in the multipart field `file`; to upload several images,
+        send several requests (each one succeeds or fails on its own).
+        Allowed types: PNG, JPEG, WebP. The type is read from the file's bytes, not from its
+        name or the declared Content-Type. SVG is refused (it can carry script).
+        Size limit is set by the server (default 5 MiB).
+        Codes: 400 VALIDATION_FAILED (no file, more than one file, or another field);
+        413 FILE_TOO_LARGE; 415 UNSUPPORTED_MEDIA_TYPE.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadAssetRequest'
+            encoding:
+              file:
+                contentType: image/png, image/jpeg, image/webp
+      responses:
+        '201':
+          description: Image stored. Returns its details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+              example: &assetExample
+                id: m4Pq7
+                mimeType: image/png
+                sizeBytes: 48213
+                createdAt: '2026-11-27T18:40:00Z'
+                contentUrl: /api/v1/assets/m4Pq7/content
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+  /assets/{id}:
+    get:
+      summary: Get the details of an image
+      operationId: getAsset
+      tags:
+        - Assets
+      description: |
+        Who: the uploader only. Otherwise 404 (the image's existence is not revealed).
+        Returns the same details as the upload; for the image itself use `contentUrl`.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+              example: *assetExample
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Delete an image
+      operationId: deleteAsset
+      x-status: planned
+      tags:
+        - Assets
+      description: |
+        **Planned, not implemented yet.**
+        Who: the uploader only. Otherwise 404.
+        Soft delete: the image leaves your library and is removed from your own problems and worksheets
+        (their lockVersion and version go up; removing is applied directly, also on published ones).
+        Copies made by other teachers keep their attachment and still show the image (copies stand alone,
+        D-36). The stored file is removed only once no attachment points to it. No notification (D-38).
+        Codes: 404 NOT_FOUND.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204':
+          description: Deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /assets/{id}/content:
+    get:
+      summary: Get the image file
+      operationId: getAssetContent
+      tags:
+        - Assets
+      description: |
+        Who: the uploader only. Otherwise 404.
+        Planned with attachments: also anyone who can see a problem or worksheet that uses the image
+        (including a copy that kept it after the uploader deleted the image).
+        Returns the raw bytes, meant for `<img src>`. `download=true` only switches
+        Content-Disposition from inline to attachment (the browser saves the file instead).
+        A stored file never changes, so the response can be cached for good: send the ETag back
+        in If-None-Match and an unchanged file answers 304 with no body.
+        Every response has `X-Content-Type-Options: nosniff`.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - name: download
+          in: query
+          description: true = save as a file (Content-Disposition attachment); missing or false = show inline.
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: The image bytes, with the stored type as Content-Type.
+          headers:
+            ETag:
+              $ref: '#/components/headers/AssetETag'
+            Cache-Control:
+              $ref: '#/components/headers/AssetCacheControl'
+            Content-Disposition:
+              description: inline, or attachment when download=true.
+              schema:
+                type: string
+                example: inline; filename="m4Pq7.png"
+            X-Content-Type-Options:
+              $ref: '#/components/headers/NoSniff'
+          content:
+            image/png:
+              schema: {type: string, format: binary}
+            image/jpeg:
+              schema: {type: string, format: binary}
+            image/webp:
+              schema: {type: string, format: binary}
+        '304':
+          description: Not modified. The If-None-Match ETag still matches; use the cached copy.
+          headers:
+            ETag:
+              $ref: '#/components/headers/AssetETag'
+            Cache-Control:
+              $ref: '#/components/headers/AssetCacheControl'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /tags:
     get:
       summary: List tags (for pickers and autocomplete)
@@ -1627,6 +2060,23 @@ components:
       schema:
         type: string
         example: access_token=; Path=/api; Max-Age=0; HttpOnly; Secure; SameSite=Lax
+    AssetETag:
+      description: Identifies the stored file; send it back in If-None-Match.
+      schema:
+        type: string
+        example: '"m4Pq7"'
+    AssetCacheControl:
+      description: |
+        private (only the viewer's browser may keep it; access depends on who is logged in),
+        cached for a year and never revalidated, because a stored file never changes.
+      schema:
+        type: string
+        example: private, max-age=31536000, immutable
+    NoSniff:
+      description: The browser must use the sent Content-Type and not guess another one.
+      schema:
+        type: string
+        example: nosniff
 
   parameters:
     Id:
@@ -1684,12 +2134,19 @@ components:
       description: An item of the worksheet given by `id` (the id of the problem in it).
       schema:
         $ref: '#/components/schemas/Sqid'
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      description: An image attached to the problem or worksheet given by `id` (the image's own id).
+      schema:
+        $ref: '#/components/schemas/Sqid'
     IfMatch:
       name: If-Match
       in: header
       required: true
       description: |
-        The lockVersion of the set or worksheet in quotes, e.g. `"4"` (an ETag).
+        The lockVersion of the set, problem or worksheet in quotes, e.g. `"4"` (an ETag).
         DELETE has no body, so the optimistic lock travels in this header.
         Missing or malformed → 400; does not match → 412 LOCK_MISMATCH.
       schema:
@@ -1785,6 +2242,30 @@ components:
             status: 412
             code: LOCK_MISMATCH
             detail: Someone changed this set in between. Reload and try again.
+    PayloadTooLarge:
+      description: The uploaded file is bigger than the server allows.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+          example:
+            type: about:blank
+            title: Payload Too Large
+            status: 413
+            code: FILE_TOO_LARGE
+            detail: The file is larger than 5 MiB.
+    UnsupportedMediaType:
+      description: The uploaded file is not an allowed image type.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDetails'
+          example:
+            type: about:blank
+            title: Unsupported Media Type
+            status: 415
+            code: UNSUPPORTED_MEDIA_TYPE
+            detail: Only PNG, JPEG and WebP images are allowed.
     InvalidCredentials:
       description: Wrong email or password
       content:
@@ -1821,6 +2302,106 @@ components:
     Sqid:
       type: string
       example: k3Xa9
+    # --- assets ---
+    UploadAssetRequest:
+      type: object
+      required: [file]
+      additionalProperties: false
+      properties:
+        file:
+          type: string
+          format: binary
+          description: The image file. Exactly one.
+    Asset:
+      type: object
+      required: [id, mimeType, sizeBytes, createdAt, contentUrl]
+      properties:
+        id: {$ref: '#/components/schemas/Sqid'}
+        mimeType:
+          type: string
+          enum: [image/png, image/jpeg, image/webp]
+          description: The type read from the file's bytes at upload.
+        sizeBytes: {type: integer, minimum: 1, example: 48213}
+        createdAt: {type: string, format: date-time}
+        contentUrl:
+          type: string
+          description: |
+            Path of the image file from the site root, ready for `<img src>`.
+            Built by the server; do not build it yourself (it will point elsewhere once files move to R2).
+          example: /api/v1/assets/m4Pq7/content
+    AssetPage:
+      description: Planned (GET /assets).
+      type: object
+      required: [items, meta]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/Asset'}
+        meta: {$ref: '#/components/schemas/PageMeta'}
+    AssetRef:
+      description: The part of an image a problem or worksheet needs to show it.
+      type: object
+      required: [id, mimeType, contentUrl]
+      properties:
+        id: {$ref: '#/components/schemas/Sqid'}
+        mimeType: {type: string, enum: [image/png, image/jpeg, image/webp]}
+        contentUrl: {type: string, example: /api/v1/assets/m4Pq7/content}
+    AttachmentPlacement:
+      type: string
+      enum: [BELOW, RIGHT]
+      description: Where the image sits next to the text.
+    AttachmentSize:
+      type: string
+      enum: [S, M, L]
+      description: Display size of the image.
+    Attachment:
+      description: Planned. One image shown in a problem or worksheet.
+      type: object
+      required: [asset, placement, size]
+      properties:
+        asset: {$ref: '#/components/schemas/AssetRef'}
+        placement: {$ref: '#/components/schemas/AttachmentPlacement'}
+        size: {$ref: '#/components/schemas/AttachmentSize'}
+    AddAttachmentRequest:
+      type: object
+      required: [lockVersion, assetId]
+      properties:
+        lockVersion:
+          type: integer
+          description: The problem's or worksheet's lockVersion.
+        assetId:
+          allOf:
+            - $ref: '#/components/schemas/Sqid'
+          description: An image from your own library.
+        afterId:
+          type: string
+          nullable: true
+          example: k3Lm9
+          description: Where to put it. Missing = at the end. null = first. An assetId = right after that image.
+        placement:
+          allOf:
+            - $ref: '#/components/schemas/AttachmentPlacement'
+          default: BELOW
+        size:
+          allOf:
+            - $ref: '#/components/schemas/AttachmentSize'
+          default: M
+    UpdateAttachmentRequest:
+      type: object
+      required: [lockVersion]
+      minProperties: 2
+      description: lockVersion plus at least one of afterId, placement, size; otherwise 400 VALIDATION_FAILED.
+      properties:
+        lockVersion:
+          type: integer
+          description: The problem's or worksheet's lockVersion.
+        afterId:
+          type: string
+          nullable: true
+          example: k3Lm9
+          description: null = first. An assetId = right after that image.
+        placement: {$ref: '#/components/schemas/AttachmentPlacement'}
+        size: {$ref: '#/components/schemas/AttachmentSize'}
     UserRef:
       type: object
       required: [id, displayName]
@@ -2047,6 +2628,10 @@ components:
             createdAt: {type: string, format: date-time}
             updatedAt: {type: string, format: date-time}
             source: {$ref: '#/components/schemas/SourceRef'}
+            attachments:
+              type: array
+              description: Planned, not returned yet. The problem's images in display order.
+              items: {$ref: '#/components/schemas/Attachment'}
             lockVersion:
               type: integer
               description: |
@@ -2127,6 +2712,10 @@ components:
               type: array
               items: { $ref: '#/components/schemas/WorksheetItem'}
               description: In worksheet order, deleted problems are left out.
+            attachments:
+              type: array
+              description: Planned, not returned yet. The worksheet's own images in display order.
+              items: { $ref: '#/components/schemas/Attachment' }
     WorksheetItem:
       required: [kind, problem]
       type: object
@@ -2335,7 +2924,7 @@ components:
             403 ACCOUNT_BLOCKED - the user is blocked by moderation
             403 TRUST_TOO_LOW - registered user trying to publish
             403 CSRF_CHECK_FAILED - POST/PATCH/DELETE without the X-Requested-With header
-            404 NOT_FOUND - problem or worksheet does not exist or is hidden
+            404 NOT_FOUND - problem, worksheet or image does not exist or is hidden
             409 LOCK_MISMATCH - lockVersion does not match
             412 LOCK_MISMATCH - If-Match version does not match (DELETE …/children/{childId})
             409 SET_PARENT_HAS_RESULT - a set (or a problem getting its first child) still has a result
@@ -2350,5 +2939,8 @@ components:
             409 NO_UPDATE_AVAILABLE - take-over or dismiss when the copy has no update (or is not a copy)
             409 EMAIL_TAKEN - register with an email that already has an account
             409 USERNAME_TAKEN - register with a username that is already used
+            409 ALREADY_ATTACHED - the image is already on this problem or worksheet (planned)
+            413 FILE_TOO_LARGE - the uploaded file is bigger than the server allows
+            415 UNSUPPORTED_MEDIA_TYPE - the uploaded file is not PNG, JPEG or WebP
 
         requestId: {type: string}

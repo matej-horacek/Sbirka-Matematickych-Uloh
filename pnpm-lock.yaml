@@ -66,6 +66,9 @@ importers:
       '@nestjs/platform-express':
         specifier: ^12.4.0
         version: 12.4.0(@nestjs/common@12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.4.0)(rxjs@7.8.2)
+      '@nestjs/storage':
+        specifier: ^0.0.5
+        version: 0.0.5(@nestjs/common@12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.4.0)(reflect-metadata@0.2.2)
       '@prisma/adapter-pg':
         specifier: 7.10.1
         version: 7.10.1
@@ -1243,6 +1246,14 @@ packages:
     peerDependenciesMeta:
       prettier:
         optional: true
+
+  '@nestjs/storage@0.0.5':
+    resolution: {integrity: sha512-Vd1oBnG+FjPe8C1hMrRo5yEfzj1ydvlp2e17ks9EXYXs1a5Ucp+IU2a4ZGeWd6I2Jr2pmvjp1jTo2QyjBAyaCQ==}
+    engines: {node: '>=20.19.0'}
+    peerDependencies:
+      '@nestjs/common': ^12.1.0
+      '@nestjs/core': ^12.1.0
+      reflect-metadata: ^0.1.13 || ^0.2.0
 
   '@nestjs/testing@12.4.0':
     resolution: {integrity: sha512-jRnK2OwXABrhkqrGL+hCxHO5IO1gpz0Zhew/ga3ND4dNqgTUAwLmntbnQo17uKo1V2oj2H5VsYamMqkixTma3g==}
@@ -4189,6 +4200,7 @@ packages:
 
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
+    deprecated: This package is no longer needed on supported Node.js versions. Node.js 16+ includes AbortController and AbortSignal as built-in globals. All Node.js versions requiring this polyfill are end-of-life. Use the built-in globals instead.
 
   node-addon-api@8.9.2:
     resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
@@ -6519,6 +6531,12 @@ snapshots:
       prettier: 3.9.6
     transitivePeerDependencies:
       - chokidar
+
+  '@nestjs/storage@0.0.5(@nestjs/common@12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.4.0)(reflect-metadata@0.2.2)':
+    dependencies:
+      '@nestjs/common': 12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@nestjs/core': 12.4.0(@nestjs/common@12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@12.4.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      reflect-metadata: 0.2.2
 
   '@nestjs/testing@12.4.0(@nestjs/common@12.4.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.4.0)(@nestjs/platform-express@12.4.0)':
     dependencies:

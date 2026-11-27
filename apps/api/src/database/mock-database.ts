@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { seed } from './mock-seed.js';
-import {worksheet_citation_display} from "../generated/prisma/enums.js";
+import { asset_status, worksheet_citation_display } from '../generated/prisma/enums.js';
 
 // In-memory stand-in for PrismaService (Phase B replaces it with PrismaService
 // and real migrations). Rows are shaped like Prisma models: camelCase fields,
@@ -131,6 +131,18 @@ export interface WorksheetProblemRow {
   position: string;
 }
 
+/** asset: one uploaded image. The file lives on the storage disk under `storageKey`. */
+export interface AssetRow {
+  id: number;
+  storageKey: string;
+  mimeType: 'image/png' | 'image/jpeg' | 'image/webp';
+  sizeBytes: number;
+  sha256: string;
+  status: asset_status;
+  uploadedBy: number;
+  createdAt: Date;
+}
+
 @Injectable()
 export class MockDatabase {
   users: UserRow[] = [];
@@ -139,12 +151,14 @@ export class MockDatabase {
   chapters: ChapterRow[] = [];
   problems: ProblemRow[] = [];
   worksheets: WorksheetRow[] = [];
+  assets: AssetRow[] = [];
   refreshTokens: RefreshTokenRow[] = [];
   worksheetProblems: WorksheetProblemRow[] = [];
   private nextProblemId = 1;
   private nextWorksheetId = 1;
   private nextUserId = 1;
   private nextRefreshTokenId = 1;
+  private nextAssetId = 1;
 
   constructor() {
     const data = seed();
@@ -166,7 +180,7 @@ export class MockDatabase {
    * D-04: a problem's or worksheet's tags and chapters are ordered by name (there is no position column, so the Prisma
    * repository cannot return any other order). The mock keeps the same order so both behave alike.
    */
-  sortRelations<T extends {tagIds: number[]; chapterIds: number[] }>(row: T): T {
+  sortRelations<T extends { tagIds: number[]; chapterIds: number[] }>(row: T): T {
     const byName = (items: { id: number; name: string }[]) => (a: number, b: number) =>
       (items.find((i) => i.id === a)?.name ?? '').localeCompare(items.find((i) => i.id === b)?.name ?? '', 'cs');
     row.tagIds = [...row.tagIds].sort(byName(this.tags));
@@ -186,7 +200,11 @@ export class MockDatabase {
     return this.nextProblemId++;
   }
 
-  newWorksheetId(): number{
+  newWorksheetId(): number {
     return this.nextWorksheetId++;
+  }
+
+  newAssetId(): number {
+    return this.nextAssetId++;
   }
 }
